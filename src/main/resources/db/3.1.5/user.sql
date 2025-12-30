@@ -1,0 +1,3 @@
+INSERT INTO `user`.`user_type` (`id`, `name`, `code`, `description`, `create_date_time`, `create_name`, `modify_date_time`, `modify_name`, `is_delete`, `type`, `state`, `label`, `sorting`, `version`) VALUES ('4', '管家', '4', NULL, now(), '孙馨普通后台用户-138901042', now(), '孙馨普通后台用户-138901042', b'0', 0, 0, NULL, 0, 1);
+
+update `user`.`user_type_value` set `user_type_id` = '4' where `name` in ('服务管家主管','互联网管家主管','商务管家主管','特别业务管家','业务管家','业务助理','用户咨询','经纪人咨询','互联网管家','商务管家','业务管家主管');
