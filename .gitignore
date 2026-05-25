@@ -25,4 +25,3 @@ build/
 
 ### VS Code ###
 .vscode/
-/src/main/resources/logback-spring.xml
