@@ -1,32 +1,46 @@
-# 代码生成模板说明
+# AI 编程规范入口
 
-本目录保存 `user` 项目的代码生成模板和生成器配置。AI 或开发者阅读本目录时，优先阅读：
+本目录已经不再作为 FreeMarker 代码生成器目录使用。项目后续以 AI 识别规范、阅读示例、直接编写 Java 代码为主。
 
-1. `README.md`：模板入口和文件索引。
-2. `CODE_GENERATION_SPEC.md`：代码生成规范、字段规则、枚举规则、返回结构和分层约定。
-3. `config/mysql.properties`：生成器数据库连接和基础包名配置。
+## 阅读顺序
 
-## 文件索引
+1. `README.md`：当前目录用途和文件索引。
+2. `AI_CODING_GUIDE.md`：AI 执行编码任务时必须遵守的步骤。
+3. `PROJECT_CODING_SPEC.md`：项目分层、字段、枚举、权限、多租户、统一返回等规范。
+4. `examples/`：真实 Java 风格示例，AI 写新模块时优先参考。
+5. `legacy-ftl/`：历史 FreeMarker 模板，仅作迁移参考，不再作为代码生成入口。
 
-| 文件 | 生成内容 | 目标包 |
-| --- | --- | --- |
-| `skl_entity.java.ftl` | DO 实体 | `${packageName}.entity` |
-| `skl_entity_bo.java.ftl` | 入参传输对象 | `${packageName}.entity.bo` |
-| `skl_entity_vo.java.ftl` | 出参渲染对象 | `${packageName}.entity.vo` |
-| `skl_entity_query.java.ftl` | 查询参数对象 | `${packageName}.entity.query` |
-| `skl_entity_enums.java.ftl` | MyBatis-Plus 枚举 | `${packageName}.entity.enums` |
-| `skl_mapper.java.ftl` | Mapper 接口 | `${packageName}.mapper` |
-| `skl_service.java.ftl` | Service 接口 | `${packageName}.service` |
-| `skl_serviceImpl.java.ftl` | Service 实现 | `${packageName}.service.impl` |
-| `skl_service_query.java.ftl` | 自动查询条件构造 | `${packageName}.service.query` |
-| `skl_service_results.java.ftl` | 查询结果增强和 DO/VO 转换 | `${packageName}.service.results` |
-| `skl_controller.java.ftl` | REST Controller | `${packageName}.controller` |
+## 目录结构
 
-## 当前项目关键约定
+```text
+templates/
+  README.md
+  AI_CODING_GUIDE.md
+  PROJECT_CODING_SPEC.md
+  examples/
+    ExampleBO.java
+    ExampleEntity.java
+    ExampleQuery.java
+    ExampleVO.java
+    ExampleMapper.java
+    ExampleController.java
+    ExampleService.java
+    ExampleServiceImpl.java
+    ExampleServiceQuery.java
+    ExampleServiceResults.java
+    ExampleStateEnum.java
+  legacy-ftl/
+    *.ftl
+    config/
+```
 
-- 基础包名使用 `com.kellen`，不要再使用历史 `com.gb`。
-- 实体默认继承 `com.kellen.bean.EntityBase`。
-- Controller 统一返回 `com.kellen.utils.Json`。
-- 状态类字段如果有业务含义，应使用对应业务模块自己的 `IEnum` 枚举，不要把业务枚举放进 `EntityBase`。
-- 多租户字段 `tenant_id` 由 `EntityBase.tenantId` 和 `TenantContextHolder` 统一承接。
+## 当前关键原则
 
+- 直接写 Java 代码，不再新增或依赖 FreeMarker 模板。
+- 新代码使用 `com.kellen` 包名。
+- Controller 返回统一使用 `com.kellen.utils.Json`。
+- 实体公共字段继承 `com.kellen.bean.EntityBase`。
+- `type/state` 等业务状态字段由具体业务模块定义 `IEnum`，不要塞进 `EntityBase`。
+- 多租户和逻辑删除由框架处理，业务查询不要重复拼 `tenant_id` 或 `is_delete = 0`。
+- 权限接口使用 `@PreAuthorize("hasAuthority('权限码')")`。
+- `examples/` 示例按历史 `legacy-ftl` 分层编写，类、字段、方法和关键逻辑都保留注释，AI 写代码时优先模仿该风格。
