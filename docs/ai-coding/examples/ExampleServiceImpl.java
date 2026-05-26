@@ -1,7 +1,6 @@
 package com.kellen.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.kellen.example.entity.ExampleEntity;
@@ -182,12 +181,8 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
     public Boolean updateEnhance(ExampleBO exampleBO) {
         // 将 BO 转换为实体。
         ExampleEntity entity = GeneralConvertor.convertor(exampleBO, ExampleEntity.class);
-        // 创建更新包装器。
-        UpdateWrapper<ExampleEntity> updateWrapper = new UpdateWrapper<>();
-        // 根据主键更新。
-        updateWrapper.eq("id", exampleBO.getId());
-        // 执行更新。
-        int count = exampleMapper.update(entity, updateWrapper);
+        // 使用 MyBatis-Plus 内置 updateById，确保 @Version 乐观锁插件能读取实体中的旧版本号。
+        int count = exampleMapper.updateById(entity);
         // 返回是否成功。
         return count > 0;
     }

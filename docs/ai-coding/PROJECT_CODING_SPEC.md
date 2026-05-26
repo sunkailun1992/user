@@ -139,6 +139,19 @@ GeneralConvertor.convertor(source, Target.class)
 
 先查询后修改的业务必须带上数据库记录的 `version` 字段，由 MyBatis-Plus `@Version` 和 `OptimisticLockerInnerInterceptor` 校验并发写入，不能绕过版本号直接更新。
 
+更新示例优先使用：
+
+```java
+int count = mapper.updateById(entity);
+```
+
+要求：
+
+- BO 修改入参必须包含查询得到的旧 `version`。
+- VO 查询响应必须返回当前 `version`，方便前端修改时原样提交。
+- 不要用只按 `id` 拼接的 `UpdateWrapper` 替代 `updateById(entity)`，否则 AI 容易漏掉乐观锁旧版本号。
+- 如确实使用 `update(entity, wrapper)`，必须保证实体中有旧 `version`，且 wrapper 不复用。
+
 ## 注释规范
 
 新代码和本次修改代码必须保持高注释密度：

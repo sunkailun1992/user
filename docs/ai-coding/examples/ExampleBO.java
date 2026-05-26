@@ -3,6 +3,7 @@ package com.kellen.example.entity.bo;
 import com.kellen.example.entity.enums.ExampleStateEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -26,6 +27,15 @@ public class ExampleBO implements Serializable {
     @Schema(description = "主键")
     @NotBlank(groups = {Update.class, Remove.class}, message = "id不能为空")
     private String id;
+
+    /**
+     * 数据库版本号。
+     * <p>
+     * 修改时必须提交查询得到的旧版本号，供 MyBatis-Plus @Version 乐观锁判断并发覆盖。
+     */
+    @Schema(description = "数据库版本号，修改时必传")
+    @NotNull(groups = {Update.class}, message = "version不能为空")
+    private Integer version;
 
     /**
      * 示例名称。

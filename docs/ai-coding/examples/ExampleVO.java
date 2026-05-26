@@ -26,6 +26,14 @@ public class ExampleVO implements Serializable {
     private String id;
 
     /**
+     * 数据库版本号。
+     * <p>
+     * 前端修改前需要把该值原样提交回来，保证 MyBatis-Plus 乐观锁能使用旧版本号更新。
+     */
+    @Schema(description = "数据库版本号")
+    private Integer version;
+
+    /**
      * 示例名称。
      */
     @Schema(description = "示例名称")

@@ -44,6 +44,7 @@
 - 更新逻辑不能绕过 `version` 直接覆盖数据。
 - AI 生成 Service 更新方法时，必须检查入参或查询对象是否携带数据库记录的 `version`。
 - 如果业务需要先加载实体再更新，更新前要保留数据库当前版本号，并在提交更新时交给 MyBatis-Plus 乐观锁插件校验。
+- 常规更新优先使用 MyBatis-Plus 内置 `updateById(entity)`，不要生成只按 `id` 更新且不携带旧 `version` 的写法。
 
 ## 错误码规则
 
