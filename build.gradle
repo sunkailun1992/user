@@ -77,7 +77,7 @@ dependencyManagement {
  * 引入的jar
  */
 dependencies {
-    implementation 'com:utils:1.0.4'
+    implementation 'com:utils:1.0.5'
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'

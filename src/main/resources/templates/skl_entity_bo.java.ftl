@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import lombok.Data;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.fasterxml.jackson.annotation.JsonFormat;
 <#list enumsList as e>
@@ -64,5 +64,4 @@ public class ${ClassName}BO implements Serializable {
      */
     public interface Remove{}
 }
-
 

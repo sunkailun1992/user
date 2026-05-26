@@ -28,6 +28,7 @@ import ${packageName}.entity.enums.${ClassName}${e.bigName}Enum;
 public class ${ClassName}Query implements Serializable {
     <#list list as item>
     <#if item.columnName == "version">
+    <#elseif item.columnName == "tenantId">
     <#elseif item.columnName == "createDateTime">
     <#elseif item.columnName == "createName">
     <#elseif item.columnName == "modifyDateTime">
@@ -101,5 +102,4 @@ public class ${ClassName}Query implements Serializable {
      */
     public interface Count{}
 }
-
 

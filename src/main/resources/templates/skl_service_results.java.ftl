@@ -5,7 +5,7 @@ import ${packageName}.entity.vo.${ClassName}VO;
 import ${packageName}.entity.bo.${ClassName}BO;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import com.gb.utils.GeneralConvertor;
+import com.kellen.utils.GeneralConvertor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

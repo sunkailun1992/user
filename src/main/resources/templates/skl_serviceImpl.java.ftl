@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import com.gb.utils.GeneralConvertor;
+import com.kellen.utils.GeneralConvertor;
 
 import java.util.List;
 

@@ -14,16 +14,16 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
-import com.gb.utils.annotations.RequestRequired;
-import com.gb.utils.annotations.Methods;
-import com.gb.utils.Json;
-import com.gb.utils.RedisUtils;
-import com.gb.utils.annotations.PreventRepeat;
-import javax.servlet.http.HttpServletRequest;
+import com.kellen.utils.annotations.RequestRequired;
+import com.kellen.utils.annotations.Methods;
+import com.kellen.utils.Json;
+import com.kellen.utils.RedisUtils;
+import com.kellen.utils.annotations.PreventRepeat;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.validation.annotation.Validated;
 import com.github.xiaoymin.knife4j.annotations.ApiOperationSupport;
 import com.github.xiaoymin.knife4j.annotations.ApiSupport;
-import com.gb.utils.enumeration.ReturnCode;
+import com.kellen.utils.enumeration.ReturnCode;
 import ${packageName}.service.${ClassName}Service;
 import ${packageName}.entity.query.${ClassName}Query;
 import ${packageName}.entity.vo.${ClassName}VO;
@@ -142,7 +142,7 @@ public class ${ClassName}Controller {
     @PreventRepeat
     @Methods(methodsName = "${functionName}新增", methods = "save")
     @ApiOperation(value = "${functionName}新增", httpMethod = "POST", notes = "${functionName}新增", response = Json.class)
-    @ApiOperationSupport(ignoreParameters = {"id", "createDateTime", "createName", "modifyDateTime", "modifyName", "isDelete", "version"})
+    @ApiOperationSupport(ignoreParameters = {"id", "code", "description", "createDateTime", "createName", "modifyDateTime", "modifyName", "isDelete", "type", "state", "label", "sorting", "version", "tenantId"})
     @PostMapping("/save")
     public Json<String> save(@Validated(value = ${ClassName}BO.Save.class) @RequestBody ${ClassName}BO ${className}BO, HttpServletRequest httpServletRequest) {
         //缓存取出用户
@@ -167,7 +167,7 @@ public class ${ClassName}Controller {
     @PreventRepeat
     @Methods(methodsName = "${functionName}修改", methods = "update")
     @ApiOperation(value = "${functionName}修改", httpMethod = "PUT", notes = "${functionName}修改", response = Json.class)
-    @ApiOperationSupport(ignoreParameters = {"createDateTime", "createName", "modifyDateTime", "modifyName", "isDelete", "version"})
+    @ApiOperationSupport(ignoreParameters = {"createDateTime", "createName", "modifyDateTime", "modifyName", "isDelete", "version", "tenantId"})
     @PutMapping("/update")
     public Json<Boolean> update(@Validated(value = ${ClassName}BO.Update.class) @RequestBody ${ClassName}BO ${className}BO, HttpServletRequest httpServletRequest) {
         //缓存取出用户

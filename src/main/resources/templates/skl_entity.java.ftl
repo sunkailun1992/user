@@ -14,7 +14,7 @@ import com.baomidou.mybatisplus.annotation.*;
 <#list enumsList as e>
 import ${packageName}.entity.enums.${ClassName}${e.bigName}Enum;
 </#list>
-import com.gb.bean.EntityBase;
+import com.kellen.bean.EntityBase;
 <#assign b = 0>
 
 
@@ -34,14 +34,17 @@ import com.gb.bean.EntityBase;
 public class ${ClassName} extends EntityBase {
 <#list list as item>
     <#if item.columnName == "id">
+    <#elseif item.columnName == "code">
     <#elseif item.columnName == "description">
     <#elseif item.columnName == "createDateTime">
     <#elseif item.columnName == "createName">
     <#elseif item.columnName == "modifyDateTime">
     <#elseif item.columnName == "modifyName">
     <#elseif item.columnName == "isDelete">
+    <#elseif item.columnName == "label">
     <#elseif item.columnName == "sorting">
     <#elseif item.columnName == "version">
+    <#elseif item.columnName == "tenantId">
     <#else>
 
         <#if item.dataType == "LocalDateTime">

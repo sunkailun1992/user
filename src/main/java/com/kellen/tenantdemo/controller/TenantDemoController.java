@@ -4,6 +4,7 @@ import com.kellen.tenantdemo.entity.TenantDemo;
 import com.kellen.tenantdemo.mapper.TenantDemoMapper;
 import com.kellen.utils.TenantContextHolder;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +49,7 @@ public class TenantDemoController {
     }
 
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('user:tenant-demo:list')")
     public Map<String, Object> list() {
         return result("current tenant data", tenantDemoMapper.selectList(null));
     }
