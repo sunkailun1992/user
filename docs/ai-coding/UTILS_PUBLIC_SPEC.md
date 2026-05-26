@@ -74,5 +74,4 @@
 - 是否需要打开 `archive/utils-markdown/ErrorCode.md` 查完整错误码。
 - 是否需要打开 `archive/utils-markdown/Announcement.md` 核对团队流程原文。
 - 是否需要打开 `archive/utils-markdown/Specification.md` 核对 Java 通用规范。
-- 是否避免新增 FreeMarker 模板。
 - 是否避免把公共规范重新放回运行时 `src/main/resources`。

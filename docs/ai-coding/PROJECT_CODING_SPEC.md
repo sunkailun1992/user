@@ -15,7 +15,7 @@
 - Spring Cloud 2023.0.1
 - Spring Cloud Alibaba 2023.0.1.0
 - MyBatis-Plus 3.5.15
-- 包名：`com.kellen`
+- 包名跟随当前微服务已有基础包结构。
 - Servlet 和 Validation 使用 `jakarta.*`
 
 ## 标准分层
@@ -23,7 +23,7 @@
 新业务模块建议使用以下结构：
 
 ```text
-com.kellen.<module>
+<base-package>.<module>
   controller
   dto
   entity
@@ -38,8 +38,8 @@ com.kellen.<module>
 复杂查询可以单独补：
 
 ```text
-com.kellen.<module>.query
-com.kellen.<module>.vo
+<base-package>.<module>.query
+<base-package>.<module>.vo
 ```
 
 ## 请求对象拆分规范
@@ -288,11 +288,22 @@ X-Tenant-Id: 100
 - 查询条件不要重复写 `is_delete = 0`。
 - 删除优先使用 MyBatis-Plus 逻辑删除能力。
 
+## README 维护规范
+
+AI 自动化新增或修改功能代码后，必须同步检查项目根目录 `README.md`。
+
+规则：
+
+- 如果项目根目录已有 `README.md`，需要补充本次新增或调整的业务说明、接口说明、权限码、DDL 脚本、默认数据、启动或验证命令。
+- 如果项目根目录没有 `README.md`，必须新建并写入当前服务职责、核心接口、关键配置、数据库维护方式和验证命令。
+- `README.md` 只写当前微服务真实业务上下文，不写可复制的通用 AI 编码规范。
+- 通用 AI 编码规范继续放在 `docs/ai-coding`，不要把当前服务的私有接口、默认账号、权限码写回通用规范。
+
 ## AI 编码检查清单
 
 AI 每次新增模块时必须检查：
 
-- 是否使用 `com.kellen` 包名。
+- 是否跟随当前微服务已有基础包结构。
 - 是否继承 `EntityBase`。
 - 是否使用 `Json` 统一返回。
 - 是否使用 `jakarta.*`。
@@ -304,4 +315,5 @@ AI 每次新增模块时必须检查：
 - 是否按 `UTILS_PUBLIC_SPEC.md` 选择或扩展错误码。
 - 是否给受保护接口加 `@PreAuthorize`。
 - 是否给新增或修改代码补齐类注释、字段注释、方法 JavaDoc 和关键行注释。
+- 是否同步补充或新建项目根目录 `README.md`。
 - 是否运行 `./gradlew clean compileJava -x test`。
