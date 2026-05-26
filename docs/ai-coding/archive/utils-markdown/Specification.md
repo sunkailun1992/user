@@ -5,7 +5,7 @@
 ## 命名规范
 
 - 包名全部小写，当前项目统一使用 `com.kellen`，不要新增 `com.gb`。
-- 类名使用大驼峰，能直接表达职责，例如 `AuthController`、`AuthServiceImpl`。
+- 类名使用大驼峰，能直接表达职责，例如 `XxxController`、`XxxServiceImpl`。
 - 方法名、参数名、局部变量名使用小驼峰，避免拼音缩写和无意义短名。
 - 常量名使用大写下划线，表达稳定业务含义。
 - 枚举类建议以 `Enum` 结尾，枚举项使用大写下划线或项目已有风格。
@@ -61,7 +61,7 @@
 - Controller 统一返回 `Json`。
 - 成功返回使用 `new Json<>(ReturnCode.成功, data)`。
 - 需要鉴权的接口必须加 `@PreAuthorize`。
-- 权限码使用稳定格式，例如 `user:资源:动作`。
+- 权限码使用稳定格式，例如 `module:resource:action`。
 - 请求参数要有明确校验，错误时返回稳定错误码。
 - 对外 VO 不直接暴露内部敏感字段。
 

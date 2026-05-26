@@ -5,10 +5,11 @@
 ## 快速阅读
 
 1. 先读 `AI_CODING_GUIDE.md`，确认执行步骤和禁止事项。
-2. 再读 `PROJECT_CODING_SPEC.md`，确认项目分层、返回值、权限、多租户、注释和检查清单。
+2. 再读 `PROJECT_CODING_SPEC.md`，确认通用分层、返回值、权限、多租户、注释和检查清单。
 3. 涉及错误码、乐观锁、数据库变更、分支流程时，读 `UTILS_PUBLIC_SPEC.md`。
-4. 新增业务模块时参考 `examples/`，不要复制 `legacy-ftl/` 生成模板。
-5. 需要追溯原始迁移资料时再看 `archive/`。
+4. 当前微服务业务改造时，读项目根目录 `README.md`。
+5. 新增业务模块时参考 `examples/`，不要复制 `legacy-ftl/` 生成模板。
+6. 需要追溯原始迁移资料时再看 `archive/`。
 
 ## 目录结构
 
@@ -52,3 +53,9 @@ docs/ai-coding/
 - `examples/` 示例按历史 `legacy-ftl` 分层编写，类、字段、方法和关键逻辑都保留注释，AI 写代码时优先模仿该风格。
 - AI 新增或修改 Java 代码时，新增类、字段、方法、方法参数、关键分支、关键赋值、关键返回值都要写清楚注释；复杂或框架衔接逻辑按行补充行尾注释。
 - `UTILS_PUBLIC_SPEC.md` 是公共规范的 AI 阅读入口；`archive/` 只保留迁移资料，不作为默认阅读内容。
+
+## 复制规则
+
+- 复制到其他微服务时，可以复用本目录下的 `README.md`、`AI_CODING_GUIDE.md`、`PROJECT_CODING_SPEC.md`、`UTILS_PUBLIC_SPEC.md`、`examples/`。
+- 当前微服务上下文写在项目根目录 `README.md`，复制规范到其他微服务时不要把当前服务 README 当成通用规范。
+- `PROJECT_CODING_SPEC.md` 不写具体业务接口、默认账号、当前服务权限码等服务私有信息。

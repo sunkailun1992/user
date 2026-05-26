@@ -1,10 +1,12 @@
-# User 项目 AI 编码规范
+# 微服务 AI 编码规范
 
 ## 目标
 
-本规范是 `user` 项目的主编码规则。AI 编写代码时，应根据本文件和 `examples/` 下的示例直接创建或修改 Java 文件。
+本规范是可复制到多个微服务的通用编码规则。AI 编写代码时，应根据本文件和 `examples/` 下的示例直接创建或修改 Java 文件。
 
 公共团队规则、错误码、数据库变更和乐观锁规则见 `UTILS_PUBLIC_SPEC.md`。归档原文见 `archive/utils-markdown/`，默认不需要阅读。
+
+当前微服务的接口、权限码、默认数据、业务边界和特殊约束写在项目根目录 `README.md`，不要写进本通用规范。
 
 ## 技术基线
 
@@ -64,7 +66,7 @@ XxxBindResourceBO
 - 响应对象使用 `VO`，不要直接把包含密码等敏感字段的 Entity 返回给前端。
 - Controller 只接收请求对象、调用 Service、组装 `Json`，不写业务规则、不写 SQL、不写初始化数据。
 - Controller 必须按业务资源拆分，例如租户、用户、角色、资源、授权关系分别建 Controller，不要把多个资源维护接口塞进一个 `ManageController`。
-- Service 必须按业务资源拆分，例如认证登录、初始化、租户、用户、角色、资源、授权关系分别建 Service，不要把多个资源的逻辑塞进一个 `AuthService` 或 `XxxManageService`。
+- Service 必须按业务资源拆分，例如登录认证、基础数据、核心业务对象、资源对象、授权关系分别建 Service，不要把多个资源的逻辑塞进一个 `XxxService` 或 `XxxManageService`。
 - Service 负责业务编排、事务、鉴权上下文、租户上下文和 Mapper 调用。
 - Mapper 只负责数据访问，普通 CRUD 优先使用 MyBatis-Plus。
 
@@ -88,7 +90,7 @@ src/main/resources/db/*.sql
 
 - 新增或修改表结构时，新增独立 SQL 脚本或维护当前模块脚本。
 - `MysqlDdl#getSqlFiles()` 统一声明脚本路径。
-- 基础字典、默认租户、默认管理员、默认角色、默认权限资源等初始化数据也写入 DDL SQL 脚本。
+- 基础字典、默认角色、默认权限资源等初始化数据也写入 DDL SQL 脚本。
 - 不再为基础数据新增业务初始化接口，避免启动后还需要人工调用初始化接口。
 - 表结构必须包含 `version`，并由实体继承 `EntityBase.@Version`。
 - 多租户业务表必须包含 `tenant_id`，业务 SQL 不手写租户条件。
@@ -255,54 +257,6 @@ return new Json<>(ReturnCode.用户密码错误, null, "用户名或密码错误
 ```text
 模块:资源:动作
 ```
-
-示例：
-
-```text
-user:auth:resources
-user:auth:manage
-```
-
-## 登录与资源规范
-
-当前登录能力在 `com.kellen.auth`：
-
-- `POST /auth/login`
-- `GET /auth/resources`
-- `GET /auth/manage/tenants`
-- `POST /auth/manage/tenants`
-- `PUT /auth/manage/tenants`
-- `POST /auth/manage/tenants/remove`
-- `GET /auth/manage/users`
-- `POST /auth/manage/users`
-- `PUT /auth/manage/users`
-- `POST /auth/manage/users/remove`
-- `GET /auth/manage/roles`
-- `POST /auth/manage/roles`
-- `PUT /auth/manage/roles`
-- `POST /auth/manage/roles/remove`
-- `GET /auth/manage/resources`
-- `POST /auth/manage/resources`
-- `PUT /auth/manage/resources`
-- `POST /auth/manage/resources/remove`
-- `POST /auth/manage/user-roles`
-- `POST /auth/manage/role-resources`
-
-资源分两类：
-
-| 分类 | 说明 |
-| --- | --- |
-| `FRONTEND` | 前端菜单、页面、按钮 |
-| `BACKEND` | 后端接口权限 |
-
-登录返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。
-
-安全配置注意：
-
-- `POST /auth/login` 不加 `@PreAuthorize`。
-- 如果 `security.auth.enabled=true`，需要在 Nacos `security.auth.permit-urls` 中放行 `/auth/login`。
-- `/auth/resources` 必须拥有 `user:auth:resources`。
-- `/auth/manage/**` 必须拥有 `user:auth:manage`。
 
 ## 多租户规范
 
