@@ -125,3 +125,43 @@ CREATE TABLE IF NOT EXISTS auth_role_resource (
     UNIQUE KEY uk_auth_role_resource_tenant_role_resource (tenant_id, role_id, resource_id),
     KEY idx_auth_role_resource_tenant_id (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='认证角色资源关系表';
+
+INSERT IGNORE INTO auth_tenant
+(id, name, code, description, create_name, modify_name, state, version, tenant_id)
+VALUES
+('100', '默认租户', 'default', '系统默认租户', 'system', 'system', 1, 1, '100');
+
+INSERT IGNORE INTO auth_user
+(id, username, password, nickname, code, description, create_name, modify_name, state, version, tenant_id)
+VALUES
+('u_admin_100', 'admin', '$2a$10$WzvrHmwWViUXVzyNaez6ROLEEg49ATB68RCjSWFai5MlyWojAbraG', '管理员', 'admin', '默认管理员账号', 'system', 'system', 1, 1, '100');
+
+INSERT IGNORE INTO auth_role
+(id, name, code, description, create_name, modify_name, state, version, tenant_id)
+VALUES
+('r_admin_100', '管理员', 'admin', '默认管理员角色', 'system', 'system', 1, 1, '100');
+
+INSERT IGNORE INTO auth_resource
+(id, name, resource_category, path, method, parent_id, code, description, create_name, modify_name, sorting, state, version, tenant_id)
+VALUES
+('res_menu_tenant_100', '租户管理', 'FRONTEND', '/system/tenant', NULL, NULL, 'menu:tenant', '前端租户菜单', 'system', 'system', 10, 1, 1, '100'),
+('res_menu_user_100', '用户管理', 'FRONTEND', '/system/user', NULL, NULL, 'menu:user', '前端用户菜单', 'system', 'system', 20, 1, 1, '100'),
+('res_menu_role_100', '角色管理', 'FRONTEND', '/system/role', NULL, NULL, 'menu:role', '前端角色菜单', 'system', 'system', 30, 1, 1, '100'),
+('res_menu_resource_100', '权限资源', 'FRONTEND', '/system/resource', NULL, NULL, 'menu:resource', '前端权限资源菜单', 'system', 'system', 40, 1, 1, '100'),
+('res_api_auth_resource_100', '当前资源列表', 'BACKEND', '/auth/resources', 'GET', NULL, 'user:auth:resources', '当前用户资源接口权限', 'system', 'system', 10, 1, 1, '100'),
+('res_api_auth_manage_100', '认证体系维护', 'BACKEND', '/auth/manage/**', '*', NULL, 'user:auth:manage', '认证体系维护接口权限', 'system', 'system', 20, 1, 1, '100');
+
+INSERT IGNORE INTO auth_user_role
+(id, user_id, role_id, code, description, create_name, modify_name, state, version, tenant_id)
+VALUES
+('ur_admin_100', 'u_admin_100', 'r_admin_100', 'u_admin_100:r_admin_100', '默认管理员用户角色关系', 'system', 'system', 1, 1, '100');
+
+INSERT IGNORE INTO auth_role_resource
+(id, role_id, resource_id, code, description, create_name, modify_name, state, version, tenant_id)
+VALUES
+('rr_admin_menu_tenant_100', 'r_admin_100', 'res_menu_tenant_100', 'r_admin_100:res_menu_tenant_100', '默认管理员角色资源关系', 'system', 'system', 1, 1, '100'),
+('rr_admin_menu_user_100', 'r_admin_100', 'res_menu_user_100', 'r_admin_100:res_menu_user_100', '默认管理员角色资源关系', 'system', 'system', 1, 1, '100'),
+('rr_admin_menu_role_100', 'r_admin_100', 'res_menu_role_100', 'r_admin_100:res_menu_role_100', '默认管理员角色资源关系', 'system', 'system', 1, 1, '100'),
+('rr_admin_menu_resource_100', 'r_admin_100', 'res_menu_resource_100', 'r_admin_100:res_menu_resource_100', '默认管理员角色资源关系', 'system', 'system', 1, 1, '100'),
+('rr_admin_api_auth_resource_100', 'r_admin_100', 'res_api_auth_resource_100', 'r_admin_100:res_api_auth_resource_100', '默认管理员角色资源关系', 'system', 'system', 1, 1, '100'),
+('rr_admin_api_auth_manage_100', 'r_admin_100', 'res_api_auth_manage_100', 'r_admin_100:res_api_auth_manage_100', '默认管理员角色资源关系', 'system', 'system', 1, 1, '100');

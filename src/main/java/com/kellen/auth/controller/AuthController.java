@@ -4,7 +4,6 @@ import com.kellen.auth.dto.LoginRequest;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
 import com.kellen.auth.service.AuthAuthenticationService;
-import com.kellen.auth.service.AuthBootstrapService;
 import com.kellen.utils.Json;
 import com.kellen.utils.enumeration.ReturnCode;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,12 +13,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 /**
  * 认证授权请求层。
  * <p>
- * 只保留正式认证入口：初始化真实基础数据、登录、当前用户资源查询。
+ * 只保留正式认证入口：登录、当前用户资源查询。
  *
  * @author sunkailun
  * @className AuthController
@@ -30,11 +27,6 @@ import java.util.Map;
 public class AuthController {
 
     /**
-     * 认证体系初始化服务。
-     */
-    private final AuthBootstrapService authBootstrapService;
-
-    /**
      * 认证登录业务服务。
      */
     private final AuthAuthenticationService authAuthenticationService;
@@ -42,28 +34,11 @@ public class AuthController {
     /**
      * 构造认证授权请求层。
      *
-     * @param authBootstrapService      认证体系初始化服务
      * @param authAuthenticationService 认证登录业务服务
      */
-    public AuthController(AuthBootstrapService authBootstrapService, AuthAuthenticationService authAuthenticationService) {
-        // 注入认证体系初始化服务。
-        this.authBootstrapService = authBootstrapService;
+    public AuthController(AuthAuthenticationService authAuthenticationService) {
         // 注入认证登录业务服务。
         this.authAuthenticationService = authAuthenticationService;
-    }
-
-    /**
-     * 初始化真实认证授权基础数据。
-     *
-     * @return 初始化结果
-     * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
-     */
-    @PostMapping("/init")
-    public Json<Map<String, Object>> init() {
-        // 调用业务服务初始化真实租户、用户、角色、资源和授权关系。
-        return new Json<>(ReturnCode.成功, authBootstrapService.init());
     }
 
     /**

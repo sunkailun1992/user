@@ -69,7 +69,7 @@ public class AuthTenantServiceImpl implements AuthTenantService {
         try {
             // 租户是全局主数据，写入时忽略租户插件。
             TenantContextHolder.ignore();
-            // 先按ID查询租户是否存在，保证初始化接口可重复调用。
+            // 先按ID查询租户是否存在，避免重复插入同一个租户。
             AuthTenant exists = StringUtils.isBlank(bo.getId()) ? null : authTenantMapper.selectById(bo.getId());
             // 已存在则直接返回租户ID。
             if (exists != null) {

@@ -88,7 +88,8 @@ src/main/resources/db/*.sql
 
 - 新增或修改表结构时，新增独立 SQL 脚本或维护当前模块脚本。
 - `MysqlDdl#getSqlFiles()` 统一声明脚本路径。
-- 业务初始化接口只写入基础数据，不负责建表。
+- 基础字典、默认租户、默认管理员、默认角色、默认权限资源等初始化数据也写入 DDL SQL 脚本。
+- 不再为基础数据新增业务初始化接口，避免启动后还需要人工调用初始化接口。
 - 表结构必须包含 `version`，并由实体继承 `EntityBase.@Version`。
 - 多租户业务表必须包含 `tenant_id`，业务 SQL 不手写租户条件。
 
@@ -266,7 +267,6 @@ user:auth:manage
 
 当前登录能力在 `com.kellen.auth`：
 
-- `POST /auth/init`
 - `POST /auth/login`
 - `GET /auth/resources`
 - `GET /auth/manage/tenants`
@@ -299,8 +299,8 @@ user:auth:manage
 
 安全配置注意：
 
-- `POST /auth/init` 和 `POST /auth/login` 不加 `@PreAuthorize`。
-- 如果 `security.auth.enabled=true`，需要在 Nacos `security.auth.permit-urls` 中放行 `/auth/init` 和 `/auth/login`。
+- `POST /auth/login` 不加 `@PreAuthorize`。
+- 如果 `security.auth.enabled=true`，需要在 Nacos `security.auth.permit-urls` 中放行 `/auth/login`。
 - `/auth/resources` 必须拥有 `user:auth:resources`。
 - `/auth/manage/**` 必须拥有 `user:auth:manage`。
 

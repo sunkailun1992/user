@@ -69,7 +69,7 @@ public class AuthResourceServiceImpl implements AuthResourceService {
         try {
             // 设置目标租户上下文。
             TenantContextHolder.setTenantId(bo.getTenantId());
-            // 查询同租户同编码资源是否已存在，保证初始化接口可重复调用。
+            // 查询同租户同编码资源是否已存在，避免重复插入同一个资源。
             AuthResource exists = authResourceMapper.selectOne(new LambdaQueryWrapper<AuthResource>().eq(AuthResource::getCode, bo.getCode()).last("LIMIT 1"));
             // 已存在则直接返回资源ID。
             if (exists != null) {

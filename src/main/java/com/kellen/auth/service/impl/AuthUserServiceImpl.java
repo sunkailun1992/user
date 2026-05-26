@@ -75,7 +75,7 @@ public class AuthUserServiceImpl implements AuthUserService {
         try {
             // 设置目标租户上下文。
             TenantContextHolder.setTenantId(bo.getTenantId());
-            // 查询同租户同用户名用户是否已存在，保证初始化接口可重复调用。
+            // 查询同租户同用户名用户是否已存在，避免重复插入同一个用户。
             AuthUser exists = authUserMapper.selectOne(new LambdaQueryWrapper<AuthUser>().eq(AuthUser::getUsername, bo.getUsername()).last("LIMIT 1"));
             // 已存在则直接返回用户ID。
             if (exists != null) {
