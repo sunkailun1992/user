@@ -5,7 +5,7 @@
 ## 命名规范
 
 - 包名全部小写，当前项目统一使用 `com.kellen`，不要新增 `com.gb`。
-- 类名使用大驼峰，能直接表达职责，例如 `AuthController`、`TenantDemoServiceImpl`。
+- 类名使用大驼峰，能直接表达职责，例如 `AuthController`、`AuthServiceImpl`。
 - 方法名、参数名、局部变量名使用小驼峰，避免拼音缩写和无意义短名。
 - 常量名使用大写下划线，表达稳定业务含义。
 - 枚举类建议以 `Enum` 结尾，枚举项使用大写下划线或项目已有风格。

@@ -16,12 +16,27 @@ import lombok.Setter;
 @Schema(description = "登录请求参数")
 public class LoginRequest {
 
+    /**
+     * 租户ID。
+     */
     @Schema(description = "租户ID")
     private String tenantId;
 
+    /**
+     * 租户编码。
+     */
+    @Schema(description = "租户编码")
+    private String tenantCode;
+
+    /**
+     * 用户名。
+     */
     @Schema(description = "用户名")
     private String username;
 
+    /**
+     * 密码。
+     */
     @Schema(description = "密码")
     private String password;
 }
