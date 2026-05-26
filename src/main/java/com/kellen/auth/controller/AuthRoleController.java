@@ -3,8 +3,7 @@ package com.kellen.auth.controller;
 import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.bo.AuthRoleBO;
 import com.kellen.auth.service.AuthRoleService;
-import com.kellen.utils.Json;
-import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,9 +53,9 @@ public class AuthRoleController {
      * @email 376253703@qq.com
      */
     @GetMapping
-    public Json<List<AuthRole>> list(@RequestParam String tenantId) {
+    public ApiResponse<List<AuthRole>> list(@RequestParam String tenantId) {
         // 查询指定租户的角色列表。
-        return new Json<>(ReturnCode.成功, authRoleService.list(tenantId));
+        return ApiResponse.success(authRoleService.list(tenantId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -69,9 +68,9 @@ public class AuthRoleController {
      * @email 376253703@qq.com
      */
     @PostMapping
-    public Json<String> save(@Validated(AuthRoleBO.Save.class) @RequestBody AuthRoleBO bo) {
+    public ApiResponse<String> save(@Validated(AuthRoleBO.Save.class) @RequestBody AuthRoleBO bo) {
         // 新增角色并返回角色ID。
-        return new Json<>(ReturnCode.成功, authRoleService.save(bo));
+        return ApiResponse.success(authRoleService.save(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -84,9 +83,9 @@ public class AuthRoleController {
      * @email 376253703@qq.com
      */
     @PutMapping
-    public Json<Boolean> update(@Validated(AuthRoleBO.Update.class) @RequestBody AuthRoleBO bo) {
+    public ApiResponse<Boolean> update(@Validated(AuthRoleBO.Update.class) @RequestBody AuthRoleBO bo) {
         // 修改角色并使用version触发乐观锁。
-        return new Json<>(ReturnCode.成功, authRoleService.update(bo));
+        return ApiResponse.success(authRoleService.update(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -99,8 +98,8 @@ public class AuthRoleController {
      * @email 376253703@qq.com
      */
     @PostMapping("/remove")
-    public Json<Boolean> remove(@Validated(AuthRoleBO.Remove.class) @RequestBody AuthRoleBO bo) {
+    public ApiResponse<Boolean> remove(@Validated(AuthRoleBO.Remove.class) @RequestBody AuthRoleBO bo) {
         // 逻辑删除角色。
-        return new Json<>(ReturnCode.成功, authRoleService.remove(bo));
+        return ApiResponse.success(authRoleService.remove(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

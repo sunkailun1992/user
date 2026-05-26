@@ -6,8 +6,7 @@ import com.kellen.example.entity.bo.ExampleBO;
 import com.kellen.example.entity.query.ExampleQuery;
 import com.kellen.example.entity.vo.ExampleVO;
 import com.kellen.example.service.ExampleService;
-import com.kellen.utils.Json;
-import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -53,11 +52,11 @@ public class ExampleController {
      */
     @PostMapping("/select")
     @PreAuthorize("hasAuthority('example:select')")
-    public Json<Page<ExampleVO>> select(@Validated(ExampleQuery.Select.class) @RequestBody ExampleQuery exampleQuery) {
+    public ApiResponse<Page<ExampleVO>> select(@Validated(ExampleQuery.Select.class) @RequestBody ExampleQuery exampleQuery) {
         // 创建分页对象。
         Page<ExampleEntity> page = new Page<>(exampleQuery.getCurrent(), exampleQuery.getSize());
-        // 返回统一 Json 结果。
-        return new Json<>(ReturnCode.成功, exampleService.pageEnhance(page, exampleQuery));
+        // 返回统一 ApiResponse 结果。
+        return ApiResponse.success(exampleService.pageEnhance(page, exampleQuery));
     }
 
     /**
@@ -68,9 +67,9 @@ public class ExampleController {
      */
     @PostMapping("/selectList")
     @PreAuthorize("hasAuthority('example:select-list')")
-    public Json<List<ExampleVO>> selectList(@Validated(ExampleQuery.SelectList.class) @RequestBody ExampleQuery exampleQuery) {
-        // 返回统一 Json 结果。
-        return new Json<>(ReturnCode.成功, exampleService.listEnhance(exampleQuery));
+    public ApiResponse<List<ExampleVO>> selectList(@Validated(ExampleQuery.SelectList.class) @RequestBody ExampleQuery exampleQuery) {
+        // 返回统一 ApiResponse 结果。
+        return ApiResponse.success(exampleService.listEnhance(exampleQuery));
     }
 
     /**
@@ -81,9 +80,9 @@ public class ExampleController {
      */
     @PostMapping("/selectOne")
     @PreAuthorize("hasAuthority('example:select-one')")
-    public Json<ExampleVO> selectOne(@Validated(ExampleQuery.SelectOne.class) @RequestBody ExampleQuery exampleQuery) {
-        // 返回统一 Json 结果。
-        return new Json<>(ReturnCode.成功, exampleService.getOneEnhance(exampleQuery));
+    public ApiResponse<ExampleVO> selectOne(@Validated(ExampleQuery.SelectOne.class) @RequestBody ExampleQuery exampleQuery) {
+        // 返回统一 ApiResponse 结果。
+        return ApiResponse.success(exampleService.getOneEnhance(exampleQuery));
     }
 
     /**
@@ -94,9 +93,9 @@ public class ExampleController {
      */
     @PostMapping("/count")
     @PreAuthorize("hasAuthority('example:count')")
-    public Json<Long> count(@Validated(ExampleQuery.Count.class) @RequestBody ExampleQuery exampleQuery) {
-        // 返回统一 Json 结果。
-        return new Json<>(ReturnCode.成功, exampleService.countEnhance(exampleQuery));
+    public ApiResponse<Long> count(@Validated(ExampleQuery.Count.class) @RequestBody ExampleQuery exampleQuery) {
+        // 返回统一 ApiResponse 结果。
+        return ApiResponse.success(exampleService.countEnhance(exampleQuery));
     }
 
     /**
@@ -107,9 +106,9 @@ public class ExampleController {
      */
     @PostMapping("/save")
     @PreAuthorize("hasAuthority('example:save')")
-    public Json<String> save(@Validated(ExampleBO.Save.class) @RequestBody ExampleBO exampleBO) {
-        // 返回统一 Json 结果。
-        return new Json<>(ReturnCode.成功, exampleService.saveEnhance(exampleBO));
+    public ApiResponse<String> save(@Validated(ExampleBO.Save.class) @RequestBody ExampleBO exampleBO) {
+        // 返回统一 ApiResponse 结果。
+        return ApiResponse.success(exampleService.saveEnhance(exampleBO));
     }
 
     /**
@@ -120,9 +119,9 @@ public class ExampleController {
      */
     @PutMapping("/update")
     @PreAuthorize("hasAuthority('example:update')")
-    public Json<Boolean> update(@Validated(ExampleBO.Update.class) @RequestBody ExampleBO exampleBO) {
-        // 返回统一 Json 结果。
-        return new Json<>(ReturnCode.成功, exampleService.updateEnhance(exampleBO));
+    public ApiResponse<Boolean> update(@Validated(ExampleBO.Update.class) @RequestBody ExampleBO exampleBO) {
+        // 返回统一 ApiResponse 结果。
+        return ApiResponse.success(exampleService.updateEnhance(exampleBO));
     }
 
     /**
@@ -133,8 +132,8 @@ public class ExampleController {
      */
     @DeleteMapping("/remove")
     @PreAuthorize("hasAuthority('example:remove')")
-    public Json<Boolean> remove(@Validated(ExampleBO.Remove.class) @RequestBody ExampleBO exampleBO) {
-        // 返回统一 Json 结果。
-        return new Json<>(ReturnCode.成功, exampleService.removeEnhance(exampleBO));
+    public ApiResponse<Boolean> remove(@Validated(ExampleBO.Remove.class) @RequestBody ExampleBO exampleBO) {
+        // 返回统一 ApiResponse 结果。
+        return ApiResponse.success(exampleService.removeEnhance(exampleBO));
     }
 }

@@ -64,7 +64,7 @@ XxxBindResourceBO
 - 删除 BO 只放删除所需字段，例如 `id` 和必要的业务校验字段。
 - 查询条件使用 `Query`，不要和写入 BO 混用。
 - 响应对象使用 `VO`，不要直接把包含密码等敏感字段的 Entity 返回给前端。
-- Controller 只接收请求对象、调用 Service、组装 `Json`，不写业务规则、不写 SQL、不写初始化数据。
+- Controller 只接收请求对象、调用 Service、组装 `ApiResponse`，不写业务规则、不写 SQL、不写初始化数据。
 - Controller 必须按业务资源拆分，例如租户、用户、角色、资源、授权关系分别建 Controller，不要把多个资源维护接口塞进一个 `ManageController`。
 - Service 必须按业务资源拆分，例如登录认证、基础数据、核心业务对象、资源对象、授权关系分别建 Service，不要把多个资源的逻辑塞进一个 `XxxService` 或 `XxxManageService`。
 - Service 负责业务编排、事务、鉴权上下文、租户上下文和 Mapper 调用。
@@ -227,22 +227,22 @@ int count = mapper.updateById(entity);
 Controller 返回统一使用：
 
 ```java
-com.kellen.utils.Json
+com.kellen.utils.ApiResponse
 ```
 
 成功：
 
 ```java
-return new Json<>(ReturnCode.成功, data);
+return ApiResponse.success(data);
 ```
 
 失败：
 
 ```java
-return new Json<>(ReturnCode.用户密码错误, null, "用户名或密码错误");
+return ApiResponse.fail(ReturnCode.用户密码错误, "用户名或密码错误");
 ```
 
-不要新建临时 `Map<String, Object>` 作为接口统一响应壳。具体业务对象可以是 DTO、VO 或 `Map`，但最外层必须是 `Json`。
+接口响应字段统一为 `success`、`code`、`msg`、`data`、`errorMessage`、`timestamp`。不要新建临时 `Map<String, Object>` 作为接口统一响应壳。具体业务对象可以是 DTO、VO 或 `Map`，但最外层必须是 `ApiResponse`。
 
 ## 权限规范
 
@@ -305,7 +305,7 @@ AI 每次新增模块时必须检查：
 
 - 是否跟随当前微服务已有基础包结构。
 - 是否继承 `EntityBase`。
-- 是否使用 `Json` 统一返回。
+- 是否使用 `ApiResponse` 统一返回。
 - 是否使用 `jakarta.*`。
 - 是否给业务枚举实现 `IEnum`。
 - 是否给数据库状态字段建立对应枚举，且枚举实现 `IEnum<Integer>` 或匹配的泛型类型。

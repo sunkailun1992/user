@@ -4,8 +4,7 @@ import com.kellen.auth.dto.LoginRequest;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
 import com.kellen.auth.service.AuthAuthenticationService;
-import com.kellen.utils.Json;
-import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,9 +50,9 @@ public class AuthController {
      * @email 376253703@qq.com
      */
     @PostMapping("/login")
-    public Json<AuthLoginVO> login(@RequestBody LoginRequest request) {
+    public ApiResponse<AuthLoginVO> login(@RequestBody LoginRequest request) {
         // 调用业务服务完成租户解析、密码校验、JWT签发和资源组装。
-        return new Json<>(ReturnCode.成功, authAuthenticationService.login(request));
+        return ApiResponse.success(authAuthenticationService.login(request)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -66,8 +65,8 @@ public class AuthController {
      */
     @GetMapping("/resources")
     @PreAuthorize("hasAuthority('user:auth:resources')")
-    public Json<AuthCurrentResourceVO> resources() {
+    public ApiResponse<AuthCurrentResourceVO> resources() {
         // 调用业务服务查询当前用户拥有的前端资源和后端权限码。
-        return new Json<>(ReturnCode.成功, authAuthenticationService.currentResources());
+        return ApiResponse.success(authAuthenticationService.currentResources()); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

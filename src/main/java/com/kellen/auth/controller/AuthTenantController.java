@@ -3,8 +3,7 @@ package com.kellen.auth.controller;
 import com.kellen.auth.entity.AuthTenant;
 import com.kellen.auth.entity.bo.AuthTenantBO;
 import com.kellen.auth.service.AuthTenantService;
-import com.kellen.utils.Json;
-import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,9 +51,9 @@ public class AuthTenantController {
      * @email 376253703@qq.com
      */
     @GetMapping
-    public Json<List<AuthTenant>> list() {
+    public ApiResponse<List<AuthTenant>> list() {
         // 查询全部租户主数据。
-        return new Json<>(ReturnCode.成功, authTenantService.list());
+        return ApiResponse.success(authTenantService.list()); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -67,9 +66,9 @@ public class AuthTenantController {
      * @email 376253703@qq.com
      */
     @PostMapping
-    public Json<String> save(@Validated(AuthTenantBO.Save.class) @RequestBody AuthTenantBO bo) {
+    public ApiResponse<String> save(@Validated(AuthTenantBO.Save.class) @RequestBody AuthTenantBO bo) {
         // 新增租户并返回租户ID。
-        return new Json<>(ReturnCode.成功, authTenantService.save(bo));
+        return ApiResponse.success(authTenantService.save(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -82,9 +81,9 @@ public class AuthTenantController {
      * @email 376253703@qq.com
      */
     @PutMapping
-    public Json<Boolean> update(@Validated(AuthTenantBO.Update.class) @RequestBody AuthTenantBO bo) {
+    public ApiResponse<Boolean> update(@Validated(AuthTenantBO.Update.class) @RequestBody AuthTenantBO bo) {
         // 修改租户并使用version触发乐观锁。
-        return new Json<>(ReturnCode.成功, authTenantService.update(bo));
+        return ApiResponse.success(authTenantService.update(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -97,8 +96,8 @@ public class AuthTenantController {
      * @email 376253703@qq.com
      */
     @PostMapping("/remove")
-    public Json<Boolean> remove(@Validated(AuthTenantBO.Remove.class) @RequestBody AuthTenantBO bo) {
+    public ApiResponse<Boolean> remove(@Validated(AuthTenantBO.Remove.class) @RequestBody AuthTenantBO bo) {
         // 逻辑删除租户。
-        return new Json<>(ReturnCode.成功, authTenantService.remove(bo));
+        return ApiResponse.success(authTenantService.remove(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

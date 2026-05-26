@@ -92,6 +92,33 @@ menu:resource
 
 登录返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。
 
+## 统一返回
+
+Controller 统一返回 `com.kellen.utils.ApiResponse`。
+
+成功返回推荐：
+
+```java
+return ApiResponse.success(data);
+```
+
+失败返回推荐：
+
+```java
+return ApiResponse.fail(returnCode, "稳定错误提示");
+```
+
+接口响应字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `success` | 是否成功 |
+| `code` | 统一错误码 |
+| `msg` | 错误码默认提示 |
+| `data` | 业务返回数据 |
+| `errorMessage` | 失败时的稳定错误提示 |
+| `timestamp` | 服务端响应时间 |
+
 ## DDL 和默认数据
 
 表结构和默认基础数据由 MyBatis-Plus 自动 DDL 维护。

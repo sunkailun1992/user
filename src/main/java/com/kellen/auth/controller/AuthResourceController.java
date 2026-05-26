@@ -3,8 +3,7 @@ package com.kellen.auth.controller;
 import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.bo.AuthResourceBO;
 import com.kellen.auth.service.AuthResourceService;
-import com.kellen.utils.Json;
-import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,9 +53,9 @@ public class AuthResourceController {
      * @email 376253703@qq.com
      */
     @GetMapping
-    public Json<List<AuthResource>> list(@RequestParam String tenantId) {
+    public ApiResponse<List<AuthResource>> list(@RequestParam String tenantId) {
         // 查询指定租户的权限资源列表。
-        return new Json<>(ReturnCode.成功, authResourceService.list(tenantId));
+        return ApiResponse.success(authResourceService.list(tenantId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -69,9 +68,9 @@ public class AuthResourceController {
      * @email 376253703@qq.com
      */
     @PostMapping
-    public Json<String> save(@Validated(AuthResourceBO.Save.class) @RequestBody AuthResourceBO bo) {
+    public ApiResponse<String> save(@Validated(AuthResourceBO.Save.class) @RequestBody AuthResourceBO bo) {
         // 新增权限资源并返回资源ID。
-        return new Json<>(ReturnCode.成功, authResourceService.save(bo));
+        return ApiResponse.success(authResourceService.save(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -84,9 +83,9 @@ public class AuthResourceController {
      * @email 376253703@qq.com
      */
     @PutMapping
-    public Json<Boolean> update(@Validated(AuthResourceBO.Update.class) @RequestBody AuthResourceBO bo) {
+    public ApiResponse<Boolean> update(@Validated(AuthResourceBO.Update.class) @RequestBody AuthResourceBO bo) {
         // 修改权限资源并使用version触发乐观锁。
-        return new Json<>(ReturnCode.成功, authResourceService.update(bo));
+        return ApiResponse.success(authResourceService.update(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -99,8 +98,8 @@ public class AuthResourceController {
      * @email 376253703@qq.com
      */
     @PostMapping("/remove")
-    public Json<Boolean> remove(@Validated(AuthResourceBO.Remove.class) @RequestBody AuthResourceBO bo) {
+    public ApiResponse<Boolean> remove(@Validated(AuthResourceBO.Remove.class) @RequestBody AuthResourceBO bo) {
         // 逻辑删除权限资源。
-        return new Json<>(ReturnCode.成功, authResourceService.remove(bo));
+        return ApiResponse.success(authResourceService.remove(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

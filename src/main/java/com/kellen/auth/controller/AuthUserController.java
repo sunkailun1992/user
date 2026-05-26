@@ -3,8 +3,7 @@ package com.kellen.auth.controller;
 import com.kellen.auth.entity.AuthUser;
 import com.kellen.auth.entity.bo.AuthUserBO;
 import com.kellen.auth.service.AuthUserService;
-import com.kellen.utils.Json;
-import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,9 +53,9 @@ public class AuthUserController {
      * @email 376253703@qq.com
      */
     @GetMapping
-    public Json<List<AuthUser>> list(@RequestParam String tenantId) {
+    public ApiResponse<List<AuthUser>> list(@RequestParam String tenantId) {
         // 查询指定租户的用户列表。
-        return new Json<>(ReturnCode.成功, authUserService.list(tenantId));
+        return ApiResponse.success(authUserService.list(tenantId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -69,9 +68,9 @@ public class AuthUserController {
      * @email 376253703@qq.com
      */
     @PostMapping
-    public Json<String> save(@Validated(AuthUserBO.Save.class) @RequestBody AuthUserBO bo) {
+    public ApiResponse<String> save(@Validated(AuthUserBO.Save.class) @RequestBody AuthUserBO bo) {
         // 新增用户并返回用户ID。
-        return new Json<>(ReturnCode.成功, authUserService.save(bo));
+        return ApiResponse.success(authUserService.save(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -84,9 +83,9 @@ public class AuthUserController {
      * @email 376253703@qq.com
      */
     @PutMapping
-    public Json<Boolean> update(@Validated(AuthUserBO.Update.class) @RequestBody AuthUserBO bo) {
+    public ApiResponse<Boolean> update(@Validated(AuthUserBO.Update.class) @RequestBody AuthUserBO bo) {
         // 修改用户并使用version触发乐观锁。
-        return new Json<>(ReturnCode.成功, authUserService.update(bo));
+        return ApiResponse.success(authUserService.update(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -99,8 +98,8 @@ public class AuthUserController {
      * @email 376253703@qq.com
      */
     @PostMapping("/remove")
-    public Json<Boolean> remove(@Validated(AuthUserBO.Remove.class) @RequestBody AuthUserBO bo) {
+    public ApiResponse<Boolean> remove(@Validated(AuthUserBO.Remove.class) @RequestBody AuthUserBO bo) {
         // 逻辑删除用户。
-        return new Json<>(ReturnCode.成功, authUserService.remove(bo));
+        return ApiResponse.success(authUserService.remove(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

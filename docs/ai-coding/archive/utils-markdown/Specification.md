@@ -58,8 +58,8 @@
 
 ## 接口规范
 
-- Controller 统一返回 `Json`。
-- 成功返回使用 `new Json<>(ReturnCode.成功, data)`。
+- Controller 统一返回 `ApiResponse`。
+- 成功返回使用 `ApiResponse.success(data)`。
 - 需要鉴权的接口必须加 `@PreAuthorize`。
 - 权限码使用稳定格式，例如 `module:resource:action`。
 - 请求参数要有明确校验，错误时返回稳定错误码。
@@ -85,7 +85,7 @@
 - 是否符合当前微服务包名和模块分层。
 - 是否使用 Java 17、Spring Boot 3、`jakarta.*`。
 - 是否继承或复用项目公共能力，而不是重复造工具。
-- 是否使用 `Json`、`ReturnCode`、`IEnum`、`EntityBase` 等项目约定。
+- 是否使用 `ApiResponse`、`ReturnCode`、`IEnum`、`EntityBase` 等项目约定。
 - 是否补齐类、字段、方法和关键行注释。
 - 是否避免新增运行时无关规范资源。
 - 是否运行 `./gradlew clean compileJava -x test` 验证。

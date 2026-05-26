@@ -3,8 +3,7 @@ package com.kellen.auth.controller;
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.service.AuthGrantService;
-import com.kellen.utils.Json;
-import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,9 +48,9 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @PostMapping("/user-roles")
-    public Json<Boolean> bindUserRole(@Validated @RequestBody AuthUserRoleBO bo) {
+    public ApiResponse<Boolean> bindUserRole(@Validated @RequestBody AuthUserRoleBO bo) {
         // 绑定用户和角色关系。
-        return new Json<>(ReturnCode.成功, authGrantService.bindUserRole(bo));
+        return ApiResponse.success(authGrantService.bindUserRole(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**
@@ -64,8 +63,8 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @PostMapping("/role-resources")
-    public Json<Boolean> bindRoleResource(@Validated @RequestBody AuthRoleResourceBO bo) {
+    public ApiResponse<Boolean> bindRoleResource(@Validated @RequestBody AuthRoleResourceBO bo) {
         // 绑定角色和权限资源关系。
-        return new Json<>(ReturnCode.成功, authGrantService.bindRoleResource(bo));
+        return ApiResponse.success(authGrantService.bindRoleResource(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

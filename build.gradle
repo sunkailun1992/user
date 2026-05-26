@@ -77,11 +77,10 @@ dependencyManagement {
  * 引入的jar
  */
 dependencies {
-    implementation 'com:utils:1.0.8'
+    implementation 'com:utils:1.0.9'
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'
-    implementation 'com.aliyun.schedulerx:schedulerx2-spring-boot-starter:1.2.4.3'
     testImplementation 'org.codehaus.groovy:groovy:3.0.9'
     testImplementation 'org.codehaus.groovy:groovy-all:3.0.9'
     testImplementation 'org.spockframework:spock-core:2.0-groovy-3.0'
