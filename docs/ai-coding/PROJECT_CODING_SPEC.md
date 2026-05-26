@@ -2,7 +2,9 @@
 
 ## 目标
 
-本规范用于替代历史 FreeMarker 代码生成器模板。AI 编写代码时，应根据本文件和 `examples/` 下的示例直接创建或修改 Java 文件。
+本规范是 `user` 项目的主编码规则。AI 编写代码时，应根据本文件和 `examples/` 下的示例直接创建或修改 Java 文件。
+
+公共团队规则、错误码、数据库变更和乐观锁规则见 `UTILS_PUBLIC_SPEC.md`。归档原文见 `archive/utils-markdown/`，默认不需要阅读。
 
 ## 技术基线
 
@@ -135,6 +137,8 @@ Service 负责业务编排，Controller 不直接堆业务逻辑。
 GeneralConvertor.convertor(source, Target.class)
 ```
 
+先查询后修改的业务必须带上查询得到的 `version`，由框架乐观锁能力校验并发写入，不能绕过版本号直接更新。
+
 ## 注释规范
 
 新代码和本次修改代码必须保持高注释密度：
@@ -247,8 +251,11 @@ AI 每次新增模块时必须检查：
 - 是否使用 `Json` 统一返回。
 - 是否使用 `jakarta.*`。
 - 是否给业务枚举实现 `IEnum`。
+- 是否给数据库状态字段建立对应枚举，且枚举实现 `IEnum<Integer>` 或匹配的泛型类型。
 - 是否避免把业务枚举塞进 `EntityBase`。
 - 是否避免重复拼 `tenant_id` 和 `is_delete`。
+- 是否在先查后改的更新逻辑中携带 `version`。
+- 是否按 `UTILS_PUBLIC_SPEC.md` 选择或扩展错误码。
 - 是否给受保护接口加 `@PreAuthorize`。
 - 是否给新增或修改代码补齐类注释、字段注释、方法 JavaDoc 和关键行注释。
 - 是否运行 `./gradlew clean compileJava -x test`。

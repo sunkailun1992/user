@@ -1,15 +1,14 @@
-# AI 编程规范入口
+# AI 编码规范入口
 
-本目录是 AI 编码规范入口。项目后续以 AI 识别规范、阅读示例、直接编写 Java 代码为主，不再把规范文件放在运行时 `src/main/resources/templates` 目录。
+本目录是 AI 编码规范入口。AI 新增或修改代码时，先读主规范，再按项目现有代码实现；历史 FreeMarker 和迁移资料只作为归档参考。
 
-## 阅读顺序
+## 快速阅读
 
-1. `README.md`：当前目录用途和文件索引。
-2. `AI_CODING_GUIDE.md`：AI 执行编码任务时必须遵守的步骤。
-3. `PROJECT_CODING_SPEC.md`：项目分层、字段、枚举、权限、多租户、统一返回等规范。
-4. `examples/`：真实 Java 风格示例，AI 写新模块时优先参考。
-5. `legacy-ftl/`：历史 FreeMarker 模板，仅作迁移参考，不再作为代码生成入口。
-6. `utils-markdown/`：从 `utils` 项目整合过来的公共规范、公告、错误码和新人培训资料。
+1. 先读 `AI_CODING_GUIDE.md`，确认执行步骤和禁止事项。
+2. 再读 `PROJECT_CODING_SPEC.md`，确认项目分层、返回值、权限、多租户、注释和检查清单。
+3. 涉及错误码、乐观锁、数据库变更、分支流程时，读 `UTILS_PUBLIC_SPEC.md`。
+4. 新增业务模块时参考 `examples/`，不要复制 `legacy-ftl/` 生成模板。
+5. 需要追溯原始迁移资料时再看 `archive/`。
 
 ## 目录结构
 
@@ -18,6 +17,7 @@ docs/ai-coding/
   README.md
   AI_CODING_GUIDE.md
   PROJECT_CODING_SPEC.md
+  UTILS_PUBLIC_SPEC.md
   examples/
     ExampleBO.java
     ExampleEntity.java
@@ -33,14 +33,14 @@ docs/ai-coding/
   legacy-ftl/
     *.ftl
     config/
-  utils-markdown/
-    Announcement.md
-    ErrorCode.md
-    NewPeopleTraining.md
-    Specification.md
+  archive/
+    utils-markdown/
+      Announcement.md
+      ErrorCode.md
+      Specification.md
 ```
 
-## 当前关键原则
+## 必读结论
 
 - 直接写 Java 代码，不再新增或依赖 FreeMarker 模板。
 - 新代码使用 `com.kellen` 包名。
@@ -51,4 +51,4 @@ docs/ai-coding/
 - 权限接口使用 `@PreAuthorize("hasAuthority('权限码')")`。
 - `examples/` 示例按历史 `legacy-ftl` 分层编写，类、字段、方法和关键逻辑都保留注释，AI 写代码时优先模仿该风格。
 - AI 新增或修改 Java 代码时，新增类、字段、方法、方法参数、关键分支、关键赋值、关键返回值都要写清楚注释；复杂或框架衔接逻辑按行补充行尾注释。
-- `utils-markdown/` 是公共规范快照，AI 处理公共工具类、错误码、团队流程或历史风格时需要一并参考。
+- `UTILS_PUBLIC_SPEC.md` 是公共规范的 AI 阅读入口；`archive/` 只保留迁移资料，不作为默认阅读内容。
