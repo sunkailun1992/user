@@ -137,7 +137,7 @@ Service 负责业务编排，Controller 不直接堆业务逻辑。
 GeneralConvertor.convertor(source, Target.class)
 ```
 
-先查询后修改的业务必须带上查询得到的 `version`，由框架乐观锁能力校验并发写入，不能绕过版本号直接更新。
+先查询后修改的业务必须带上数据库记录的 `version` 字段，由 MyBatis-Plus `@Version` 和 `OptimisticLockerInnerInterceptor` 校验并发写入，不能绕过版本号直接更新。
 
 ## 注释规范
 
@@ -148,7 +148,7 @@ GeneralConvertor.convertor(source, Target.class)
 - 方法必须有 JavaDoc，格式保持历史模板风格，包含用途、`@param`、`@return`、`@author`、`@DateTime`、`@email`。
 - 方法参数必须说明业务含义；不能只写“参数”或重复变量名。
 - 新增或修改的关键代码行必须有行尾注释，说明业务目的或框架衔接原因。
-- 认证授权、租户、权限、Redis、动态数据源、版本校验、SQL 参数校验、事务、异常处理、返回值组装等逻辑必须逐行注释。
+- 认证授权、租户、权限、Redis、动态数据源、数据库乐观锁、SQL 参数校验、事务、异常处理、返回值组装等逻辑必须逐行注释。
 - 注释要解释“为什么”或“业务含义”，不要只翻译代码。
 - 局部改造旧代码时，只要求本次改动行和相关方法补齐注释，不要无关重写整类历史代码。
 
@@ -254,7 +254,7 @@ AI 每次新增模块时必须检查：
 - 是否给数据库状态字段建立对应枚举，且枚举实现 `IEnum<Integer>` 或匹配的泛型类型。
 - 是否避免把业务枚举塞进 `EntityBase`。
 - 是否避免重复拼 `tenant_id` 和 `is_delete`。
-- 是否在先查后改的更新逻辑中携带 `version`。
+- 是否在先查后改的更新逻辑中携带数据库记录的 `version`，并依赖 MyBatis-Plus 乐观锁处理并发覆盖。
 - 是否按 `UTILS_PUBLIC_SPEC.md` 选择或扩展错误码。
 - 是否给受保护接口加 `@PreAuthorize`。
 - 是否给新增或修改代码补齐类注释、字段注释、方法 JavaDoc 和关键行注释。
