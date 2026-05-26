@@ -135,6 +135,19 @@ Service 负责业务编排，Controller 不直接堆业务逻辑。
 GeneralConvertor.convertor(source, Target.class)
 ```
 
+## 注释规范
+
+新代码和本次修改代码必须保持高注释密度：
+
+- 类必须有 JavaDoc，说明业务对象或组件职责。
+- 字段必须有业务注释；实体字段优先使用 `@Schema(description = "...")`，必要时补充 JavaDoc。
+- 方法必须有 JavaDoc，格式保持历史模板风格，包含用途、`@param`、`@return`、`@author`、`@DateTime`、`@email`。
+- 方法参数必须说明业务含义；不能只写“参数”或重复变量名。
+- 新增或修改的关键代码行必须有行尾注释，说明业务目的或框架衔接原因。
+- 认证授权、租户、权限、Redis、动态数据源、版本校验、SQL 参数校验、事务、异常处理、返回值组装等逻辑必须逐行注释。
+- 注释要解释“为什么”或“业务含义”，不要只翻译代码。
+- 局部改造旧代码时，只要求本次改动行和相关方法补齐注释，不要无关重写整类历史代码。
+
 ## Controller 规范
 
 Controller 返回统一使用：
@@ -237,5 +250,5 @@ AI 每次新增模块时必须检查：
 - 是否避免把业务枚举塞进 `EntityBase`。
 - 是否避免重复拼 `tenant_id` 和 `is_delete`。
 - 是否给受保护接口加 `@PreAuthorize`。
+- 是否给新增或修改代码补齐类注释、字段注释、方法 JavaDoc 和关键行注释。
 - 是否运行 `./gradlew clean compileJava -x test`。
-
