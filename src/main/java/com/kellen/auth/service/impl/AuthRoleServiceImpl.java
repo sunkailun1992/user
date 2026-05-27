@@ -158,10 +158,19 @@ public class AuthRoleServiceImpl implements AuthRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean update(AuthRoleBO bo) {
-        // 将 BO 转换为实体，保留 version 触发乐观锁。
-        AuthRole role = GeneralConvertor.convertor(bo, AuthRole.class);
-        // 使用updateById执行乐观锁更新。
-        return authRoleMapper.updateById(role) > 0;
+        try {
+            // 设置目标租户上下文，避免更新依赖请求头隐式租户。
+            TenantContextHolder.setTenantId(bo.getTenantId());
+            // 将 BO 转换为实体，保留 version 触发乐观锁。
+            AuthRole role = GeneralConvertor.convertor(bo, AuthRole.class);
+            // 租户条件由租户插件处理，更新实体不主动写 tenant_id。
+            role.setTenantId(null);
+            // 使用updateById执行乐观锁更新。
+            return authRoleMapper.updateById(role) > 0;
+        } finally {
+            // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
     }
 
     /**
@@ -173,8 +182,15 @@ public class AuthRoleServiceImpl implements AuthRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean remove(AuthRoleBO bo) {
-        // 按ID逻辑删除角色。
-        return authRoleMapper.deleteById(bo.getId()) > 0;
+        try {
+            // 设置目标租户上下文，避免删除依赖请求头隐式租户。
+            TenantContextHolder.setTenantId(bo.getTenantId());
+            // 按ID逻辑删除角色。
+            return authRoleMapper.deleteById(bo.getId()) > 0;
+        } finally {
+            // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
     }
 
     /**
@@ -189,6 +205,11 @@ public class AuthRoleServiceImpl implements AuthRoleService {
     private QueryWrapper<AuthRole> buildQueryWrapper(AuthRoleQuery query) {
         // 将查询参数转换为实体，用于 QueryWrapper 自动拼接同名字段等值条件。
         AuthRole entity = GeneralConvertor.convertor(query, AuthRole.class);
+        // 租户条件由 TenantContextHolder 和 MyBatis-Plus 租户插件处理，避免 QueryWrapper 重复拼 tenant_id。
+        if (entity != null) {
+            // 清理转换进实体的租户ID。
+            entity.setTenantId(null);
+        }
         // 创建查询包装器。
         QueryWrapper<AuthRole> queryWrapper = entity == null ? new QueryWrapper<>() : new QueryWrapper<>(entity);
         // 拼接自动查询条件。

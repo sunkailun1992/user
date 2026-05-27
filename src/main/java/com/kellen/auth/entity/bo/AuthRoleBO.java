@@ -37,7 +37,7 @@ public class AuthRoleBO implements Serializable {
      * 租户ID。
      */
     @Schema(description = "租户ID")
-    @NotBlank(groups = {Save.class}, message = "tenantId不能为空")
+    @NotBlank(groups = {Save.class, Update.class, Remove.class}, message = "tenantId不能为空")
     private String tenantId;
 
     /**

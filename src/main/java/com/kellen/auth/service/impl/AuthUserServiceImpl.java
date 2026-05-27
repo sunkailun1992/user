@@ -164,18 +164,27 @@ public class AuthUserServiceImpl implements AuthUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean update(AuthUserBO bo) {
-        // 将 BO 转换为实体，保留 version 触发乐观锁。
-        AuthUser user = GeneralConvertor.convertor(bo, AuthUser.class);
-        // 修改时空密码不覆盖原密码。
-        if (StringUtils.isBlank(bo.getPassword())) {
-            // 清理空密码字段。
-            user.setPassword(null);
-        } else {
-            // 加密并设置新密码。
-            user.setPassword(passwordEncoder.encode(bo.getPassword()));
+        try {
+            // 设置目标租户上下文，避免更新依赖请求头隐式租户。
+            TenantContextHolder.setTenantId(bo.getTenantId());
+            // 将 BO 转换为实体，保留 version 触发乐观锁。
+            AuthUser user = GeneralConvertor.convertor(bo, AuthUser.class);
+            // 租户条件由租户插件处理，更新实体不主动写 tenant_id。
+            user.setTenantId(null);
+            // 修改时空密码不覆盖原密码。
+            if (StringUtils.isBlank(bo.getPassword())) {
+                // 清理空密码字段。
+                user.setPassword(null);
+            } else {
+                // 加密并设置新密码。
+                user.setPassword(passwordEncoder.encode(bo.getPassword()));
+            }
+            // 使用updateById执行乐观锁更新。
+            return authUserMapper.updateById(user) > 0;
+        } finally {
+            // 清理租户上下文。
+            TenantContextHolder.clear();
         }
-        // 使用updateById执行乐观锁更新。
-        return authUserMapper.updateById(user) > 0;
     }
 
     /**
@@ -187,8 +196,15 @@ public class AuthUserServiceImpl implements AuthUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean remove(AuthUserBO bo) {
-        // 按ID逻辑删除用户。
-        return authUserMapper.deleteById(bo.getId()) > 0;
+        try {
+            // 设置目标租户上下文，避免删除依赖请求头隐式租户。
+            TenantContextHolder.setTenantId(bo.getTenantId());
+            // 按ID逻辑删除用户。
+            return authUserMapper.deleteById(bo.getId()) > 0;
+        } finally {
+            // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
     }
 
     /**
@@ -203,6 +219,11 @@ public class AuthUserServiceImpl implements AuthUserService {
     private QueryWrapper<AuthUser> buildQueryWrapper(AuthUserQuery query) {
         // 将查询参数转换为实体，用于 QueryWrapper 自动拼接同名字段等值条件。
         AuthUser entity = GeneralConvertor.convertor(query, AuthUser.class);
+        // 租户条件由 TenantContextHolder 和 MyBatis-Plus 租户插件处理，避免 QueryWrapper 重复拼 tenant_id。
+        if (entity != null) {
+            // 清理转换进实体的租户ID。
+            entity.setTenantId(null);
+        }
         // 创建查询包装器。
         QueryWrapper<AuthUser> queryWrapper = entity == null ? new QueryWrapper<>() : new QueryWrapper<>(entity);
         // 拼接自动查询条件。

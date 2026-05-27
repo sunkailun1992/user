@@ -60,8 +60,8 @@
 | `GET` | 当前资源地址 | 列表查询，使用 `*Query` 承接查询条件 |
 | `POST` | 当前资源地址 `/page` | 分页查询，使用 `*Query.current` 和 `*Query.size` |
 | `POST` | 当前资源地址 | 新增，使用 `*BO` |
-| `PUT` | 当前资源地址 | 修改，使用 `*BO.version` 触发 MyBatis-Plus 乐观锁 |
-| `POST` | 当前资源地址 `/remove` | 逻辑删除，使用 `*BO.id` |
+| `PUT` | 当前资源地址 | 修改，租户内资源使用 `*BO.tenantId` 设置租户上下文，并使用 `*BO.version` 触发 MyBatis-Plus 乐观锁 |
+| `POST` | 当前资源地址 `/remove` | 逻辑删除，租户内资源使用 `*BO.tenantId` 设置租户上下文，并使用 `*BO.id` 定位记录 |
 
 管理接口统一要求：
 
