@@ -3,7 +3,7 @@ package com.kellen.auth.service.results;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthUser;
 import com.kellen.auth.entity.vo.AuthUserVO;
-import com.kellen.utils.GeneralConvertor;
+import com.kellen.utils.convert.GeneralConvertor;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;

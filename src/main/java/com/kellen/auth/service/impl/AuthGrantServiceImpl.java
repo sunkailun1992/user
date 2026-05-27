@@ -13,7 +13,7 @@ import com.kellen.auth.mapper.AuthRoleResourceMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.auth.service.results.AuthResourceServiceResults;
-import com.kellen.utils.TenantContextHolder;
+import com.kellen.utils.context.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -3,7 +3,7 @@ package com.kellen.auth.controller;
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.service.AuthGrantService;
-import com.kellen.utils.ApiResponse;
+import com.kellen.utils.response.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;

@@ -2,7 +2,7 @@ package com.kellen.auth.entity;
 
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.enums.AuthTypeEnum;
-import com.kellen.bean.EntityBase;
+import com.kellen.entity.EntityBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;

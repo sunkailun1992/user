@@ -4,7 +4,7 @@ import com.kellen.auth.dto.LoginRequest;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
 import com.kellen.auth.service.AuthAuthenticationService;
-import com.kellen.utils.ApiResponse;
+import com.kellen.utils.response.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;

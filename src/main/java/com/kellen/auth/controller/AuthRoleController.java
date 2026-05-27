@@ -6,7 +6,7 @@ import com.kellen.auth.entity.bo.AuthRoleBO;
 import com.kellen.auth.entity.query.AuthRoleQuery;
 import com.kellen.auth.entity.vo.AuthRoleVO;
 import com.kellen.auth.service.AuthRoleService;
-import com.kellen.utils.ApiResponse;
+import com.kellen.utils.response.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;

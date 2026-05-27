@@ -5,9 +5,8 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.kellen.utils.DataSourceUtil;
-import com.kellen.utils.DynamicSourceTtl;
-import com.kellen.utils.constants.UniversalConstant;
+import com.kellen.utils.datasource.DataSourceUtil;
+import com.kellen.utils.context.DynamicSourceTtl;
 import jodd.util.StringUtil;
 import org.slf4j.MDC;
 import org.springframework.amqp.AmqpException;
@@ -41,6 +40,11 @@ import java.util.Objects;
  */
 @Configuration
 public class RabbitConfig {
+
+    /**
+     * RabbitMQ 虚拟主机配置项名称。
+     */
+    private static final String RABBITMQ_VIRTUAL_HOST = "rabbitmq.virtualHost";
 
     /**
      * rabbitmq
@@ -89,8 +93,8 @@ public class RabbitConfig {
         CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitmqHost, rabbitmqPort);
         connectionFactory.setUsername(rabbitmqUsername);
         connectionFactory.setPassword(rabbitmqPassword);
-        if (StringUtil.isNotBlank(applicationContext.getEnvironment().getProperty(UniversalConstant.RABBITMQ_VIRTUAL_HOST))) {
-            connectionFactory.setVirtualHost(applicationContext.getEnvironment().getProperty(UniversalConstant.RABBITMQ_VIRTUAL_HOST));
+        if (StringUtil.isNotBlank(applicationContext.getEnvironment().getProperty(RABBITMQ_VIRTUAL_HOST))) {
+            connectionFactory.setVirtualHost(applicationContext.getEnvironment().getProperty(RABBITMQ_VIRTUAL_HOST));
         }
         return connectionFactory;
     }

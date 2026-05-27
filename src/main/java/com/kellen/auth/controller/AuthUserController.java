@@ -6,7 +6,7 @@ import com.kellen.auth.entity.bo.AuthUserBO;
 import com.kellen.auth.entity.query.AuthUserQuery;
 import com.kellen.auth.entity.vo.AuthUserVO;
 import com.kellen.auth.service.AuthUserService;
-import com.kellen.utils.ApiResponse;
+import com.kellen.utils.response.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
