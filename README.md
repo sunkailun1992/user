@@ -70,6 +70,7 @@ app:
 
 | Controller | 地址 |
 | --- | --- |
+| `AuthCodeController` | `/auth/manage/codes` |
 | `AuthTenantController` | `/auth/manage/tenants` |
 | `AuthUserController` | `/auth/manage/users` |
 | `AuthRoleController` | `/auth/manage/roles` |
@@ -92,6 +93,21 @@ app:
 @PreAuthorize("hasAuthority('user:auth:manage')")
 ```
 
+编码生成接口：
+
+| 方法 | 地址 | 说明 |
+| --- | --- | --- |
+| `GET` | `/auth/manage/codes/generate` | 按 `target`、`resourceCategory`、`name` 生成租户、角色或权限资源编码 |
+
+编码生成规则统一在后端 `AuthCodeGenerateService` 维护，前端只调用接口，不自行拼接随机编码。当前目标值：
+
+| target | 说明 | 编码形态 |
+| --- | --- | --- |
+| `TENANT` | 租户编码 | `tenant_<name>_<yyyyMMddHHmmss>_<随机4位>` |
+| `ROLE` | 角色编码 | `role_<name>_<yyyyMMddHHmmss>_<随机4位>` |
+| `RESOURCE` + `FRONTEND` | 前端资源编码 | `menu:<name>:<yyyyMMddHHmmss>_<随机4位>` |
+| `RESOURCE` + `BACKEND` | 后端资源编码 | `api:<name>:<yyyyMMddHHmmss>_<随机4位>` |
+
 当前用户资源接口要求：
 
 ```java
@@ -105,6 +121,8 @@ app:
 ```text
 user:auth:resources
 user:auth:manage
+user:auth:code-generate
+user:auth:resource-tree
 ```
 
 当前服务内置前端资源码：
@@ -114,6 +132,8 @@ menu:tenant
 menu:user
 menu:role
 menu:resource
+menu:role:bind-resource
+menu:resource:tree
 ```
 
 资源分类：
