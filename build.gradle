@@ -92,13 +92,22 @@ dependencyManagement {
  * 引入的jar
  */
 dependencies {
+    // utils：引入统一认证上下文、多租户、公共异常、统一响应、MyBatis-Plus 配置和通用工具能力。
     implementation 'com:utils:1.1.0'
+    // Spring Cloud Bootstrap：支持 bootstrap.yml 在应用主配置前加载 Nacos 等外部配置。
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+    // Nacos Discovery：支持服务注册与服务发现。
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
+    // Nacos Config：支持从 Nacos 配置中心读取应用配置。
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'
+    // Groovy：支持 src/test/groovy 下的 Spock 测试源码编译。
     testImplementation 'org.codehaus.groovy:groovy:3.0.9'
-    testImplementation 'org.codehaus.groovy:groovy-all:3.0.9'
+    // Spock Core：提供 Groovy 风格单元测试框架。
     testImplementation 'org.spockframework:spock-core:2.0-groovy-3.0'
+    // Spock Spring：提供 Spock 与 Spring TestContext 的集成能力。
     testImplementation 'org.spockframework:spock-spring:2.0-groovy-3.0'
+    // JUnit 4：兼容现有 src/test/java 中的 @RunWith 和 org.junit.Test 测试类。
+    testImplementation 'junit:junit:4.13.2'
+    // Spring Boot Test：提供 JUnit、AssertJ、Mockito、SpringBootTest 等测试能力。
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
