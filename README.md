@@ -53,6 +53,16 @@
 | `AuthResourceController` | `/auth/manage/resources` |
 | `AuthGrantController` | `/auth/manage/user-roles`、`/auth/manage/role-resources` |
 
+租户、用户、角色、权限资源维护接口均提供：
+
+| 方法 | 地址 | 说明 |
+| --- | --- | --- |
+| `GET` | 当前资源地址 | 列表查询，使用 `*Query` 承接查询条件 |
+| `POST` | 当前资源地址 `/page` | 分页查询，使用 `*Query.current` 和 `*Query.size` |
+| `POST` | 当前资源地址 | 新增，使用 `*BO` |
+| `PUT` | 当前资源地址 | 修改，使用 `*BO.version` 触发 MyBatis-Plus 乐观锁 |
+| `POST` | 当前资源地址 `/remove` | 逻辑删除，使用 `*BO.id` |
+
 管理接口统一要求：
 
 ```java
@@ -91,6 +101,30 @@ menu:resource
 | `BACKEND` | 后端接口权限 |
 
 登录返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。
+
+## 代码拆分约定
+
+真实业务代码需要按查询、写入、返回拆分：
+
+| 类型 | 位置 | 职责 |
+| --- | --- | --- |
+| `*Query` | `entity.query` | 承接列表/分页查询条件 |
+| `*BO` | `entity.bo` | 承接新增、修改、删除写入参数 |
+| `*VO` | `entity.vo` | 对外返回，不直接返回 Entity |
+| `*ServiceQuery` | `service.query` | 拼接公共查询条件、排序、指定字段 |
+| `*ServiceResults` | `service.results` | 负责 Entity 转 VO、分页转换、枚举说明补充 |
+| `*ServiceImpl` | `service.impl` | 负责编排业务流程、事务、人工查询条件 |
+
+查询链路统一为：
+
+```java
+Entity entity = GeneralConvertor.convertor(query, Entity.class);
+QueryWrapper<Entity> queryWrapper = new QueryWrapper<>(entity);
+serviceQuery.query(query, queryWrapper);
+queryArtificial(query, queryWrapper);
+Page<Entity> pageDO = mapper.selectPage(page, queryWrapper);
+Page<VO> pageVO = serviceResults.toPageVO(pageDO);
+```
 
 ## 统一返回
 

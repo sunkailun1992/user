@@ -1,7 +1,10 @@
 package com.kellen.auth.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.bo.AuthRoleBO;
+import com.kellen.auth.entity.query.AuthRoleQuery;
+import com.kellen.auth.entity.vo.AuthRoleVO;
 
 import java.util.List;
 
@@ -17,10 +20,19 @@ public interface AuthRoleService {
     /**
      * 查询角色列表。
      *
-     * @param tenantId 租户ID
+     * @param page  分页对象
+     * @param query 角色查询参数
+     * @return 角色分页
+     */
+    Page<AuthRoleVO> page(Page<AuthRole> page, AuthRoleQuery query);
+
+    /**
+     * 查询角色列表。
+     *
+     * @param query 角色查询参数
      * @return 角色列表
      */
-    List<AuthRole> list(String tenantId);
+    List<AuthRoleVO> list(AuthRoleQuery query);
 
     /**
      * 新增角色。

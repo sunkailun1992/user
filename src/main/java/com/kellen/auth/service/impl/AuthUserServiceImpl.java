@@ -1,11 +1,18 @@
 package com.kellen.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthUser;
 import com.kellen.auth.entity.bo.AuthUserBO;
 import com.kellen.auth.entity.enums.AuthStateEnum;
+import com.kellen.auth.entity.query.AuthUserQuery;
+import com.kellen.auth.entity.vo.AuthUserVO;
 import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.service.AuthUserService;
+import com.kellen.auth.service.query.AuthUserServiceQuery;
+import com.kellen.auth.service.results.AuthUserServiceResults;
+import com.kellen.utils.GeneralConvertor;
 import com.kellen.utils.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -30,6 +37,16 @@ public class AuthUserServiceImpl implements AuthUserService {
     private final AuthUserMapper authUserMapper;
 
     /**
+     * 用户查询增强。
+     */
+    private final AuthUserServiceQuery authUserServiceQuery;
+
+    /**
+     * 用户结果增强。
+     */
+    private final AuthUserServiceResults authUserServiceResults;
+
+    /**
      * 密码编码器。
      */
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -37,26 +54,66 @@ public class AuthUserServiceImpl implements AuthUserService {
     /**
      * 构造用户业务服务。
      *
-     * @param authUserMapper 用户Mapper
+     * @param authUserMapper         用户Mapper
+     * @param authUserServiceQuery   用户查询增强
+     * @param authUserServiceResults 用户结果增强
      */
-    public AuthUserServiceImpl(AuthUserMapper authUserMapper) {
+    public AuthUserServiceImpl(AuthUserMapper authUserMapper,
+                               AuthUserServiceQuery authUserServiceQuery,
+                               AuthUserServiceResults authUserServiceResults) {
         // 保存用户Mapper。
         this.authUserMapper = authUserMapper;
+        // 保存用户查询增强。
+        this.authUserServiceQuery = authUserServiceQuery;
+        // 保存用户结果增强。
+        this.authUserServiceResults = authUserServiceResults;
+    }
+
+    /**
+     * 分页查询用户。
+     *
+     * @param page  分页对象
+     * @param query 用户查询参数
+     * @return 用户分页
+     */
+    @Override
+    public Page<AuthUserVO> page(Page<AuthUser> page, AuthUserQuery query) {
+        try {
+            // 设置目标租户上下文。
+            TenantContextHolder.setTenantId(query.getTenantId());
+            // 构建完整查询包装器。
+            QueryWrapper<AuthUser> queryWrapper = buildQueryWrapper(query);
+            // 执行分页查询。
+            Page<AuthUser> pageDO = authUserMapper.selectPage(page, queryWrapper);
+            // 转换为响应分页。
+            Page<AuthUserVO> pageVO = authUserServiceResults.toPageVO(pageDO);
+            // 根据查询参数决定是否执行结果增强。
+            return needAssignment(query) ? authUserServiceResults.assignment(pageVO) : pageVO;
+        } finally {
+            // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
     }
 
     /**
      * 查询用户列表。
      *
-     * @param tenantId 租户ID
+     * @param query 用户查询参数
      * @return 用户列表
      */
     @Override
-    public List<AuthUser> list(String tenantId) {
+    public List<AuthUserVO> list(AuthUserQuery query) {
         try {
             // 设置目标租户上下文。
-            TenantContextHolder.setTenantId(tenantId);
-            // 查询当前租户用户列表。
-            return authUserMapper.selectList(new LambdaQueryWrapper<AuthUser>().orderByAsc(AuthUser::getUsername));
+            TenantContextHolder.setTenantId(query.getTenantId());
+            // 构建完整查询包装器。
+            QueryWrapper<AuthUser> queryWrapper = buildQueryWrapper(query);
+            // 查询用户实体列表。
+            List<AuthUser> records = authUserMapper.selectList(queryWrapper);
+            // 转换为响应列表。
+            List<AuthUserVO> voRecords = authUserServiceResults.toListVO(records);
+            // 根据查询参数决定是否执行结果增强。
+            return needAssignment(query) ? authUserServiceResults.assignment(voRecords) : voRecords;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();
@@ -82,17 +139,11 @@ public class AuthUserServiceImpl implements AuthUserService {
                 // 返回已存在用户ID。
                 return exists.getId();
             }
-            // 创建用户实体。
-            AuthUser user = new AuthUser();
-            // 设置用户ID，初始化场景可以传入固定ID。
-            user.setId(bo.getId());
-            // 设置用户名。
-            user.setUsername(bo.getUsername());
+            // 将 BO 转换为实体。
+            AuthUser user = GeneralConvertor.convertor(bo, AuthUser.class);
             // 加密密码。
             user.setPassword(passwordEncoder.encode(bo.getPassword()));
-            // 设置昵称。
-            user.setNickname(bo.getNickname());
-            // 设置状态。
+            // 设置默认启用状态。
             user.setState(bo.getState() == null ? AuthStateEnum.启用 : bo.getState());
             // 插入用户。
             authUserMapper.insert(user);
@@ -113,20 +164,13 @@ public class AuthUserServiceImpl implements AuthUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean update(AuthUserBO bo) {
-        // 创建用户更新实体。
-        AuthUser user = new AuthUser();
-        // 设置用户ID。
-        user.setId(bo.getId());
-        // 设置旧版本号，触发MyBatis-Plus乐观锁。
-        user.setVersion(bo.getVersion());
-        // 设置用户名。
-        user.setUsername(bo.getUsername());
-        // 设置昵称。
-        user.setNickname(bo.getNickname());
-        // 设置状态。
-        user.setState(bo.getState());
-        // 判断是否需要更新密码。
-        if (StringUtils.isNotBlank(bo.getPassword())) {
+        // 将 BO 转换为实体，保留 version 触发乐观锁。
+        AuthUser user = GeneralConvertor.convertor(bo, AuthUser.class);
+        // 修改时空密码不覆盖原密码。
+        if (StringUtils.isBlank(bo.getPassword())) {
+            // 清理空密码字段。
+            user.setPassword(null);
+        } else {
             // 加密并设置新密码。
             user.setPassword(passwordEncoder.encode(bo.getPassword()));
         }
@@ -145,5 +189,62 @@ public class AuthUserServiceImpl implements AuthUserService {
     public Boolean remove(AuthUserBO bo) {
         // 按ID逻辑删除用户。
         return authUserMapper.deleteById(bo.getId()) > 0;
+    }
+
+    /**
+     * 构建用户查询包装器。
+     *
+     * @param query 用户查询参数
+     * @return 查询包装器
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private QueryWrapper<AuthUser> buildQueryWrapper(AuthUserQuery query) {
+        // 将查询参数转换为实体，用于 QueryWrapper 自动拼接同名字段等值条件。
+        AuthUser entity = GeneralConvertor.convertor(query, AuthUser.class);
+        // 创建查询包装器。
+        QueryWrapper<AuthUser> queryWrapper = entity == null ? new QueryWrapper<>() : new QueryWrapper<>(entity);
+        // 拼接自动查询条件。
+        authUserServiceQuery.query(query, queryWrapper);
+        // 拼接人工查询条件。
+        queryArtificial(query, queryWrapper);
+        // 返回完整查询包装器。
+        return queryWrapper;
+    }
+
+    /**
+     * 拼接用户人工查询条件。
+     *
+     * @param query        用户查询参数
+     * @param queryWrapper 查询包装器
+     * @return 查询包装器
+     */
+    private QueryWrapper<AuthUser> queryArtificial(AuthUserQuery query, QueryWrapper<AuthUser> queryWrapper) {
+        // 查询对象为空或关键字为空时直接返回原包装器。
+        if (query == null || StringUtils.isBlank(query.getQuery())) {
+            // 返回调用方传入的包装器。
+            return queryWrapper;
+        }
+        // 通用关键字匹配用户名或昵称。
+        queryWrapper.and(wrapper -> wrapper.like("username", query.getQuery()).or().like("nickname", query.getQuery()));
+        // 返回完整查询包装器。
+        return queryWrapper;
+    }
+
+    /**
+     * 判断是否需要结果增强。
+     *
+     * @param query 用户查询参数
+     * @return boolean
+     */
+    private boolean needAssignment(AuthUserQuery query) {
+        // 查询对象为空时默认执行结果增强。
+        if (query == null) {
+            // 返回需要增强。
+            return true;
+        }
+        // assignment 明确传 false 时跳过结果增强，其余情况默认增强。
+        return !Boolean.FALSE.equals(query.getAssignment());
     }
 }

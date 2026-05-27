@@ -1,7 +1,10 @@
 package com.kellen.auth.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthUser;
 import com.kellen.auth.entity.bo.AuthUserBO;
+import com.kellen.auth.entity.query.AuthUserQuery;
+import com.kellen.auth.entity.vo.AuthUserVO;
 
 import java.util.List;
 
@@ -17,10 +20,19 @@ public interface AuthUserService {
     /**
      * 查询用户列表。
      *
-     * @param tenantId 租户ID
+     * @param page  分页对象
+     * @param query 用户查询参数
+     * @return 用户分页
+     */
+    Page<AuthUserVO> page(Page<AuthUser> page, AuthUserQuery query);
+
+    /**
+     * 查询用户列表。
+     *
+     * @param query 用户查询参数
      * @return 用户列表
      */
-    List<AuthUser> list(String tenantId);
+    List<AuthUserVO> list(AuthUserQuery query);
 
     /**
      * 新增用户。

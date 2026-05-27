@@ -1,7 +1,10 @@
 package com.kellen.auth.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthTenant;
 import com.kellen.auth.entity.bo.AuthTenantBO;
+import com.kellen.auth.entity.query.AuthTenantQuery;
+import com.kellen.auth.entity.vo.AuthTenantVO;
 
 import java.util.List;
 
@@ -17,9 +20,19 @@ public interface AuthTenantService {
     /**
      * 查询租户列表。
      *
+     * @param page  分页对象
+     * @param query 租户查询参数
+     * @return 租户分页
+     */
+    Page<AuthTenantVO> page(Page<AuthTenant> page, AuthTenantQuery query);
+
+    /**
+     * 查询租户列表。
+     *
+     * @param query 租户查询参数
      * @return 租户列表
      */
-    List<AuthTenant> list();
+    List<AuthTenantVO> list(AuthTenantQuery query);
 
     /**
      * 新增租户。

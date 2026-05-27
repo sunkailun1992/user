@@ -1,7 +1,10 @@
 package com.kellen.auth.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthTenant;
 import com.kellen.auth.entity.bo.AuthTenantBO;
+import com.kellen.auth.entity.query.AuthTenantQuery;
+import com.kellen.auth.entity.vo.AuthTenantVO;
 import com.kellen.auth.service.AuthTenantService;
 import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,15 +48,33 @@ public class AuthTenantController {
     /**
      * 查询租户列表。
      *
+     * @param query 租户查询参数
      * @return 租户列表
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
     @GetMapping
-    public ApiResponse<List<AuthTenant>> list() {
+    public ApiResponse<List<AuthTenantVO>> list(@Validated AuthTenantQuery query) {
         // 查询全部租户主数据。
-        return ApiResponse.success(authTenantService.list()); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+        return ApiResponse.success(authTenantService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 分页查询租户。
+     *
+     * @param query 租户查询参数
+     * @return 租户分页
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    @PostMapping("/page")
+    public ApiResponse<Page<AuthTenantVO>> page(@Validated(AuthTenantQuery.Select.class) @RequestBody AuthTenantQuery query) {
+        // 创建MyBatis-Plus分页对象。
+        Page<AuthTenant> page = new Page<>(query.getCurrent(), query.getSize());
+        // 查询租户分页并转换为VO。
+        return ApiResponse.success(authTenantService.page(page, query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**

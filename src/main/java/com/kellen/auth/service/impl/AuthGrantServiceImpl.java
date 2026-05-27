@@ -12,6 +12,7 @@ import com.kellen.auth.mapper.AuthResourceMapper;
 import com.kellen.auth.mapper.AuthRoleResourceMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthGrantService;
+import com.kellen.auth.service.results.AuthResourceServiceResults;
 import com.kellen.utils.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -53,21 +54,30 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     private final AuthResourceMapper authResourceMapper;
 
     /**
+     * 资源结果转换增强。
+     */
+    private final AuthResourceServiceResults authResourceServiceResults;
+
+    /**
      * 构造授权关系业务服务。
      *
-     * @param authUserRoleMapper     用户角色Mapper
-     * @param authRoleResourceMapper 角色资源Mapper
-     * @param authResourceMapper     资源Mapper
+     * @param authUserRoleMapper         用户角色Mapper
+     * @param authRoleResourceMapper     角色资源Mapper
+     * @param authResourceMapper         资源Mapper
+     * @param authResourceServiceResults 资源结果转换增强
      */
     public AuthGrantServiceImpl(AuthUserRoleMapper authUserRoleMapper,
                                 AuthRoleResourceMapper authRoleResourceMapper,
-                                AuthResourceMapper authResourceMapper) {
+                                AuthResourceMapper authResourceMapper,
+                                AuthResourceServiceResults authResourceServiceResults) {
         // 保存用户角色Mapper。
         this.authUserRoleMapper = authUserRoleMapper;
         // 保存角色资源Mapper。
         this.authRoleResourceMapper = authRoleResourceMapper;
         // 保存资源Mapper。
         this.authResourceMapper = authResourceMapper;
+        // 保存资源结果转换增强。
+        this.authResourceServiceResults = authResourceServiceResults;
     }
 
     /**
@@ -152,40 +162,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     @Override
     public List<AuthResourceVO> toResourceViews(List<AuthResource> resources, AuthResourceCategoryEnum category) {
         // 按分类过滤并转换为资源响应对象。
-        return resources.stream().filter(resource -> category == resource.getResourceCategory()).sorted(Comparator.comparing(resource -> resource.getSorting() == null ? 0 : resource.getSorting())).map(this::toResourceVO).toList();
-    }
-
-    /**
-     * 转换资源响应对象。
-     *
-     * @param resource 资源实体
-     * @return 资源响应对象
-     */
-    private AuthResourceVO toResourceVO(AuthResource resource) {
-        // 创建资源响应对象。
-        AuthResourceVO vo = new AuthResourceVO();
-        // 设置资源ID。
-        vo.setId(resource.getId());
-        // 设置权限编码。
-        vo.setCode(resource.getCode());
-        // 设置资源名称。
-        vo.setName(resource.getName());
-        // 设置资源分类值。
-        vo.setCategory(resource.getResourceCategory() == null ? null : resource.getResourceCategory().getValue());
-        // 设置资源分类说明。
-        vo.setCategoryDesc(resource.getResourceCategory() == null ? null : resource.getResourceCategory().getDesc());
-        // 设置资源路径。
-        vo.setPath(resource.getPath());
-        // 设置请求方法。
-        vo.setMethod(resource.getMethod());
-        // 设置父级资源ID。
-        vo.setParentId(resource.getParentId());
-        // 设置排序。
-        vo.setSorting(resource.getSorting());
-        // 设置数据库版本号。
-        vo.setVersion(resource.getVersion());
-        // 返回资源响应对象。
-        return vo;
+        return resources.stream().filter(resource -> category == resource.getResourceCategory()).sorted(Comparator.comparing(resource -> resource.getSorting() == null ? 0 : resource.getSorting())).map(authResourceServiceResults::toVO).toList();
     }
 
     /**

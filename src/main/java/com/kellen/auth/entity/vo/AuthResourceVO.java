@@ -1,5 +1,6 @@
 package com.kellen.auth.entity.vo;
 
+import com.kellen.auth.entity.enums.AuthStateEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -69,6 +70,24 @@ public class AuthResourceVO implements Serializable {
      */
     @Schema(description = "排序")
     private Integer sorting;
+
+    /**
+     * 资源状态。
+     */
+    @Schema(description = "资源状态")
+    private AuthStateEnum state;
+
+    /**
+     * 资源状态说明。
+     */
+    @Schema(description = "资源状态说明")
+    private String stateDesc;
+
+    /**
+     * 租户ID。
+     */
+    @Schema(description = "租户ID")
+    private String tenantId;
 
     /**
      * 数据库版本号。

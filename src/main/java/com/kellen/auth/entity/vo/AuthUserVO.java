@@ -1,0 +1,61 @@
+package com.kellen.auth.entity.vo;
+
+import com.kellen.auth.entity.enums.AuthStateEnum;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+import java.io.Serializable;
+
+/**
+ * 用户响应对象。
+ *
+ * @author sunkailun
+ * @className AuthUserVO
+ * @time 2026/05/27
+ */
+@Data
+@Schema(description = "用户响应对象")
+public class AuthUserVO implements Serializable {
+
+    /**
+     * 用户主键。
+     */
+    @Schema(description = "用户主键")
+    private String id;
+
+    /**
+     * 租户ID。
+     */
+    @Schema(description = "租户ID")
+    private String tenantId;
+
+    /**
+     * 用户名。
+     */
+    @Schema(description = "用户名")
+    private String username;
+
+    /**
+     * 用户昵称。
+     */
+    @Schema(description = "用户昵称")
+    private String nickname;
+
+    /**
+     * 用户状态。
+     */
+    @Schema(description = "用户状态")
+    private AuthStateEnum state;
+
+    /**
+     * 用户状态说明。
+     */
+    @Schema(description = "用户状态说明")
+    private String stateDesc;
+
+    /**
+     * 数据库版本号。
+     */
+    @Schema(description = "数据库版本号")
+    private Integer version;
+}

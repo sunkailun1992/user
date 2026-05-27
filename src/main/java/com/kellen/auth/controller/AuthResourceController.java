@@ -1,7 +1,10 @@
 package com.kellen.auth.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.bo.AuthResourceBO;
+import com.kellen.auth.entity.query.AuthResourceQuery;
+import com.kellen.auth.entity.vo.AuthResourceVO;
 import com.kellen.auth.service.AuthResourceService;
 import com.kellen.utils.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,7 +14,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -46,16 +48,33 @@ public class AuthResourceController {
     /**
      * 查询资源列表。
      *
-     * @param tenantId 租户ID
+     * @param query 资源查询参数
      * @return 资源列表
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
     @GetMapping
-    public ApiResponse<List<AuthResource>> list(@RequestParam String tenantId) {
+    public ApiResponse<List<AuthResourceVO>> list(@Validated AuthResourceQuery query) {
         // 查询指定租户的权限资源列表。
-        return ApiResponse.success(authResourceService.list(tenantId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+        return ApiResponse.success(authResourceService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 分页查询资源。
+     *
+     * @param query 资源查询参数
+     * @return 资源分页
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    @PostMapping("/page")
+    public ApiResponse<Page<AuthResourceVO>> page(@Validated(AuthResourceQuery.Select.class) @RequestBody AuthResourceQuery query) {
+        // 创建MyBatis-Plus分页对象。
+        Page<AuthResource> page = new Page<>(query.getCurrent(), query.getSize());
+        // 查询资源分页并转换为VO。
+        return ApiResponse.success(authResourceService.page(page, query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**

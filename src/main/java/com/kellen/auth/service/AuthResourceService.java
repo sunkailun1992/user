@@ -1,7 +1,10 @@
 package com.kellen.auth.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.bo.AuthResourceBO;
+import com.kellen.auth.entity.query.AuthResourceQuery;
+import com.kellen.auth.entity.vo.AuthResourceVO;
 
 import java.util.List;
 
@@ -17,10 +20,19 @@ public interface AuthResourceService {
     /**
      * 查询资源列表。
      *
-     * @param tenantId 租户ID
+     * @param page  分页对象
+     * @param query 资源查询参数
+     * @return 资源分页
+     */
+    Page<AuthResourceVO> page(Page<AuthResource> page, AuthResourceQuery query);
+
+    /**
+     * 查询资源列表。
+     *
+     * @param query 资源查询参数
      * @return 资源列表
      */
-    List<AuthResource> list(String tenantId);
+    List<AuthResourceVO> list(AuthResourceQuery query);
 
     /**
      * 新增资源。
