@@ -2,6 +2,7 @@ package com.kellen.auth.service;
 
 import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
+import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.vo.AuthResourceVO;
@@ -32,6 +33,23 @@ public interface AuthGrantService {
      * @return 是否成功
      */
     Boolean bindRoleResource(AuthRoleResourceBO bo);
+
+    /**
+     * 查询角色已绑定资源ID列表。
+     *
+     * @param tenantId 租户ID
+     * @param roleId   角色ID
+     * @return 资源ID列表
+     */
+    List<String> listRoleResourceIds(String tenantId, String roleId);
+
+    /**
+     * 按完整资源ID列表同步角色资源关系。
+     *
+     * @param bo 角色资源同步授权参数
+     * @return 是否成功
+     */
+    Boolean syncRoleResources(AuthRoleResourceSyncBO bo);
 
     /**
      * 查询用户拥有的资源。

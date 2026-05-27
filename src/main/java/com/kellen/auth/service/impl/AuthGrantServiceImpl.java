@@ -5,6 +5,7 @@ import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.AuthRoleResource;
 import com.kellen.auth.entity.AuthUserRole;
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
+import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.vo.AuthResourceVO;
@@ -108,6 +109,45 @@ public class AuthGrantServiceImpl implements AuthGrantService {
         bindRoleResource(bo.getTenantId(), bo.getRoleId(), bo.getResourceId());
         // 返回成功。
         return true;
+    }
+
+    /**
+     * 查询角色已绑定资源ID列表。
+     *
+     * @param tenantId 租户ID
+     * @param roleId   角色ID
+     * @return 资源ID列表
+     */
+    @Override
+    public List<String> listRoleResourceIds(String tenantId, String roleId) {
+        // 按租户和角色查询当前有效的角色资源关系。
+        return authRoleResourceMapper.selectResourceIdsByRoleId(tenantId, roleId);
+    }
+
+    /**
+     * 按完整资源ID列表同步角色资源关系。
+     *
+     * @param bo 角色资源同步授权参数
+     * @return 是否成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean syncRoleResources(AuthRoleResourceSyncBO bo) {
+        // 过滤空资源ID并去重，避免前端重复勾选或传入空值导致脏关系。
+        List<String> resourceIds = bo.getResourceIds().stream().filter(StringUtils::isNotBlank).distinct().toList();
+        try {
+            // 设置目标租户上下文，保持后续插入自动填充租户ID一致。
+            TenantContextHolder.setTenantId(bo.getTenantId());
+            // 删除未保留的角色资源关系，保存时以当前勾选结果作为完整授权集合。
+            authRoleResourceMapper.deleteByRoleIdAndResourceIdNotIn(bo.getTenantId(), bo.getRoleId(), resourceIds);
+            // 补齐当前勾选但数据库缺失的角色资源关系。
+            resourceIds.forEach(resourceId -> bindRoleResource(bo.getTenantId(), bo.getRoleId(), resourceId));
+            // 返回成功。
+            return true;
+        } finally {
+            // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
     }
 
     /**
@@ -217,6 +257,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
                 // 直接返回。
                 return;
             }
+            // 清理历史逻辑删除关系，避免唯一索引阻止重新授权。
+            authRoleResourceMapper.deleteByRoleIdAndResourceId(tenantId, roleId, resourceId);
             // 创建角色资源关系。
             AuthRoleResource roleResource = new AuthRoleResource();
             // 设置角色ID。

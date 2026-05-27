@@ -77,6 +77,15 @@ app:
 | `AuthResourceController` | `/auth/manage/resources` |
 | `AuthGrantController` | `/auth/manage/user-roles`、`/auth/manage/role-resources` |
 
+授权关系接口：
+
+| 方法 | 地址 | 说明 |
+| --- | --- | --- |
+| `POST` | `/auth/manage/user-roles` | 绑定用户角色 |
+| `POST` | `/auth/manage/role-resources` | 追加绑定单个角色资源 |
+| `GET` | `/auth/manage/role-resources` | 查询角色已绑定资源 ID 列表 |
+| `PUT` | `/auth/manage/role-resources` | 按完整资源 ID 列表同步角色资源 |
+
 租户、用户、角色、权限资源维护接口均提供：
 
 | 方法 | 地址 | 说明 |
