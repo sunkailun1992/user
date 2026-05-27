@@ -258,5 +258,5 @@ docs/ai-coding
 ## 验证命令
 
 ```bash
-./gradlew clean compileJava -x test
+./gradlew clean compileJava test
 ```

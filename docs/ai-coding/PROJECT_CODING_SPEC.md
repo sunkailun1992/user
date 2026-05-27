@@ -232,6 +232,36 @@ int count = mapper.updateById(entity);
 - 不要用只按 `id` 拼接的 `UpdateWrapper` 替代 `updateById(entity)`，否则 AI 容易漏掉乐观锁旧版本号。
 - 如确实使用 `update(entity, wrapper)`，必须保证实体中有旧 `version`，且 wrapper 不复用。
 
+## 测试规范
+
+项目统一使用 JUnit 5 编写测试，不再新增 JUnit4、Spock 或 Groovy 测试。
+
+依赖基线：
+
+```gradle
+testImplementation 'org.springframework.boot:spring-boot-starter-test'
+testImplementation 'org.springframework.security:spring-security-test'
+test {
+    useJUnitPlatform()
+}
+```
+
+规则：
+
+- 新增或修改业务代码时，必须同步新增或更新测试用例。
+- 测试类放在 `src/test/java`，包名与被测类保持一致。
+- 测试类命名使用 `XxxTest`；集成测试可使用 `XxxIntegrationTest`，但不得默认依赖未准备好的外部服务。
+- 接口功能测试必须优先从 Controller 请求层开始，使用 `MockMvc` 发起 HTTP 请求，验证请求参数、权限、统一响应、错误场景和 Controller 到 Service 的参数传递。
+- Controller 请求层测试优先使用 `@WebMvcTest`，并使用测试最小配置隔离主启动类中的 MapperScan、WebSocket、调度任务、Nacos、数据库等基础设施。
+- 纯转换类或工具类测试只能作为补充，不能替代接口请求层测试。
+- 普通单元测试使用 JUnit 5、Mockito、AssertJ，不启动完整 Spring 容器。
+- Service 测试优先 mock Mapper、外部客户端、Redis、MQ、Nacos、第三方服务，重点验证业务分支、事务边界、租户上下文、乐观锁版本号和异常路径。
+- 只有确实需要验证 Spring 装配时才使用 `@SpringBootTest`，避免所有测试都启动完整应用。
+- 外部依赖测试必须使用 test profile、mock、测试容器或显式开关，不能默认要求本机存在 MQ、Redis、Nacos、数据库等服务。
+- 测试方法名表达业务语义，推荐 `shouldXxxWhenYyy` 风格。
+- 断言必须验证关键输出和副作用，不允许只调用方法但没有断言。
+- 新增代码涉及权限、多租户、乐观锁、异常处理、返回值转换时，测试必须覆盖至少一个正向场景和一个失败/边界场景。
+
 ## 注释规范
 
 新代码和本次修改代码必须保持高注释密度：
@@ -341,4 +371,5 @@ AI 每次新增模块时必须检查：
 - 是否给受保护接口加 `@PreAuthorize`。
 - 是否给新增或修改代码补齐类注释、字段注释、方法 JavaDoc 和关键行注释。
 - 是否同步补充或新建项目根目录 `README.md`。
-- 是否运行 `./gradlew clean compileJava -x test`。
+- 是否同步补充或更新 JUnit 5 测试用例。
+- 是否运行 `./gradlew clean compileJava test`。

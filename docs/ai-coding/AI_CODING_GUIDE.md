@@ -13,8 +13,9 @@
 7. 判断本次代码是否属于公共工具类、通用组件、基础配置或跨微服务复用能力；如果是，先切到同级 `utils` 项目检索已有实现。
 8. `utils` 已有能力时优先复用，不要在当前微服务重复编写；确实缺失时再在 `utils` 实现并安装依赖。
 9. 只有明确属于当前微服务业务边界的代码，才按当前项目现有结构创建 Java 文件。
-10. 代码编写完成后检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
-11. 编译验证。
+10. 代码编写完成后补充或更新 JUnit 5 测试用例；接口功能优先从 Controller 请求层覆盖请求参数、权限、统一响应和 Service 调用，再按风险补充 Service/Mapper 单元测试。
+11. 检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
+12. 编译和测试验证。
 
 `examples/` 是当前 AI 编码的主要参考，不是可编译源码目录。示例需要贴近当前分层规范：完整分层、统一方法命名、类/字段/方法/关键逻辑注释齐全。
 
@@ -46,6 +47,9 @@ private String getRepeatKey(JoinPoint joinPoint) {
 - 不要返回裸 `Map` 作为统一响应。
 - 不要在业务 SQL 中重复处理租户和逻辑删除。
 - 不要把公共工具类、通用组件、基础配置或跨微服务复用能力直接写进业务微服务；编写前必须先检查同级 `utils` 是否已有实现，已有则复用，缺失才在 `utils` 维护。
+- 不要新增 JUnit4、Spock、Groovy 测试；当前项目统一使用 JUnit 5。
+- 不要只写脱离请求入口的转换类测试来代表接口功能正常；Controller 接口必须优先使用 MockMvc 从 HTTP 请求层验证。
+- 不要让普通测试默认依赖真实 MQ、Redis、Nacos、数据库或第三方服务；这些必须 mock、使用测试容器、测试 profile 或显式集成测试开关。
 - 不要忽略 `UTILS_PUBLIC_SPEC.md` 中的乐观锁、枚举、错误码和数据库变更记录要求。
 
 ## 推荐生成顺序
@@ -68,7 +72,7 @@ private String getRepeatKey(JoinPoint joinPoint) {
 ## 验证命令
 
 ```bash
-./gradlew clean compileJava -x test
+./gradlew clean compileJava test
 ```
 
 如果依赖 `utils` 有调整，先在 `utils` 执行：

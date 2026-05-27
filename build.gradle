@@ -3,7 +3,6 @@
  */
 plugins {
     id 'java'
-    id 'groovy'
     id 'org.springframework.boot' version '3.2.12'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'io.freefair.lombok' version '8.14.4'
@@ -42,12 +41,6 @@ ext {
     springCloudAlibabaVersion = '2023.0.3.4'
     // 公共 utils 包版本，必须与本地或远程 Maven 制品保持一致。
     utilsVersion = '1.1.0'
-    // Groovy 3 版本，匹配当前 Spock groovy-3.0 变体。
-    groovyVersion = '3.0.25'
-    // Spock 版本，保持 groovy-3.0 变体，避免跨到 Groovy 5。
-    spockVersion = '2.4-groovy-3.0'
-    // JUnit 4 版本，用于兼容现有历史测试类。
-    junit4Version = '4.13.2'
 }
 /**
  * 编码规则
@@ -120,14 +113,8 @@ dependencies {
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
     // Nacos Config：支持从 Nacos 配置中心读取应用配置。
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'
-    // Groovy：支持 src/test/groovy 下的 Spock 测试源码编译。
-    testImplementation "org.codehaus.groovy:groovy:${groovyVersion}"
-    // Spock Core：提供 Groovy 风格单元测试框架。
-    testImplementation "org.spockframework:spock-core:${spockVersion}"
-    // Spock Spring：提供 Spock 与 Spring TestContext 的集成能力。
-    testImplementation "org.spockframework:spock-spring:${spockVersion}"
-    // JUnit 4：兼容现有 src/test/java 中的 @RunWith 和 org.junit.Test 测试类。
-    testImplementation "junit:junit:${junit4Version}"
-    // Spring Boot Test：提供 JUnit、AssertJ、Mockito、SpringBootTest 等测试能力。
+    // Spring Boot Test：提供 JUnit 5、AssertJ、Mockito、SpringBootTest 等测试能力。
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Spring Security Test：提供 MockMvc 安全上下文和 @WithMockUser，支持从请求层验证权限控制。
+    testImplementation 'org.springframework.security:spring-security-test'
 }
