@@ -17,6 +17,10 @@ spring:
         group: ${custom.nacos-group}  # 测试组
         namespace: ${custom.namespace} # 环境的id
         extension-configs:
+          # 日志配置
+          - data-id: logging.yml
+            group: DEFAULT_GROUP
+            refresh: true
           # 通用配置
           - data-id: reuse-configuration.yaml
             group: DEFAULT_GROUP

@@ -178,6 +178,73 @@ src/main/resources/db/auth-schema.sql
 
 不要再新增 `/auth/init` 这类业务初始化接口。
 
+## 本地日志
+
+服务日志统一使用 Spring Boot 日志配置和本地文件滚动策略。
+
+公共日志配置在 Nacos：
+
+```text
+Data ID: logging.yml
+Group: DEFAULT_GROUP
+```
+
+当前服务通过 `bootstrap.yml` 的 `extension-configs` 加载该配置。后续微服务统一引入同一个 `logging.yml`，保证日志目录、日志格式和滚动策略一致。
+
+推荐默认日志目录：
+
+```text
+${user.home}/logs/${spring.application.name}
+```
+
+可通过环境变量覆盖日志目录：
+
+```bash
+LOG_PATH=/data/logs
+```
+
+日志文件：
+
+| 文件 | 说明 |
+| --- | --- |
+| `${spring.application.name}.log` | 全量业务日志 |
+| `archive/*.log.gz` | 按日期和大小滚动后的历史日志 |
+
+日志路径使用 Java 文件系统兼容写法，默认目录可在 macOS、Linux、Windows 下工作；生产、容器或服务器部署时建议显式设置 `LOG_PATH`。
+
+Nacos `logging.yml` 推荐配置：
+
+```yaml
+logging:
+  level:
+    root: INFO
+    com.kellen: INFO
+    heartbeat: ERROR
+    timer: ERROR
+    org.apache.http.impl.conn.Wire: WARN
+    org.elasticsearch.client.RestClient: ERROR
+    com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor: ERROR
+  file:
+    name: ${LOG_PATH:${user.home}/logs}/${spring.application.name:${SERVICE_NAME:application}}/${spring.application.name:${SERVICE_NAME:application}}.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [${spring.application.name:${SERVICE_NAME:application}}] [%thread] [%X{traceId},%X{spanId}] %logger{96} [%line] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [${spring.application.name:${SERVICE_NAME:application}}] [%thread] [%X{traceId},%X{spanId}] %logger{96} [%line] - %msg%n"
+  logback:
+    rollingpolicy:
+      file-name-pattern: ${LOG_PATH:${user.home}/logs}/${spring.application.name:${SERVICE_NAME:application}}/archive/${spring.application.name:${SERVICE_NAME:application}}.%d{yyyy-MM-dd}.%i.log.gz
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 10GB
+```
+
+如果某个服务需要调试业务日志，可以在该服务自己的 `user.yaml` 或对应服务配置中单独覆盖：
+
+```yaml
+logging:
+  level:
+    com.kellen: DEBUG
+```
+
 ## AI 编码规范
 
 AI 编码规范在：
