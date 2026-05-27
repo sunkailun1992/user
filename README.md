@@ -113,7 +113,7 @@ menu:resource
 | `*VO` | `entity.vo` | 对外返回，不直接返回 Entity |
 | `*ServiceQuery` | `service.query` | 拼接公共查询条件、排序、指定字段 |
 | `*ServiceResults` | `service.results` | 负责 Entity 转 VO、分页转换、枚举说明补充 |
-| `*ServiceImpl` | `service.impl` | 负责编排业务流程、事务、人工查询条件 |
+| `*ServiceImpl` | `service.impl` / `service/impl` | 负责编排业务流程、事务、人工查询条件 |
 
 查询链路统一为：
 

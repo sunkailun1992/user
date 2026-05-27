@@ -52,14 +52,15 @@ private String getRepeatKey(JoinPoint joinPoint) {
 1. `entity/enums/*Enum.java`
 2. `entity/*Entity.java`
 3. `entity/bo/*BO.java`
-4. `entity/query/*Query.java`
-5. `entity/vo/*VO.java`
-6. `mapper/*Mapper.java`
-7. `service/*Service.java`
-8. `service/query/*ServiceQuery.java`
-9. `service/results/*ServiceResults.java`
-10. `service/impl/*ServiceImpl.java`
-11. `controller/*Controller.java`
+4. 按业务需要补充 `entity/bo/*BindBO.java`、`*GrantBO.java` 等专项写入对象
+5. `entity/query/*Query.java`
+6. `entity/vo/*VO.java`
+7. `mapper/*Mapper.java`
+8. `service/*Service.java`
+9. `service/query/*ServiceQuery.java`
+10. `service/results/*ServiceResults.java`
+11. `service/impl/*ServiceImpl.java`
+12. `controller/*Controller.java`
 
 ## 验证命令
 

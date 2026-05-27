@@ -156,7 +156,7 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateEnhance(ExampleBO exampleBO) {
-        // 将 BO 转换为实体。
+        // 将 BO 转换为实体，保留旧 version 触发乐观锁。
         ExampleEntity entity = GeneralConvertor.convertor(exampleBO, ExampleEntity.class);
         // 使用 MyBatis-Plus 内置 updateById，确保 @Version 乐观锁插件能读取实体中的旧版本号。
         int count = exampleMapper.updateById(entity);

@@ -15,7 +15,7 @@ import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.security.SecurityUser;
 import com.kellen.security.UserContextHolder;
-import com.kellen.utils.JwtUtil;
+import com.kellen.utils.JwtUtils;
 import com.kellen.utils.TenantContextHolder;
 import com.kellen.utils.enumeration.ReturnCode;
 import com.kellen.utils.exception.UserException;
@@ -141,7 +141,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 写入权限码。
             claims.put("permissions", permissions);
             // 签发JWT。
-            String token = JwtUtil.createJwt(UUID.randomUUID().toString(), user.getId(), claims);
+            String token = JwtUtils.createJwt(UUID.randomUUID().toString(), user.getId(), claims);
             // 创建登录响应。
             AuthLoginVO vo = new AuthLoginVO();
             // 设置令牌。

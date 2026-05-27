@@ -9,16 +9,16 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 示例业务传输对象。
+ * 示例业务写入参数。
  * <p>
- * BO 用于新增、修改、删除等写操作入参，字段应贴近前端提交内容。
+ * 简单 CRUD 可以使用一个 BO 配合 Save、Update、Remove 校验分组；字段差异很大时再拆分 SaveBO、UpdateBO、RemoveBO。
  *
  * @author sunkailun
  * @className ExampleBO
  * @time 2026/05/26
  */
 @Data
-@Schema(description = "示例业务传输对象")
+@Schema(description = "示例业务写入参数")
 public class ExampleBO implements Serializable {
 
     /**
@@ -41,6 +41,7 @@ public class ExampleBO implements Serializable {
      * 示例名称。
      */
     @Schema(description = "示例名称")
+    @NotBlank(groups = {Save.class}, message = "name不能为空")
     private String name;
 
     /**

@@ -34,26 +34,25 @@
   service
     query
     results
-  service.impl
+    impl
 ```
 
-复杂查询可以单独补：
+复杂查询和结果转换必须按职责补齐：
 
 ```text
 <base-package>.<module>.service.query
 <base-package>.<module>.service.results
+<base-package>.<module>.service.impl
 ```
 
 ## 请求对象拆分规范
 
-Controller 入参必须按接口语义拆分，不要为了省文件把新增、修改、删除、授权、查询全部塞进一个请求类。
+Controller 入参必须按接口语义保持清晰，不要把查询条件和写入参数混用。
 
 推荐命名：
 
 ```text
-XxxSaveBO
-XxxUpdateBO
-XxxRemoveBO
+XxxBO
 XxxQuery
 XxxBindRoleBO
 XxxBindResourceBO
@@ -61,9 +60,10 @@ XxxBindResourceBO
 
 规则：
 
-- 新增和修改字段不同的，必须拆成不同 BO。
-- 修改 BO 必须包含数据库旧 `version`，用于 MyBatis-Plus 乐观锁。
-- 删除 BO 只放删除所需字段，例如 `id` 和必要的业务校验字段。
+- 简单 CRUD 可以使用一个 `XxxBO`，通过 `Save`、`Update`、`Remove` 校验分组区分新增、修改、删除必填字段。
+- 新增、修改、删除字段差异很大，或授权/绑定等语义独立时，再拆成 `XxxSaveBO`、`XxxUpdateBO`、`XxxRemoveBO`、`XxxBindBO` 等专项对象。
+- 修改入参必须包含数据库旧 `version`，用于 MyBatis-Plus 乐观锁。
+- 删除入参只校验删除所需字段，例如 `id` 和必要的业务校验字段。
 - 查询条件使用 `Query`，不要和写入 BO 混用。
 - 响应对象使用 `VO`，不要直接把包含密码等敏感字段的 Entity 返回给前端。
 - Controller 只接收请求对象、调用 Service、组装 `ApiResponse`，不写业务规则、不写 SQL、不写初始化数据。
