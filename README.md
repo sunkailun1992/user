@@ -30,15 +30,38 @@
 
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
+| `GET` | `/auth/tenants` | 登录前公开查询租户列表，用于前端租户下拉选择 |
 | `POST` | `/auth/login` | 用户登录 |
 | `GET` | `/auth/resources` | 查询当前用户权限资源 |
 
-`POST /auth/login` 不加 `@PreAuthorize`。
+`GET /auth/tenants` 和 `POST /auth/login` 不加 `@PreAuthorize`。
 
 如果 `security.auth.enabled=true`，需要在 Nacos `security.auth.permit-urls` 中放行：
 
 ```text
+/auth/tenants
 /auth/login
+```
+
+## 前端跨域
+
+本地 `admin-web` 直接请求 `http://localhost:7500`，不走 Umi dev proxy。后端通过 `com.kellen.config.CorsConfig` 注册最高优先级 `CorsFilter`，确保浏览器 `OPTIONS` 预检先于 Spring Security 通过。
+
+默认允许来源：
+
+```text
+http://localhost:8000
+http://127.0.0.1:8000
+```
+
+后续切换前端域名时，统一修改配置项：
+
+```yaml
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:8000
+      - http://127.0.0.1:8000
 ```
 
 ## 管理接口
