@@ -64,7 +64,10 @@ public class MysqlDdl implements IDdl {
      */
     @Override
     public List<String> getSqlFiles() {
-        // 返回认证授权真实体系建表脚本，由MyBatis-Plus自动维护ddl_history。
-        return List.of("db/auth-schema.sql");
+        // 原始DDL脚本执行后会记录到ddl_history，后续变更必须追加新脚本并保持顺序。
+        return List.of(
+                "db/auth-schema.sql",
+                "db/20260527-auth-resource-tree-data.sql"
+        );
     }
 }

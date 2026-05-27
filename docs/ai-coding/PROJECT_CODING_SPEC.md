@@ -111,9 +111,12 @@ src/main/resources/db/*.sql
 
 规则：
 
-- 新增或修改表结构时，新增独立 SQL 脚本或维护当前模块脚本。
+- 修改 SQL 前必须检查 `MysqlDdl#getSqlFiles()` 和数据库 `ddl_history`；已执行过的脚本禁止继续改原文件。
+- `db/auth-schema.sql` 是原始建表和基础数据脚本，发布后只允许追加新脚本，不允许把新变更继续塞回原脚本。
+- 新增或修改表结构、默认数据、权限资源树时，新增独立 SQL 脚本并追加到 `MysqlDdl#getSqlFiles()`。
 - `MysqlDdl#getSqlFiles()` 统一声明脚本路径。
 - 基础字典、默认角色、默认权限资源等初始化数据也写入 DDL SQL 脚本。
+- SQL 脚本必须支持重复执行，使用 `IF NOT EXISTS`、`INSERT IGNORE` 或具备明确租户/主键条件的确定性 `UPDATE`。
 - 不再为基础数据新增业务初始化接口，避免启动后还需要人工调用初始化接口。
 - 表结构必须包含 `version`，并由实体继承 `EntityBase.@Version`。
 - 多租户业务表必须包含 `tenant_id`，业务 SQL 不手写租户条件。

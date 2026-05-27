@@ -210,7 +210,10 @@ SQL 脚本：
 
 ```text
 src/main/resources/db/auth-schema.sql
+src/main/resources/db/20260527-auth-resource-tree-data.sql
 ```
+
+脚本由 MyBatis-Plus 按 `MysqlDdl#getSqlFiles()` 顺序执行，并写入 `ddl_history`。已经执行过的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
 
 默认数据包含：
 

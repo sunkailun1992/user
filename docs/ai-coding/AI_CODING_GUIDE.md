@@ -25,6 +25,13 @@
 - 生成规则集中在 `AuthCodeGenerateService`，不要把编码格式散落在 Controller、前端或 SQL 脚本中。
 - 生成结果只能包含小写字母、数字、下划线和冒号等 ASCII 可读字符；必须带时间和随机后缀，降低并发生成碰撞概率。
 
+## DDL 变更规则
+
+- 修改 `src/main/resources/db/*.sql` 前，先检查 `MysqlDdl#getSqlFiles()` 和数据库 `ddl_history` 的执行记录。
+- 已发布或可能已执行的脚本禁止改原文件，例如 `db/auth-schema.sql` 只作为原始建表和基础数据脚本维护。
+- 如果 `ddl_history` 已记录某个脚本，后续表结构、默认数据、树状权限资源等变更必须新增独立 SQL 脚本，并按顺序追加到 `MysqlDdl#getSqlFiles()`。
+- 新增 SQL 必须具备重复执行安全性，优先使用 `CREATE TABLE IF NOT EXISTS`、`INSERT IGNORE` 和带租户/主键条件的确定性 `UPDATE`。
+
 `examples/` 是当前 AI 编码的主要参考，不是可编译源码目录。示例需要贴近当前分层规范：完整分层、统一方法命名、类/字段/方法/关键逻辑注释齐全。
 
 ## 注释要求
