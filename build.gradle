@@ -14,6 +14,21 @@ plugins {
 group = 'com'
 version = '1.0.0'
 description = 'user'
+
+/**
+ * 阿里云 Maven 制品仓库地址。
+ */
+def aliyunMavenReleaseUrl = 'https://packages.aliyun.com/695230d97a1ed8d3da00b21e/maven/2633353-release-no0hfp'
+
+/**
+ * 阿里云 Maven 用户名，从 ~/.gradle/gradle.properties 或环境变量读取，避免明文写入仓库。
+ */
+def aliyunMavenUsername = providers.gradleProperty('aliyunMavenUsername').orElse(providers.environmentVariable('ALIYUN_MAVEN_USERNAME'))
+
+/**
+ * 阿里云 Maven 密码，从 ~/.gradle/gradle.properties 或环境变量读取，避免明文写入仓库。
+ */
+def aliyunMavenPassword = providers.gradleProperty('aliyunMavenPassword').orElse(providers.environmentVariable('ALIYUN_MAVEN_PASSWORD'))
 /**
  * 编码规则
  */
@@ -46,10 +61,10 @@ allprojects {
         }
         maven {
             credentials {
-                username '5f9b8370a3bcee4a48459704'
-                password '8EM9TfN(GSKa'
+                username = aliyunMavenUsername.orNull
+                password = aliyunMavenPassword.orNull
             }
-            url 'https://packages.aliyun.com/695230d97a1ed8d3da00b21e/maven/2633353-release-no0hfp'
+            url aliyunMavenReleaseUrl
         }
     }
 }
