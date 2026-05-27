@@ -32,14 +32,16 @@
     enums
   mapper
   service
+    query
+    results
   service.impl
 ```
 
 复杂查询可以单独补：
 
 ```text
-<base-package>.<module>.query
-<base-package>.<module>.vo
+<base-package>.<module>.service.query
+<base-package>.<module>.service.results
 ```
 
 ## 请求对象拆分规范
@@ -68,6 +70,8 @@ XxxBindResourceBO
 - Controller 必须按业务资源拆分，例如租户、用户、角色、资源、授权关系分别建 Controller，不要把多个资源维护接口塞进一个 `ManageController`。
 - Service 必须按业务资源拆分，例如登录认证、基础数据、核心业务对象、资源对象、授权关系分别建 Service，不要把多个资源的逻辑塞进一个 `XxxService` 或 `XxxManageService`。
 - Service 负责业务编排、事务、鉴权上下文、租户上下文和 Mapper 调用。
+- ServiceQuery 负责 `QueryWrapper` 查询条件、排序、显示字段、通用关键字等查询增强。
+- ServiceResults 负责 DO 转 VO、分页转换、枚举说明、关联信息补全等结果增强。
 - Mapper 只负责数据访问，普通 CRUD 优先使用 MyBatis-Plus。
 
 ## DDL 维护规范

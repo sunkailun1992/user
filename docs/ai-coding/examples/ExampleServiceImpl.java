@@ -12,6 +12,7 @@ import com.kellen.example.service.ExampleService;
 import com.kellen.example.service.query.ExampleServiceQuery;
 import com.kellen.example.service.results.ExampleServiceResults;
 import com.kellen.utils.GeneralConvertor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,20 +70,14 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
      */
     @Override
     public Page<ExampleVO> pageEnhance(Page<ExampleEntity> page, ExampleQuery exampleQuery) {
-        // 将查询参数转换为实体，用于基础等值查询。
-        ExampleEntity entity = GeneralConvertor.convertor(exampleQuery, ExampleEntity.class);
-        // 创建查询包装器。
-        QueryWrapper<ExampleEntity> queryWrapper = new QueryWrapper<>(entity);
-        // 拼接自动查询条件。
-        exampleServiceQuery.query(exampleQuery, queryWrapper);
-        // 拼接人工查询条件。
-        queryArtificial(exampleQuery, queryWrapper);
+        // 根据 Query 构建完整查询包装器。
+        QueryWrapper<ExampleEntity> queryWrapper = buildQueryWrapper(exampleQuery);
         // 执行分页查询。
         Page<ExampleEntity> pageDO = exampleMapper.selectPage(page, queryWrapper);
         // 转换为 VO 分页。
         Page<ExampleVO> pageVO = exampleServiceResults.toPageVO(pageDO);
         // 判断是否需要结果增强。
-        return Boolean.FALSE.equals(exampleQuery.getAssignment()) ? pageVO : exampleServiceResults.assignment(pageVO);
+        return needAssignment(exampleQuery) ? exampleServiceResults.assignment(pageVO) : pageVO;
     }
 
     /**
@@ -93,20 +88,14 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
      */
     @Override
     public List<ExampleVO> listEnhance(ExampleQuery exampleQuery) {
-        // 将查询参数转换为实体，用于基础等值查询。
-        ExampleEntity entity = GeneralConvertor.convertor(exampleQuery, ExampleEntity.class);
-        // 创建查询包装器。
-        QueryWrapper<ExampleEntity> queryWrapper = new QueryWrapper<>(entity);
-        // 拼接自动查询条件。
-        exampleServiceQuery.query(exampleQuery, queryWrapper);
-        // 拼接人工查询条件。
-        queryArtificial(exampleQuery, queryWrapper);
+        // 根据 Query 构建完整查询包装器。
+        QueryWrapper<ExampleEntity> queryWrapper = buildQueryWrapper(exampleQuery);
         // 执行列表查询。
         List<ExampleEntity> records = exampleMapper.selectList(queryWrapper);
         // 转换为 VO 列表。
-        List<ExampleVO> voRecords = GeneralConvertor.convertor(records, ExampleVO.class);
+        List<ExampleVO> voRecords = exampleServiceResults.toListVO(records);
         // 判断是否需要结果增强。
-        return Boolean.FALSE.equals(exampleQuery.getAssignment()) ? voRecords : exampleServiceResults.assignment(voRecords);
+        return needAssignment(exampleQuery) ? exampleServiceResults.assignment(voRecords) : voRecords;
     }
 
     /**
@@ -117,20 +106,14 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
      */
     @Override
     public ExampleVO getOneEnhance(ExampleQuery exampleQuery) {
-        // 将查询参数转换为实体，用于基础等值查询。
-        ExampleEntity entity = GeneralConvertor.convertor(exampleQuery, ExampleEntity.class);
-        // 创建查询包装器。
-        QueryWrapper<ExampleEntity> queryWrapper = new QueryWrapper<>(entity);
-        // 拼接自动查询条件。
-        exampleServiceQuery.query(exampleQuery, queryWrapper);
-        // 拼接人工查询条件。
-        queryArtificial(exampleQuery, queryWrapper);
+        // 根据 Query 构建完整查询包装器。
+        QueryWrapper<ExampleEntity> queryWrapper = buildQueryWrapper(exampleQuery);
         // 执行单条查询。
         ExampleEntity record = exampleMapper.selectOne(queryWrapper);
         // 转换为 VO。
-        ExampleVO vo = GeneralConvertor.convertor(record, ExampleVO.class);
+        ExampleVO vo = exampleServiceResults.toVO(record);
         // 判断是否需要结果增强。
-        return Boolean.FALSE.equals(exampleQuery.getAssignment()) ? vo : exampleServiceResults.assignment(vo);
+        return needAssignment(exampleQuery) ? exampleServiceResults.assignment(vo) : vo;
     }
 
     /**
@@ -141,14 +124,8 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
      */
     @Override
     public Long countEnhance(ExampleQuery exampleQuery) {
-        // 将查询参数转换为实体，用于基础等值查询。
-        ExampleEntity entity = GeneralConvertor.convertor(exampleQuery, ExampleEntity.class);
-        // 创建查询包装器。
-        QueryWrapper<ExampleEntity> queryWrapper = new QueryWrapper<>(entity);
-        // 拼接自动查询条件。
-        exampleServiceQuery.query(exampleQuery, queryWrapper);
-        // 拼接人工查询条件。
-        queryArtificial(exampleQuery, queryWrapper);
+        // 根据 Query 构建完整查询包装器。
+        QueryWrapper<ExampleEntity> queryWrapper = buildQueryWrapper(exampleQuery);
         // 返回总数。
         return exampleMapper.selectCount(queryWrapper);
     }
@@ -207,14 +184,70 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
     }
 
     /**
+     * 构建查询包装器。
+     *
+     * @param exampleQuery 查询参数
+     * @return 查询包装器
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private QueryWrapper<ExampleEntity> buildQueryWrapper(ExampleQuery exampleQuery) {
+        // 将查询参数转换为实体，用于 QueryWrapper 自动拼接同名字段等值条件。
+        ExampleEntity entity = GeneralConvertor.convertor(exampleQuery, ExampleEntity.class);
+        // 创建查询包装器。
+        QueryWrapper<ExampleEntity> queryWrapper = entity == null ? new QueryWrapper<>() : new QueryWrapper<>(entity);
+        // 拼接自动查询条件。
+        exampleServiceQuery.query(exampleQuery, queryWrapper);
+        // 拼接人工查询条件。
+        queryArtificial(exampleQuery, queryWrapper);
+        // 返回完整查询包装器。
+        return queryWrapper;
+    }
+
+    /**
      * 人工查询条件。
      *
      * @param exampleQuery 查询参数
      * @param queryWrapper 查询包装器
      * @return 查询包装器
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
      */
     private QueryWrapper<ExampleEntity> queryArtificial(ExampleQuery exampleQuery, QueryWrapper<ExampleEntity> queryWrapper) {
         // 业务特殊查询条件统一写在这里。
+        // 查询对象为空时直接返回原包装器。
+        if (exampleQuery == null) {
+            // 返回调用方传入的 QueryWrapper。
+            return queryWrapper;
+        }
+        // 通用关键字为空时不拼接人工查询条件。
+        if (StringUtils.isBlank(exampleQuery.getQuery())) {
+            // 返回调用方传入的 QueryWrapper。
+            return queryWrapper;
+        }
+        // 将通用关键字拼接到业务允许模糊查询的字段上。
+        queryWrapper.and(wrapper -> wrapper.like("name", exampleQuery.getQuery()));
         return queryWrapper;
+    }
+
+    /**
+     * 判断是否需要结果增强。
+     *
+     * @param exampleQuery 查询参数
+     * @return boolean
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private boolean needAssignment(ExampleQuery exampleQuery) {
+        // 查询对象为空时默认执行结果增强。
+        if (exampleQuery == null) {
+            // 返回需要增强。
+            return true;
+        }
+        // assignment 明确传 false 时跳过结果增强，其余情况默认增强。
+        return !Boolean.FALSE.equals(exampleQuery.getAssignment());
     }
 }

@@ -19,44 +19,45 @@ import org.springframework.stereotype.Service;
 public class ExampleServiceQuery {
 
     /**
+     * 默认排序字段。
+     */
+    private static final String DEFAULT_SORT_FIELD = "create_date_time";
+
+    /**
      * 构建查询条件。
+     * <p>
+     * QueryWrapper 已经通过 new QueryWrapper<>(entity) 承接 Entity 同名字段等值查询；
+     * 本方法只补充排序、显示字段等无法由 Entity 自动表达的通用查询条件。
      *
      * @param exampleQuery 查询参数
      * @param queryWrapper 查询包装器
      * @return 查询包装器
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
      */
     public QueryWrapper<ExampleEntity> query(ExampleQuery exampleQuery, QueryWrapper<ExampleEntity> queryWrapper) {
-        // 处理排序字段，默认按 create_date_time 倒序。
-        if (exampleQuery.getCollation() != null && StringUtils.isNotBlank(exampleQuery.getCollationFields())) {
-            // collation 为 true 时升序。
-            if (exampleQuery.getCollation()) {
-                // 设置升序排序。
-                queryWrapper.orderByAsc(exampleQuery.getCollationFields());
-            } else {
-                // 设置降序排序。
-                queryWrapper.orderByDesc(exampleQuery.getCollationFields());
-            }
+        // 查询对象为空时直接返回原包装器，避免示例生成空指针代码。
+        if (exampleQuery == null) {
+            // 返回调用方传入的 QueryWrapper。
+            return queryWrapper;
+        }
+
+        // 计算排序字段，前端未传时使用默认创建时间字段。
+        String sortField = StringUtils.defaultIfBlank(exampleQuery.getCollationFields(), DEFAULT_SORT_FIELD);
+        // 判断是否显式要求升序。
+        if (Boolean.TRUE.equals(exampleQuery.getCollation())) {
+            // 拼接升序排序。
+            queryWrapper.orderByAsc(sortField);
         } else {
-            // 未传排序规则时使用默认排序字段降序。
-            queryWrapper.orderByDesc(exampleQuery.getCollationFields());
+            // 未传排序方向或传 false 时统一按降序排序。
+            queryWrapper.orderByDesc(sortField);
         }
 
         // 处理显示字段。
         if (StringUtils.isNotBlank(exampleQuery.getFields())) {
             // 指定 select 字段。
             queryWrapper.select(exampleQuery.getFields());
-        }
-
-        // 处理名称右模糊查询。
-        if (StringUtils.isNotBlank(exampleQuery.getName())) {
-            // 根据 name 拼接 likeRight 查询。
-            queryWrapper.likeRight("name", exampleQuery.getName());
-        }
-
-        // 处理状态等值查询。
-        if (exampleQuery.getState() != null) {
-            // 根据 state 拼接等值查询。
-            queryWrapper.eq("state", exampleQuery.getState());
         }
 
         // 返回查询包装器。
