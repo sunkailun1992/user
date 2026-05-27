@@ -4,9 +4,9 @@
 plugins {
     id 'java'
     id 'groovy'
-    id 'org.springframework.boot' version '3.2.4'
-    id 'io.spring.dependency-management' version '1.1.4'
-    id 'io.freefair.lombok' version '8.6'
+    id 'org.springframework.boot' version '3.2.12'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'io.freefair.lombok' version '8.14.4'
 }
 /**
  * 项目基础信息
@@ -29,6 +29,26 @@ def aliyunMavenUsername = providers.gradleProperty('aliyunMavenUsername').orElse
  * 阿里云 Maven 密码，从 ~/.gradle/gradle.properties 或环境变量读取，避免明文写入仓库。
  */
 def aliyunMavenPassword = providers.gradleProperty('aliyunMavenPassword').orElse(providers.environmentVariable('ALIYUN_MAVEN_PASSWORD'))
+
+/**
+ * 依赖版本统一管理，避免 dependencies 中散落魔法版本。
+ */
+ext {
+    // Java 源码和字节码版本。
+    javaReleaseVersion = 17
+    // Spring Cloud BOM 版本，与 Spring Boot 3.2.x 保持兼容。
+    springCloudVersion = '2023.0.6'
+    // Spring Cloud Alibaba BOM 版本，与 Spring Cloud 2023.0.x 保持兼容。
+    springCloudAlibabaVersion = '2023.0.3.4'
+    // 公共 utils 包版本，必须与本地或远程 Maven 制品保持一致。
+    utilsVersion = '1.1.0'
+    // Groovy 3 版本，匹配当前 Spock groovy-3.0 变体。
+    groovyVersion = '3.0.25'
+    // Spock 版本，保持 groovy-3.0 变体，避免跨到 Groovy 5。
+    spockVersion = '2.4-groovy-3.0'
+    // JUnit 4 版本，用于兼容现有历史测试类。
+    junit4Version = '4.13.2'
+}
 /**
  * 编码规则
  */
@@ -37,8 +57,8 @@ tasks.withType(JavaCompile) {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.toVersion(javaReleaseVersion)
+    targetCompatibility = JavaVersion.toVersion(javaReleaseVersion)
 }
 /**
  * 镜像仓库地址
@@ -83,8 +103,8 @@ test {
 
 dependencyManagement {
     imports {
-        mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.1"
-        mavenBom "com.alibaba.cloud:spring-cloud-alibaba-dependencies:2023.0.1.0"
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        mavenBom "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${springCloudAlibabaVersion}"
     }
 }
 
@@ -93,7 +113,7 @@ dependencyManagement {
  */
 dependencies {
     // utils：引入统一认证上下文、多租户、公共异常、统一响应、MyBatis-Plus 配置和通用工具能力。
-    implementation 'com:utils:1.1.0'
+    implementation "com:utils:${utilsVersion}"
     // Spring Cloud Bootstrap：支持 bootstrap.yml 在应用主配置前加载 Nacos 等外部配置。
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
     // Nacos Discovery：支持服务注册与服务发现。
@@ -101,13 +121,13 @@ dependencies {
     // Nacos Config：支持从 Nacos 配置中心读取应用配置。
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'
     // Groovy：支持 src/test/groovy 下的 Spock 测试源码编译。
-    testImplementation 'org.codehaus.groovy:groovy:3.0.9'
+    testImplementation "org.codehaus.groovy:groovy:${groovyVersion}"
     // Spock Core：提供 Groovy 风格单元测试框架。
-    testImplementation 'org.spockframework:spock-core:2.0-groovy-3.0'
+    testImplementation "org.spockframework:spock-core:${spockVersion}"
     // Spock Spring：提供 Spock 与 Spring TestContext 的集成能力。
-    testImplementation 'org.spockframework:spock-spring:2.0-groovy-3.0'
+    testImplementation "org.spockframework:spock-spring:${spockVersion}"
     // JUnit 4：兼容现有 src/test/java 中的 @RunWith 和 org.junit.Test 测试类。
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation "junit:junit:${junit4Version}"
     // Spring Boot Test：提供 JUnit、AssertJ、Mockito、SpringBootTest 等测试能力。
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
