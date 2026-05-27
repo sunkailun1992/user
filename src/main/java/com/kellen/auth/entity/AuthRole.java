@@ -1,6 +1,7 @@
 package com.kellen.auth.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,4 +23,10 @@ public class AuthRole extends AuthEntity {
 
     @Schema(description = "角色名称")
     private String name;
+
+    /**
+     * 数据权限范围。
+     */
+    @Schema(description = "数据权限范围")
+    private AuthDataScopeEnum dataScope;
 }

@@ -3,6 +3,7 @@ package com.kellen.auth.service;
 import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
+import com.kellen.auth.entity.bo.AuthRoleDataScopeSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.vo.AuthResourceVO;
@@ -50,6 +51,23 @@ public interface AuthGrantService {
      * @return 是否成功
      */
     Boolean syncRoleResources(AuthRoleResourceSyncBO bo);
+
+    /**
+     * 查询角色自定义数据范围部门ID列表。
+     *
+     * @param tenantId 租户ID
+     * @param roleId   角色ID
+     * @return 部门ID列表
+     */
+    List<String> listRoleDataScopeDeptIds(String tenantId, String roleId);
+
+    /**
+     * 按完整部门ID列表同步角色自定义数据范围。
+     *
+     * @param bo 角色数据范围同步参数
+     * @return 是否成功
+     */
+    Boolean syncRoleDataScopes(AuthRoleDataScopeSyncBO bo);
 
     /**
      * 查询用户拥有的资源。

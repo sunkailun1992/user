@@ -16,6 +16,7 @@
 
 - 通用返回对象、异常处理、错误码、认证安全、租户上下文、JWT、Redis、HTTP、JSON、对象转换、日期时间、加密解密等公共工具。
 - MyBatis-Plus 公共配置、自动填充、乐观锁、租户插件、逻辑删除、DDL 公共能力等基础组件。
+- MyBatis-Plus 数据权限插件、数据权限上下文、数据范围解析等跨微服务访问控制能力。
 - AOP、幂等、防重复提交、请求日志、动态数据源、SQL 参数校验等跨业务服务复用能力。
 - 多个微服务都会使用，或未来明显会复用的工具方法、注解、配置类、基础抽象。
 
@@ -111,8 +112,12 @@ src/main/resources/db/*.sql
 
 规则：
 
-- 修改 SQL 前必须检查 `MysqlDdl#getSqlFiles()` 和数据库 `ddl_history`；已执行过的脚本禁止继续改原文件。
-- `db/auth-schema.sql` 是原始建表和基础数据脚本，发布后只允许追加新脚本，不允许把新变更继续塞回原脚本。
+- 修改 `src/main/resources/db/*.sql` 前，必须先查看 `MysqlDdl#getSqlFiles()` 确认脚本列表和执行顺序。
+- 修改任意已存在 SQL 脚本前，必须连接当前目标数据库查询 `ddl_history`，确认该脚本是否已经执行。
+- 如果 `ddl_history` 已存在该脚本记录，禁止继续修改该 SQL 文件；表结构、默认数据、权限资源树等后续变更必须新增独立 SQL 脚本。
+- 如果无法连接数据库、无法确认 `ddl_history`、或环境不明确，必须按“脚本可能已执行”处理，只能新增 SQL 脚本，不能修改历史 SQL。
+- 只有明确确认 `ddl_history` 没有该脚本记录时，才允许修改该未执行脚本。
+- `db/auth-schema.sql` 是原始建表和基础数据脚本，一旦在任何环境执行过，后续变更只能新增脚本，不允许把新变更继续塞回原脚本。
 - 新增或修改表结构、默认数据、权限资源树时，新增独立 SQL 脚本并追加到 `MysqlDdl#getSqlFiles()`。
 - `MysqlDdl#getSqlFiles()` 统一声明脚本路径。
 - 基础字典、默认角色、默认权限资源等初始化数据也写入 DDL SQL 脚本。
@@ -335,6 +340,60 @@ X-Tenant-Id: 100
 - 业务代码不要重复手写 `tenant_id = ?`。
 - 需要跨租户查询时必须显式使用 `TenantContextHolder.ignore()`，并在 `finally` 清理。
 
+## 数据权限规范
+
+数据权限使用 `utils` 中的 MyBatis-Plus `DataPermissionInterceptor` 统一处理，业务微服务不得重复编写 SQL 拦截器。
+
+职责边界：
+
+- `@PreAuthorize` 控制接口是否允许访问。
+- `TenantLineInnerInterceptor` 控制租户之间的数据隔离。
+- `DataPermissionInterceptor` 控制同一租户内本人、部门、部门树或自定义部门的数据范围。
+
+用户体系建议字段：
+
+```text
+用户表：dept_id
+角色表：data_scope
+角色自定义部门表：role_id、dept_id
+```
+
+标准数据范围：
+
+```text
+ALL        全部数据
+SELF       仅本人数据
+DEPT       本部门数据
+DEPT_TREE  本部门及下级部门数据
+CUSTOM     自定义部门数据
+```
+
+规则：
+
+- 部门归属挂在用户下，角色只维护授权能力和数据范围。
+- 用户有多个角色时，登录或网关侧应合并数据范围；`ALL` 最大，其他部门范围按部门集合并集处理。
+- 登录态或网关 Header 需要携带 `deptId`、`dataScope`、`dataScopeDeptIds`，供 `utils` 数据权限插件拼接 SQL。
+- 业务表只有声明了数据权限表规则后才会追加条件，避免给没有 `dept_id` 或创建人字段的表拼错 SQL。
+- 多租户字段仍由租户插件处理，数据权限不要重复拼 `tenant_id`。
+- 不需要数据权限的初始化、登录、字典、资源树等查询，要通过配置或 `DataPermissionContextHolder.ignore()` 显式跳过。
+
+Nacos 配置示例：
+
+```yaml
+security:
+  data-permission:
+    enabled: true
+    default-user-column: create_name
+    default-dept-column: dept_id
+    ignore-tables:
+      - auth_tenant
+      - auth_resource
+    table-rules:
+      business_order:
+        user-column: create_name
+        dept-column: dept_id
+```
+
 ## 逻辑删除规范
 
 `EntityBase.isDelete` 使用 `@TableLogic`。
@@ -367,6 +426,7 @@ AI 每次新增模块时必须检查：
 - 是否给数据库状态字段建立对应枚举，且枚举实现 `IEnum<Integer>` 或匹配的泛型类型。
 - 是否避免把业务枚举塞进 `EntityBase`。
 - 是否避免重复拼 `tenant_id` 和 `is_delete`。
+- 是否把跨服务通用数据权限逻辑放到 `utils`，业务服务只维护用户部门、角色数据范围和业务表字段。
 - 是否在先查后改的更新逻辑中携带数据库记录的 `version`，并依赖 MyBatis-Plus 乐观锁处理并发覆盖。
 - 是否按 `UTILS_PUBLIC_SPEC.md` 选择或扩展错误码。
 - 是否先检查同级 `utils` 项目已有能力，并优先复用已有公共工具以减少当前微服务代码量。

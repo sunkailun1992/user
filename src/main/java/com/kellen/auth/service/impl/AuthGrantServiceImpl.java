@@ -2,14 +2,17 @@ package com.kellen.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kellen.auth.entity.AuthResource;
+import com.kellen.auth.entity.AuthRoleDataScope;
 import com.kellen.auth.entity.AuthRoleResource;
 import com.kellen.auth.entity.AuthUserRole;
+import com.kellen.auth.entity.bo.AuthRoleDataScopeSyncBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.vo.AuthResourceVO;
 import com.kellen.auth.mapper.AuthResourceMapper;
+import com.kellen.auth.mapper.AuthRoleDataScopeMapper;
 import com.kellen.auth.mapper.AuthRoleResourceMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthGrantService;
@@ -50,6 +53,11 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     private final AuthRoleResourceMapper authRoleResourceMapper;
 
     /**
+     * 角色自定义数据范围Mapper。
+     */
+    private final AuthRoleDataScopeMapper authRoleDataScopeMapper;
+
+    /**
      * 资源Mapper。
      */
     private final AuthResourceMapper authResourceMapper;
@@ -64,17 +72,21 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      *
      * @param authUserRoleMapper         用户角色Mapper
      * @param authRoleResourceMapper     角色资源Mapper
+     * @param authRoleDataScopeMapper    角色自定义数据范围Mapper
      * @param authResourceMapper         资源Mapper
      * @param authResourceServiceResults 资源结果转换增强
      */
     public AuthGrantServiceImpl(AuthUserRoleMapper authUserRoleMapper,
                                 AuthRoleResourceMapper authRoleResourceMapper,
+                                AuthRoleDataScopeMapper authRoleDataScopeMapper,
                                 AuthResourceMapper authResourceMapper,
                                 AuthResourceServiceResults authResourceServiceResults) {
         // 保存用户角色Mapper。
         this.authUserRoleMapper = authUserRoleMapper;
         // 保存角色资源Mapper。
         this.authRoleResourceMapper = authRoleResourceMapper;
+        // 保存角色自定义数据范围Mapper。
+        this.authRoleDataScopeMapper = authRoleDataScopeMapper;
         // 保存资源Mapper。
         this.authResourceMapper = authResourceMapper;
         // 保存资源结果转换增强。
@@ -147,6 +159,48 @@ public class AuthGrantServiceImpl implements AuthGrantService {
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();
+        }
+    }
+
+    /**
+     * 查询角色自定义数据范围部门ID列表。
+     *
+     * @param tenantId 租户ID
+     * @param roleId   角色ID
+     * @return 部门ID列表
+     */
+    @Override
+    public List<String> listRoleDataScopeDeptIds(String tenantId, String roleId) {
+        try {
+            TenantContextHolder.setTenantId(tenantId); // 设置目标租户上下文。
+            return authRoleDataScopeMapper.selectList(new LambdaQueryWrapper<AuthRoleDataScope>().eq(AuthRoleDataScope::getRoleId, roleId))
+                    .stream()
+                    .map(AuthRoleDataScope::getDeptId)
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .toList(); // 返回当前角色绑定的部门ID列表。
+        } finally {
+            TenantContextHolder.clear(); // 清理租户上下文。
+        }
+    }
+
+    /**
+     * 按完整部门ID列表同步角色自定义数据范围。
+     *
+     * @param bo 角色数据范围同步参数
+     * @return 是否成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean syncRoleDataScopes(AuthRoleDataScopeSyncBO bo) {
+        List<String> deptIds = bo.getDeptIds().stream().filter(StringUtils::isNotBlank).distinct().toList(); // 过滤空部门ID并去重。
+        try {
+            TenantContextHolder.setTenantId(bo.getTenantId()); // 设置目标租户上下文。
+            authRoleDataScopeMapper.delete(new LambdaQueryWrapper<AuthRoleDataScope>().eq(AuthRoleDataScope::getRoleId, bo.getRoleId())); // 以当前提交结果作为完整授权集合。
+            deptIds.forEach(deptId -> insertRoleDataScope(bo.getRoleId(), deptId)); // 补齐当前提交的部门关系。
+            return true; // 返回同步成功。
+        } finally {
+            TenantContextHolder.clear(); // 清理租户上下文。
         }
     }
 
@@ -273,5 +327,23 @@ public class AuthGrantServiceImpl implements AuthGrantService {
             // 清理租户上下文。
             TenantContextHolder.clear();
         }
+    }
+
+    /**
+     * 插入角色自定义数据范围关系。
+     *
+     * @param roleId 角色ID
+     * @param deptId 部门ID
+     * @return void
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private void insertRoleDataScope(String roleId, String deptId) {
+        AuthRoleDataScope roleDataScope = new AuthRoleDataScope(); // 创建角色数据范围关系实体。
+        roleDataScope.setRoleId(roleId); // 设置角色ID。
+        roleDataScope.setDeptId(deptId); // 设置部门ID。
+        roleDataScope.setCode(roleId + ":" + deptId); // 设置关系编码。
+        authRoleDataScopeMapper.insert(roleDataScope); // 插入关系。
     }
 }

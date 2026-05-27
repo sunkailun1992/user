@@ -1,6 +1,7 @@
 package com.kellen.auth.entity.query;
 
 import com.kellen.auth.entity.enums.AuthStateEnum;
+import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -67,6 +68,12 @@ public class AuthRoleQuery implements Serializable {
      */
     @Schema(description = "角色状态")
     private AuthStateEnum state;
+
+    /**
+     * 数据权限范围。
+     */
+    @Schema(description = "数据权限范围")
+    private AuthDataScopeEnum dataScope;
 
     /**
      * 指定查询字段。

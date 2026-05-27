@@ -7,20 +7,20 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 用户响应对象。
+ * 部门响应对象。
  *
  * @author sunkailun
- * @className AuthUserVO
+ * @className AuthDeptVO
  * @time 2026/05/27
  */
 @Data
-@Schema(description = "用户响应对象")
-public class AuthUserVO implements Serializable {
+@Schema(description = "部门响应对象")
+public class AuthDeptVO implements Serializable {
 
     /**
-     * 用户主键。
+     * 部门主键。
      */
-    @Schema(description = "用户主键")
+    @Schema(description = "部门主键")
     private String id;
 
     /**
@@ -30,33 +30,33 @@ public class AuthUserVO implements Serializable {
     private String tenantId;
 
     /**
-     * 用户名。
+     * 部门编码。
      */
-    @Schema(description = "用户名")
-    private String username;
+    @Schema(description = "部门编码")
+    private String code;
 
     /**
-     * 用户昵称。
+     * 部门名称。
      */
-    @Schema(description = "用户昵称")
-    private String nickname;
+    @Schema(description = "部门名称")
+    private String name;
 
     /**
-     * 所属部门ID。
+     * 父级部门ID。
      */
-    @Schema(description = "所属部门ID")
-    private String deptId;
+    @Schema(description = "父级部门ID")
+    private String parentId;
 
     /**
-     * 用户状态。
+     * 部门状态。
      */
-    @Schema(description = "用户状态")
+    @Schema(description = "部门状态")
     private AuthStateEnum state;
 
     /**
-     * 用户状态说明。
+     * 部门状态说明。
      */
-    @Schema(description = "用户状态说明")
+    @Schema(description = "部门状态说明")
     private String stateDesc;
 
     /**

@@ -16,11 +16,13 @@
 当前服务负责以下业务：
 
 - 租户管理
+- 部门管理
 - 用户管理
 - 角色管理
 - 权限资源管理
 - 用户角色授权
 - 角色资源授权
+- 角色数据范围授权
 - 登录认证
 - 当前用户资源查询
 
@@ -72,10 +74,11 @@ app:
 | --- | --- |
 | `AuthCodeController` | `/auth/manage/codes` |
 | `AuthTenantController` | `/auth/manage/tenants` |
+| `AuthDeptController` | `/auth/manage/depts` |
 | `AuthUserController` | `/auth/manage/users` |
 | `AuthRoleController` | `/auth/manage/roles` |
 | `AuthResourceController` | `/auth/manage/resources` |
-| `AuthGrantController` | `/auth/manage/user-roles`、`/auth/manage/role-resources` |
+| `AuthGrantController` | `/auth/manage/user-roles`、`/auth/manage/role-resources`、`/auth/manage/role-data-scopes` |
 
 授权关系接口：
 
@@ -85,8 +88,10 @@ app:
 | `POST` | `/auth/manage/role-resources` | 追加绑定单个角色资源 |
 | `GET` | `/auth/manage/role-resources` | 查询角色已绑定资源 ID 列表 |
 | `PUT` | `/auth/manage/role-resources` | 按完整资源 ID 列表同步角色资源 |
+| `GET` | `/auth/manage/role-data-scopes` | 查询角色自定义数据范围部门 ID 列表 |
+| `PUT` | `/auth/manage/role-data-scopes` | 按完整部门 ID 列表同步角色自定义数据范围 |
 
-租户、用户、角色、权限资源维护接口均提供：
+租户、部门、用户、角色、权限资源维护接口均提供：
 
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
@@ -154,6 +159,66 @@ menu:resource:tree
 
 登录返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。
 
+## 数据权限
+
+数据权限由 `utils` 中的 MyBatis-Plus `DataPermissionInterceptor` 统一处理，`user` 服务负责维护登录用户所需的组织和授权数据。
+
+当前模型：
+
+| 表 | 说明 |
+| --- | --- |
+| `auth_dept` | 租户内部门树 |
+| `auth_user.dept_id` | 用户所属部门 |
+| `auth_role.data_scope` | 角色数据范围 |
+| `auth_role_data_scope` | 角色自定义可见部门 |
+
+标准数据范围：
+
+| 值 | 说明 |
+| --- | --- |
+| `ALL` | 全部数据 |
+| `SELF` | 仅本人数据 |
+| `DEPT` | 本部门数据 |
+| `DEPT_TREE` | 本部门及下级部门数据 |
+| `CUSTOM` | 自定义部门数据 |
+
+登录时会把以下字段写入 JWT，并返回给前端：
+
+```text
+deptId
+dataScope
+dataScopeDeptIds
+```
+
+网关 Header 透传时也使用同名语义：
+
+```text
+X-Dept-Id
+X-Data-Scope
+X-Data-Scope-Dept-Ids
+```
+
+Nacos 数据权限配置示例：
+
+```yaml
+security:
+  data-permission:
+    enabled: true
+    default-user-column: create_name
+    default-dept-column: dept_id
+    table-rules:
+      business_order:
+        user-column: create_name
+        dept-column: dept_id
+```
+
+说明：
+
+- `@PreAuthorize` 仍负责接口权限。
+- 租户隔离仍由租户插件负责。
+- 数据权限只负责同一租户内的数据范围。
+- 没有在 `table-rules` 声明的表不会自动追加数据权限条件。
+
 ## 代码拆分约定
 
 真实业务代码需要按查询、写入、返回拆分：
@@ -220,15 +285,17 @@ SQL 脚本：
 ```text
 src/main/resources/db/auth-schema.sql
 src/main/resources/db/20260527-auth-resource-tree-data.sql
+src/main/resources/db/20260527-auth-data-permission.sql
 ```
 
-脚本由 MyBatis-Plus 按 `MysqlDdl#getSqlFiles()` 顺序执行，并写入 `ddl_history`。已经执行过的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
+脚本由 MyBatis-Plus 按 `MysqlDdl#getSqlFiles()` 顺序执行，并写入 `ddl_history`。修改历史 SQL 前必须先查当前数据库 `ddl_history`；已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
 
 默认数据包含：
 
 - 默认租户：`tenantId = 100`
+- 默认部门：`dept_root_100`
 - 默认管理员：`username = admin`，`password = 123456`
-- 默认管理员角色：`admin`
+- 默认管理员角色：`admin`，数据范围 `ALL`
 - 默认权限资源和授权关系
 
 不要再新增 `/auth/init` 这类业务初始化接口。

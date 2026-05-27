@@ -30,6 +30,12 @@ public class AuthCurrentResourceVO implements Serializable {
     private String tenantId;
 
     /**
+     * 所属部门ID。
+     */
+    @Schema(description = "所属部门ID")
+    private String deptId;
+
+    /**
      * 后端权限码。
      */
     @Schema(description = "后端权限码")

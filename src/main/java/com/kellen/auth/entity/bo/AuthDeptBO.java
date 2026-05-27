@@ -9,20 +9,20 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 认证用户写入参数。
+ * 认证部门写入参数。
  *
  * @author sunkailun
- * @className AuthUserBO
- * @time 2026/05/26
+ * @className AuthDeptBO
+ * @time 2026/05/27
  */
 @Data
-@Schema(description = "认证用户写入参数")
-public class AuthUserBO implements Serializable {
+@Schema(description = "认证部门写入参数")
+public class AuthDeptBO implements Serializable {
 
     /**
-     * 用户主键。
+     * 部门主键。
      */
-    @Schema(description = "用户主键")
+    @Schema(description = "部门主键")
     @NotBlank(groups = {Update.class, Remove.class}, message = "id不能为空")
     private String id;
 
@@ -41,35 +41,29 @@ public class AuthUserBO implements Serializable {
     private String tenantId;
 
     /**
-     * 用户名。
+     * 部门编码。
      */
-    @Schema(description = "用户名")
-    @NotBlank(groups = {Save.class}, message = "username不能为空")
-    private String username;
+    @Schema(description = "部门编码")
+    @NotBlank(groups = {Save.class}, message = "code不能为空")
+    private String code;
 
     /**
-     * 明文密码。
+     * 部门名称。
      */
-    @Schema(description = "明文密码")
-    @NotBlank(groups = {Save.class}, message = "password不能为空")
-    private String password;
+    @Schema(description = "部门名称")
+    @NotBlank(groups = {Save.class}, message = "name不能为空")
+    private String name;
 
     /**
-     * 用户昵称。
+     * 父级部门ID。
      */
-    @Schema(description = "用户昵称")
-    private String nickname;
+    @Schema(description = "父级部门ID")
+    private String parentId;
 
     /**
-     * 所属部门ID。
+     * 部门状态。
      */
-    @Schema(description = "所属部门ID")
-    private String deptId;
-
-    /**
-     * 用户状态。
-     */
-    @Schema(description = "用户状态")
+    @Schema(description = "部门状态")
     private AuthStateEnum state;
 
     /**

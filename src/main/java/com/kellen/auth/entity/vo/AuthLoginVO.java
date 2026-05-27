@@ -54,6 +54,24 @@ public class AuthLoginVO implements Serializable {
     private String tenantId;
 
     /**
+     * 所属部门ID。
+     */
+    @Schema(description = "所属部门ID")
+    private String deptId;
+
+    /**
+     * 当前登录用户合并后的数据权限范围。
+     */
+    @Schema(description = "当前登录用户合并后的数据权限范围")
+    private String dataScope;
+
+    /**
+     * 当前登录用户可访问部门ID集合。
+     */
+    @Schema(description = "当前登录用户可访问部门ID集合")
+    private List<String> dataScopeDeptIds;
+
+    /**
      * 后端权限码。
      */
     @Schema(description = "后端权限码")

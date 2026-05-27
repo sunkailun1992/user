@@ -28,4 +28,10 @@ public class AuthUser extends AuthEntity {
 
     @Schema(description = "用户昵称")
     private String nickname;
+
+    /**
+     * 所属部门ID。
+     */
+    @Schema(description = "所属部门ID")
+    private String deptId;
 }

@@ -67,7 +67,8 @@ public class MysqlDdl implements IDdl {
         // 原始DDL脚本执行后会记录到ddl_history，后续变更必须追加新脚本并保持顺序。
         return List.of(
                 "db/auth-schema.sql",
-                "db/20260527-auth-resource-tree-data.sql"
+                "db/20260527-auth-resource-tree-data.sql",
+                "db/20260527-auth-data-permission.sql"
         );
     }
 }

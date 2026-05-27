@@ -1,6 +1,7 @@
 package com.kellen.auth.entity.vo;
 
 import com.kellen.auth.entity.enums.AuthStateEnum;
+import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -52,6 +53,18 @@ public class AuthRoleVO implements Serializable {
      */
     @Schema(description = "角色状态说明")
     private String stateDesc;
+
+    /**
+     * 数据权限范围。
+     */
+    @Schema(description = "数据权限范围")
+    private AuthDataScopeEnum dataScope;
+
+    /**
+     * 数据权限范围说明。
+     */
+    @Schema(description = "数据权限范围说明")
+    private String dataScopeDesc;
 
     /**
      * 排序。

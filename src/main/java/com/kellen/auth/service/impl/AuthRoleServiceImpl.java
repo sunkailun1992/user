@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.bo.AuthRoleBO;
 import com.kellen.auth.entity.enums.AuthStateEnum;
+import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import com.kellen.auth.entity.query.AuthRoleQuery;
 import com.kellen.auth.entity.vo.AuthRoleVO;
 import com.kellen.auth.mapper.AuthRoleMapper;
@@ -139,6 +140,8 @@ public class AuthRoleServiceImpl implements AuthRoleService {
             role.setId(StringUtils.trimToNull(bo.getId()));
             // 设置默认启用状态。
             role.setState(bo.getState() == null ? AuthStateEnum.启用 : bo.getState());
+            // 设置默认数据权限范围。
+            role.setDataScope(bo.getDataScope() == null ? AuthDataScopeEnum.SELF : bo.getDataScope());
             // 插入角色。
             authRoleMapper.insert(role);
             // 返回角色ID。

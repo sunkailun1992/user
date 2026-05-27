@@ -2,6 +2,7 @@ package com.kellen.auth.controller;
 
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
+import com.kellen.auth.entity.bo.AuthRoleDataScopeSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.utils.response.ApiResponse;
@@ -103,5 +104,36 @@ public class AuthGrantController {
     public ApiResponse<Boolean> syncRoleResources(@Validated @RequestBody AuthRoleResourceSyncBO bo) {
         // 按完整资源ID列表同步角色和权限资源关系。
         return ApiResponse.success(authGrantService.syncRoleResources(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 查询角色自定义数据范围部门。
+     *
+     * @param tenantId 租户ID
+     * @param roleId   角色ID
+     * @return 部门ID列表
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    @GetMapping("/role-data-scopes")
+    public ApiResponse<List<String>> listRoleDataScopeDeptIds(@RequestParam String tenantId, @RequestParam String roleId) {
+        // 返回当前角色自定义可见部门ID列表，用于前端部门树回显。
+        return ApiResponse.success(authGrantService.listRoleDataScopeDeptIds(tenantId, roleId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 同步角色自定义数据范围。
+     *
+     * @param bo 角色数据范围同步参数
+     * @return 是否成功
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    @PutMapping("/role-data-scopes")
+    public ApiResponse<Boolean> syncRoleDataScopes(@Validated @RequestBody AuthRoleDataScopeSyncBO bo) {
+        // 按完整部门ID列表同步角色自定义数据范围。
+        return ApiResponse.success(authGrantService.syncRoleDataScopes(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

@@ -1,6 +1,7 @@
 package com.kellen.auth.entity.bo;
 
 import com.kellen.auth.entity.enums.AuthStateEnum;
+import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -59,6 +60,12 @@ public class AuthRoleBO implements Serializable {
      */
     @Schema(description = "角色状态")
     private AuthStateEnum state;
+
+    /**
+     * 数据权限范围。
+     */
+    @Schema(description = "数据权限范围")
+    private AuthDataScopeEnum dataScope;
 
     /**
      * 新增校验分组。

@@ -2,15 +2,24 @@ package com.kellen.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kellen.auth.dto.LoginRequest;
+import com.kellen.auth.entity.AuthDept;
 import com.kellen.auth.entity.AuthResource;
+import com.kellen.auth.entity.AuthRole;
+import com.kellen.auth.entity.AuthRoleDataScope;
 import com.kellen.auth.entity.AuthTenant;
 import com.kellen.auth.entity.AuthUser;
+import com.kellen.auth.entity.AuthUserRole;
+import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
+import com.kellen.auth.mapper.AuthDeptMapper;
+import com.kellen.auth.mapper.AuthRoleDataScopeMapper;
+import com.kellen.auth.mapper.AuthRoleMapper;
 import com.kellen.auth.mapper.AuthTenantMapper;
 import com.kellen.auth.mapper.AuthUserMapper;
+import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.security.SecurityUser;
@@ -24,9 +33,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 认证登录业务服务实现。
@@ -64,6 +76,26 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
     private final AuthUserMapper authUserMapper;
 
     /**
+     * 用户角色Mapper。
+     */
+    private final AuthUserRoleMapper authUserRoleMapper;
+
+    /**
+     * 角色Mapper。
+     */
+    private final AuthRoleMapper authRoleMapper;
+
+    /**
+     * 部门Mapper。
+     */
+    private final AuthDeptMapper authDeptMapper;
+
+    /**
+     * 角色自定义数据范围Mapper。
+     */
+    private final AuthRoleDataScopeMapper authRoleDataScopeMapper;
+
+    /**
      * 授权关系业务服务。
      */
     private final AuthGrantService authGrantService;
@@ -78,15 +110,31 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      *
      * @param authTenantMapper 租户Mapper
      * @param authUserMapper   用户Mapper
-     * @param authGrantService 授权关系业务服务
+     * @param authUserRoleMapper       用户角色Mapper
+     * @param authRoleMapper           角色Mapper
+     * @param authDeptMapper           部门Mapper
+     * @param authRoleDataScopeMapper  角色自定义数据范围Mapper
+     * @param authGrantService         授权关系业务服务
      */
     public AuthAuthenticationServiceImpl(AuthTenantMapper authTenantMapper,
                                          AuthUserMapper authUserMapper,
+                                         AuthUserRoleMapper authUserRoleMapper,
+                                         AuthRoleMapper authRoleMapper,
+                                         AuthDeptMapper authDeptMapper,
+                                         AuthRoleDataScopeMapper authRoleDataScopeMapper,
                                          AuthGrantService authGrantService) {
         // 保存租户Mapper。
         this.authTenantMapper = authTenantMapper;
         // 保存用户Mapper。
         this.authUserMapper = authUserMapper;
+        // 保存用户角色Mapper。
+        this.authUserRoleMapper = authUserRoleMapper;
+        // 保存角色Mapper。
+        this.authRoleMapper = authRoleMapper;
+        // 保存部门Mapper。
+        this.authDeptMapper = authDeptMapper;
+        // 保存角色自定义数据范围Mapper。
+        this.authRoleDataScopeMapper = authRoleDataScopeMapper;
         // 保存授权关系业务服务。
         this.authGrantService = authGrantService;
     }
@@ -130,6 +178,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             List<AuthResource> resources = authGrantService.findResourcesByUserId(user.getId());
             // 提取后端权限码。
             List<String> permissions = authGrantService.toPermissionCodes(resources);
+            // 解析当前用户角色合并后的数据范围。
+            DataScopeSnapshot dataScopeSnapshot = resolveDataScope(user);
             // 创建JWT声明。
             Map<String, Object> claims = new HashMap<>();
             // 写入用户ID。
@@ -138,6 +188,12 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             claims.put("username", user.getUsername());
             // 写入租户ID。
             claims.put("tenantId", tenantId);
+            // 写入部门ID。
+            claims.put("deptId", user.getDeptId());
+            // 写入数据权限范围。
+            claims.put("dataScope", dataScopeSnapshot.dataScope());
+            // 写入数据权限部门ID集合。
+            claims.put("dataScopeDeptIds", dataScopeSnapshot.deptIds());
             // 写入权限码。
             claims.put("permissions", permissions);
             // 签发JWT。
@@ -156,6 +212,12 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             vo.setNickname(user.getNickname());
             // 设置租户ID。
             vo.setTenantId(tenantId);
+            // 设置部门ID。
+            vo.setDeptId(user.getDeptId());
+            // 设置数据权限范围。
+            vo.setDataScope(dataScopeSnapshot.dataScope());
+            // 设置数据权限部门ID集合。
+            vo.setDataScopeDeptIds(dataScopeSnapshot.deptIds());
             // 设置权限码。
             vo.setPermissions(permissions);
             // 设置前端资源。
@@ -195,6 +257,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             vo.setUserId(currentUser.getUserId());
             // 设置租户ID。
             vo.setTenantId(currentUser.getTenantId());
+            // 设置部门ID。
+            vo.setDeptId(currentUser.getDeptId());
             // 设置权限码。
             vo.setPermissions(authGrantService.toPermissionCodes(resources));
             // 设置前端资源。
@@ -242,5 +306,123 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 清理忽略租户标记。
             TenantContextHolder.clearIgnore();
         }
+    }
+
+    /**
+     * 解析当前用户合并后的数据范围。
+     *
+     * @param user 当前登录用户
+     * @return 数据范围快照
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private DataScopeSnapshot resolveDataScope(AuthUser user) {
+        // 查询当前用户角色关系。
+        List<AuthUserRole> userRoles = authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, user.getId()));
+        // 提取角色ID集合。
+        Set<String> roleIds = userRoles.stream().map(AuthUserRole::getRoleId).filter(StringUtils::isNotBlank).collect(Collectors.toCollection(LinkedHashSet::new));
+        // 没有角色时按本人数据范围兜底。
+        if (roleIds.isEmpty()) {
+            // 返回本人数据范围。
+            return new DataScopeSnapshot(AuthDataScopeEnum.SELF.getValue(), List.of());
+        }
+        // 查询角色详情。
+        List<AuthRole> roles = authRoleMapper.selectList(new LambdaQueryWrapper<AuthRole>().in(AuthRole::getId, roleIds));
+        // 任一角色拥有全部数据时，合并结果就是全部数据。
+        if (roles.stream().anyMatch(role -> AuthDataScopeEnum.ALL == role.getDataScope())) {
+            // 返回全部数据范围。
+            return new DataScopeSnapshot(AuthDataScopeEnum.ALL.getValue(), List.of());
+        }
+        // 创建可访问部门集合。
+        Set<String> deptIds = new LinkedHashSet<>();
+        // 遍历角色合并部门范围。
+        for (AuthRole role : roles) {
+            // 空数据范围按本人处理。
+            AuthDataScopeEnum dataScope = role.getDataScope() == null ? AuthDataScopeEnum.SELF : role.getDataScope();
+            // 本部门范围加入当前用户部门。
+            if (AuthDataScopeEnum.DEPT == dataScope && StringUtils.isNotBlank(user.getDeptId())) {
+                deptIds.add(user.getDeptId());
+            }
+            // 本部门及下级部门范围加入部门树。
+            if (AuthDataScopeEnum.DEPT_TREE == dataScope && StringUtils.isNotBlank(user.getDeptId())) {
+                deptIds.addAll(findDeptTreeIds(user.getDeptId()));
+            }
+            // 自定义范围加入角色绑定部门。
+            if (AuthDataScopeEnum.CUSTOM == dataScope) {
+                deptIds.addAll(findCustomDeptIds(role.getId()));
+            }
+        }
+        // 有部门范围时按自定义部门集合下发，SQL 层按集合过滤。
+        if (!deptIds.isEmpty()) {
+            // 返回自定义部门数据范围。
+            return new DataScopeSnapshot(AuthDataScopeEnum.CUSTOM.getValue(), deptIds.stream().toList());
+        }
+        // 无部门范围时按本人数据范围兜底。
+        return new DataScopeSnapshot(AuthDataScopeEnum.SELF.getValue(), List.of());
+    }
+
+    /**
+     * 查询角色自定义部门ID集合。
+     *
+     * @param roleId 角色ID
+     * @return 部门ID集合
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private List<String> findCustomDeptIds(String roleId) {
+        // 查询角色绑定的数据范围部门。
+        return authRoleDataScopeMapper.selectList(new LambdaQueryWrapper<AuthRoleDataScope>().eq(AuthRoleDataScope::getRoleId, roleId))
+                .stream()
+                .map(AuthRoleDataScope::getDeptId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+    }
+
+    /**
+     * 查询部门及下级部门ID集合。
+     *
+     * @param rootDeptId 根部门ID
+     * @return 部门ID集合
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private List<String> findDeptTreeIds(String rootDeptId) {
+        // 查询当前租户全部部门。
+        List<AuthDept> depts = authDeptMapper.selectList(new LambdaQueryWrapper<>());
+        // 创建部门树结果。
+        Set<String> deptIds = new LinkedHashSet<>();
+        // 加入根部门。
+        deptIds.add(rootDeptId);
+        // 循环扩展下级部门，直到没有新增部门。
+        boolean changed;
+        do {
+            // 默认本轮没有变化。
+            changed = false;
+            // 遍历全部部门寻找已命中部门的直接子级。
+            for (AuthDept dept : depts) {
+                // 父级已命中且当前部门未命中时加入结果。
+                if (deptIds.contains(dept.getParentId()) && deptIds.add(dept.getId())) {
+                    changed = true;
+                }
+            }
+        } while (changed);
+        // 返回部门树ID集合。
+        return deptIds.stream().toList();
+    }
+
+    /**
+     * 数据范围快照。
+     *
+     * @param dataScope 数据范围
+     * @param deptIds   部门ID集合
+     * @author sunkailun
+     * @DateTime 2026/05/27
+     * @email 376253703@qq.com
+     */
+    private record DataScopeSnapshot(String dataScope, List<String> deptIds) {
     }
 }

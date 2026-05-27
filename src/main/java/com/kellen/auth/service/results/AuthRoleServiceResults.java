@@ -35,6 +35,8 @@ public class AuthRoleServiceResults {
         AuthRoleVO vo = GeneralConvertor.convertor(recordDO, AuthRoleVO.class);
         // 补充状态说明。
         vo.setStateDesc(recordDO.getState() == null ? null : recordDO.getState().getDesc());
+        // 补充数据权限范围说明。
+        vo.setDataScopeDesc(recordDO.getDataScope() == null ? null : recordDO.getDataScope().getDesc());
         // 返回响应对象。
         return vo;
     }
