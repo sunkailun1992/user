@@ -40,9 +40,41 @@ CREATE TABLE IF NOT EXISTS auth_role_data_scope (
     KEY idx_auth_role_data_scope_tenant_id (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='角色自定义数据范围表';
 
-ALTER TABLE auth_user ADD COLUMN IF NOT EXISTS dept_id varchar(64) DEFAULT NULL COMMENT '所属部门ID';
+SET @auth_user_dept_id_exists := (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'auth_user'
+      AND COLUMN_NAME = 'dept_id'
+);
 
-ALTER TABLE auth_role ADD COLUMN IF NOT EXISTS data_scope varchar(32) NOT NULL DEFAULT 'SELF' COMMENT '数据权限范围：ALL/SELF/DEPT/DEPT_TREE/CUSTOM';
+SET @auth_user_dept_id_sql := IF(
+    @auth_user_dept_id_exists = 0,
+    'ALTER TABLE auth_user ADD COLUMN dept_id varchar(64) DEFAULT NULL COMMENT ''所属部门ID''',
+    'SELECT 1'
+);
+
+PREPARE auth_user_dept_id_stmt FROM @auth_user_dept_id_sql;
+EXECUTE auth_user_dept_id_stmt;
+DEALLOCATE PREPARE auth_user_dept_id_stmt;
+
+SET @auth_role_data_scope_exists := (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'auth_role'
+      AND COLUMN_NAME = 'data_scope'
+);
+
+SET @auth_role_data_scope_sql := IF(
+    @auth_role_data_scope_exists = 0,
+    'ALTER TABLE auth_role ADD COLUMN data_scope varchar(32) NOT NULL DEFAULT ''SELF'' COMMENT ''数据权限范围：ALL/SELF/DEPT/DEPT_TREE/CUSTOM''',
+    'SELECT 1'
+);
+
+PREPARE auth_role_data_scope_stmt FROM @auth_role_data_scope_sql;
+EXECUTE auth_role_data_scope_stmt;
+DEALLOCATE PREPARE auth_role_data_scope_stmt;
 
 INSERT IGNORE INTO auth_dept
 (id, name, parent_id, code, description, create_name, modify_name, sorting, state, version, tenant_id)

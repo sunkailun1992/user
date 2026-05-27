@@ -122,6 +122,7 @@ src/main/resources/db/*.sql
 - `MysqlDdl#getSqlFiles()` 统一声明脚本路径。
 - 基础字典、默认角色、默认权限资源等初始化数据也写入 DDL SQL 脚本。
 - SQL 脚本必须支持重复执行，使用 `IF NOT EXISTS`、`INSERT IGNORE` 或具备明确租户/主键条件的确定性 `UPDATE`。
+- MySQL 环境不一定支持 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`；新增字段需要兼容旧 MySQL 时，使用 `information_schema.COLUMNS` 判断字段是否存在，再通过 `PREPARE/EXECUTE` 执行 `ALTER TABLE`。
 - 不再为基础数据新增业务初始化接口，避免启动后还需要人工调用初始化接口。
 - 表结构必须包含 `version`，并由实体继承 `EntityBase.@Version`。
 - 多租户业务表必须包含 `tenant_id`，业务 SQL 不手写租户条件。
