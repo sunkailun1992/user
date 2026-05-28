@@ -19,9 +19,9 @@ import java.io.Serializable;
 public class AuthCodeGenerateQuery implements Serializable {
 
     /**
-     * 编码目标：TENANT、ROLE、RESOURCE。
+     * 编码目标：TENANT、DEPT、ROLE、RESOURCE。
      */
-    @Schema(description = "编码目标：TENANT、ROLE、RESOURCE")
+    @Schema(description = "编码目标：TENANT、DEPT、ROLE、RESOURCE")
     @NotBlank(message = "target不能为空")
     private String target;
 

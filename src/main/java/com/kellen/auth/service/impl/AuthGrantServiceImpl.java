@@ -196,7 +196,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
         List<String> deptIds = bo.getDeptIds().stream().filter(StringUtils::isNotBlank).distinct().toList(); // 过滤空部门ID并去重。
         try {
             TenantContextHolder.setTenantId(bo.getTenantId()); // 设置目标租户上下文。
-            authRoleDataScopeMapper.delete(new LambdaQueryWrapper<AuthRoleDataScope>().eq(AuthRoleDataScope::getRoleId, bo.getRoleId())); // 以当前提交结果作为完整授权集合。
+            authRoleDataScopeMapper.deleteByRoleId(bo.getTenantId(), bo.getRoleId()); // 物理删除旧关系，避免逻辑删除记录占用唯一索引。
             deptIds.forEach(deptId -> insertRoleDataScope(bo.getRoleId(), deptId)); // 补齐当前提交的部门关系。
             return true; // 返回同步成功。
         } finally {

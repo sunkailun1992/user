@@ -49,6 +49,9 @@ public class AuthCodeGenerateServiceImpl implements AuthCodeGenerateService {
         if ("TENANT".equals(target)) {
             return "tenant_" + readableName + "_" + uniqueSuffix; // 租户编码使用 tenant 前缀。
         }
+        if ("DEPT".equals(target)) {
+            return "dept_" + readableName + "_" + uniqueSuffix; // 部门编码使用 dept 前缀。
+        }
         if ("ROLE".equals(target)) {
             return "role_" + readableName + "_" + uniqueSuffix; // 角色编码使用 role 前缀。
         }

@@ -23,6 +23,7 @@
 - 新增需要人工输入 `code` 的业务表单时，必须优先检查是否可复用 `/auth/manage/codes/generate`。
 - 编码生成接口必须受管理权限保护，当前统一要求 `user:auth:manage`。
 - 生成规则集中在 `AuthCodeGenerateService`，不要把编码格式散落在 Controller、前端或 SQL 脚本中。
+- 编码生成目标必须覆盖当前所有需要人工输入 `code` 的表单；当前包括 `TENANT`、`DEPT`、`ROLE`、`RESOURCE`。
 - 生成结果只能包含小写字母、数字、下划线和冒号等 ASCII 可读字符；必须带时间和随机后缀，降低并发生成碰撞概率。
 
 ## DDL 变更规则
