@@ -8,6 +8,8 @@ import com.kellen.auth.entity.vo.AuthTenantVO;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthTenantService;
 import com.kellen.utils.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +30,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "认证登录", description = "提供登录、登录前租户查询和当前用户资源查询接口")
 public class AuthController {
 
     /**
@@ -65,6 +68,7 @@ public class AuthController {
      * @email 376253703@qq.com
      */
     @GetMapping("/tenants")
+    @Operation(summary = "登录前查询租户", description = "公开返回可选租户列表，用于登录页租户下拉选择")
     public ApiResponse<List<AuthTenantVO>> tenants(AuthTenantQuery query) {
         // 标记执行结果增强，确保前端可以直接展示状态说明等补充字段。
         query.setAssignment(Boolean.TRUE);
@@ -82,6 +86,7 @@ public class AuthController {
      * @email 376253703@qq.com
      */
     @PostMapping("/login")
+    @Operation(summary = "用户登录", description = "校验租户、账号和密码，签发JWT并返回当前用户权限资源")
     public ApiResponse<AuthLoginVO> login(@RequestBody LoginRequest request) {
         // 调用业务服务完成租户解析、密码校验、JWT签发和资源组装。
         return ApiResponse.success(authAuthenticationService.login(request)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
@@ -97,6 +102,7 @@ public class AuthController {
      */
     @GetMapping("/resources")
     @PreAuthorize("hasAuthority('user:auth:resources')")
+    @Operation(summary = "查询当前用户资源", description = "根据当前认证用户返回前端菜单资源和后端权限码")
     public ApiResponse<AuthCurrentResourceVO> resources() {
         // 调用业务服务查询当前用户拥有的前端资源和后端权限码。
         return ApiResponse.success(authAuthenticationService.currentResources()); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。

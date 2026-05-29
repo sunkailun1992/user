@@ -6,6 +6,8 @@ import com.kellen.auth.entity.bo.AuthRoleDataScopeSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.utils.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/auth/manage")
 @PreAuthorize("hasAuthority('user:auth:manage')")
+@Tag(name = "授权关系管理", description = "维护用户角色、角色资源和角色自定义数据范围关系")
 public class AuthGrantController {
 
     /**
@@ -55,6 +58,7 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @PostMapping("/user-roles")
+    @Operation(summary = "绑定用户角色", description = "为用户追加绑定指定角色关系")
     public ApiResponse<Boolean> bindUserRole(@Validated @RequestBody AuthUserRoleBO bo) {
         // 绑定用户和角色关系。
         return ApiResponse.success(authGrantService.bindUserRole(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
@@ -70,6 +74,7 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @PostMapping("/role-resources")
+    @Operation(summary = "绑定角色资源", description = "为角色追加绑定指定权限资源关系")
     public ApiResponse<Boolean> bindRoleResource(@Validated @RequestBody AuthRoleResourceBO bo) {
         // 绑定角色和权限资源关系。
         return ApiResponse.success(authGrantService.bindRoleResource(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
@@ -86,6 +91,7 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @GetMapping("/role-resources")
+    @Operation(summary = "查询角色资源", description = "查询角色已绑定的权限资源ID列表，用于授权树回显")
     public ApiResponse<List<String>> listRoleResourceIds(@RequestParam String tenantId, @RequestParam String roleId) {
         // 返回当前角色已绑定的资源ID列表，用于前端树形授权回显。
         return ApiResponse.success(authGrantService.listRoleResourceIds(tenantId, roleId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
@@ -101,6 +107,7 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @PutMapping("/role-resources")
+    @Operation(summary = "同步角色资源", description = "按完整资源ID列表覆盖同步角色权限资源关系")
     public ApiResponse<Boolean> syncRoleResources(@Validated @RequestBody AuthRoleResourceSyncBO bo) {
         // 按完整资源ID列表同步角色和权限资源关系。
         return ApiResponse.success(authGrantService.syncRoleResources(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
@@ -117,6 +124,7 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @GetMapping("/role-data-scopes")
+    @Operation(summary = "查询角色数据范围部门", description = "查询角色自定义数据范围下已绑定的部门ID列表")
     public ApiResponse<List<String>> listRoleDataScopeDeptIds(@RequestParam String tenantId, @RequestParam String roleId) {
         // 返回当前角色自定义可见部门ID列表，用于前端部门树回显。
         return ApiResponse.success(authGrantService.listRoleDataScopeDeptIds(tenantId, roleId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
@@ -132,6 +140,7 @@ public class AuthGrantController {
      * @email 376253703@qq.com
      */
     @PutMapping("/role-data-scopes")
+    @Operation(summary = "同步角色数据范围部门", description = "按完整部门ID列表覆盖同步角色自定义数据范围")
     public ApiResponse<Boolean> syncRoleDataScopes(@Validated @RequestBody AuthRoleDataScopeSyncBO bo) {
         // 按完整部门ID列表同步角色自定义数据范围。
         return ApiResponse.success(authGrantService.syncRoleDataScopes(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。

@@ -7,6 +7,8 @@ import com.kellen.auth.entity.query.AuthDeptQuery;
 import com.kellen.auth.entity.vo.AuthDeptVO;
 import com.kellen.auth.service.AuthDeptService;
 import com.kellen.utils.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/auth/manage/depts")
 @PreAuthorize("hasAuthority('user:auth:manage')")
+@Tag(name = "部门管理", description = "维护组织部门树和数据权限归属部门")
 public class AuthDeptController {
 
     /**
@@ -51,6 +54,7 @@ public class AuthDeptController {
      * @return 部门列表
      */
     @GetMapping
+    @Operation(summary = "查询部门列表", description = "按查询条件返回当前租户下的部门列表，用于组织树和数据权限选择")
     public ApiResponse<List<AuthDeptVO>> list(@Validated AuthDeptQuery query) {
         return ApiResponse.success(authDeptService.list(query)); // 查询指定租户的部门列表。
     }
@@ -62,6 +66,7 @@ public class AuthDeptController {
      * @return 部门分页
      */
     @PostMapping("/page")
+    @Operation(summary = "分页查询部门", description = "按查询条件分页返回当前租户下的部门数据")
     public ApiResponse<Page<AuthDeptVO>> page(@Validated(AuthDeptQuery.Select.class) @RequestBody AuthDeptQuery query) {
         Page<AuthDept> page = new Page<>(query.getCurrent(), query.getSize()); // 创建 MyBatis-Plus 分页对象。
         return ApiResponse.success(authDeptService.page(page, query)); // 查询部门分页并返回统一响应。
@@ -74,6 +79,7 @@ public class AuthDeptController {
      * @return 部门ID
      */
     @PostMapping
+    @Operation(summary = "新增部门", description = "创建组织部门并返回新部门ID")
     public ApiResponse<String> save(@Validated(AuthDeptBO.Save.class) @RequestBody AuthDeptBO bo) {
         return ApiResponse.success(authDeptService.save(bo)); // 新增部门并返回部门ID。
     }
@@ -85,6 +91,7 @@ public class AuthDeptController {
      * @return 是否成功
      */
     @PutMapping
+    @Operation(summary = "修改部门", description = "根据部门ID和version修改部门资料，并通过乐观锁防止并发覆盖")
     public ApiResponse<Boolean> update(@Validated(AuthDeptBO.Update.class) @RequestBody AuthDeptBO bo) {
         return ApiResponse.success(authDeptService.update(bo)); // 修改部门并使用 version 触发乐观锁。
     }
@@ -96,6 +103,7 @@ public class AuthDeptController {
      * @return 是否成功
      */
     @PostMapping("/remove")
+    @Operation(summary = "删除部门", description = "根据部门ID逻辑删除部门，不物理删除历史数据")
     public ApiResponse<Boolean> remove(@Validated(AuthDeptBO.Remove.class) @RequestBody AuthDeptBO bo) {
         return ApiResponse.success(authDeptService.remove(bo)); // 逻辑删除部门。
     }

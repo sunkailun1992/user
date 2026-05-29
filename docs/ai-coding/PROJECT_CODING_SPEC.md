@@ -298,6 +298,16 @@ com.kellen.utils.ApiResponse
 return ApiResponse.success(data);
 ```
 
+Knife4j / OpenAPI3 文档规则：
+
+- Spring Boot 3 项目使用 OpenAPI3 注解，Controller 类必须添加 `@Tag(name = "...", description = "...")`。
+- Controller 方法必须添加 `@Operation(summary = "...", description = "...")`，`summary` 使用前端和测试人员能直接理解的业务动作，不使用 `list`、`save`、`update` 等裸方法名。
+- 查询参数、路径参数、请求头参数语义不明显时，使用 `@Parameter` 或 `@Parameters` 说明业务含义、是否必填和来源位置。
+- `@Tag.name` 按业务资源命名，例如“用户管理”“角色管理”“权限资源管理”，不要让 Knife4j 展示默认的 `xxx-controller`。
+- `@Operation.summary` 必须唯一且可读，避免 Knife4j 生成 `list_1`、`save_1`、`update_1` 这类默认 operationId。
+- DTO、BO、Query、VO、Entity 字段继续使用 `@Schema(description = "...")`，让请求体和响应体在 Knife4j 中可读。
+- 接口鉴权需要通过 `@PreAuthorize` 和 OpenAPI 安全头共同表达；认证头由 `utils` 中统一 OpenAPI 配置维护，业务 Controller 不重复定义全局安全模型。
+
 失败：
 
 ```java

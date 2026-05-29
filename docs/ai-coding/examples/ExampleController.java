@@ -7,6 +7,8 @@ import com.kellen.example.entity.query.ExampleQuery;
 import com.kellen.example.entity.vo.ExampleVO;
 import com.kellen.example.service.ExampleService;
 import com.kellen.utils.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,6 +29,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/example")
+@Tag(name = "示例业务", description = "演示标准 Controller 分层、权限控制和 Knife4j 文档注解")
 public class ExampleController {
 
     /**
@@ -52,6 +55,7 @@ public class ExampleController {
      */
     @PostMapping("/select")
     @PreAuthorize("hasAuthority('example:select')")
+    @Operation(summary = "分页查询示例", description = "按查询条件分页返回示例业务数据")
     public ApiResponse<Page<ExampleVO>> select(@Validated(ExampleQuery.Select.class) @RequestBody ExampleQuery exampleQuery) {
         // 创建分页对象。
         Page<ExampleEntity> page = new Page<>(exampleQuery.getCurrent(), exampleQuery.getSize());
@@ -67,6 +71,7 @@ public class ExampleController {
      */
     @PostMapping("/selectList")
     @PreAuthorize("hasAuthority('example:select-list')")
+    @Operation(summary = "查询示例集合", description = "按查询条件返回示例业务集合数据")
     public ApiResponse<List<ExampleVO>> selectList(@Validated(ExampleQuery.SelectList.class) @RequestBody ExampleQuery exampleQuery) {
         // 返回统一 ApiResponse 结果。
         return ApiResponse.success(exampleService.listEnhance(exampleQuery));
@@ -80,6 +85,7 @@ public class ExampleController {
      */
     @PostMapping("/selectOne")
     @PreAuthorize("hasAuthority('example:select-one')")
+    @Operation(summary = "查询单条示例", description = "按唯一条件返回一条示例业务数据")
     public ApiResponse<ExampleVO> selectOne(@Validated(ExampleQuery.SelectOne.class) @RequestBody ExampleQuery exampleQuery) {
         // 返回统一 ApiResponse 结果。
         return ApiResponse.success(exampleService.getOneEnhance(exampleQuery));
@@ -93,6 +99,7 @@ public class ExampleController {
      */
     @PostMapping("/count")
     @PreAuthorize("hasAuthority('example:count')")
+    @Operation(summary = "统计示例数量", description = "按查询条件统计示例业务数据数量")
     public ApiResponse<Long> count(@Validated(ExampleQuery.Count.class) @RequestBody ExampleQuery exampleQuery) {
         // 返回统一 ApiResponse 结果。
         return ApiResponse.success(exampleService.countEnhance(exampleQuery));
@@ -106,6 +113,7 @@ public class ExampleController {
      */
     @PostMapping("/save")
     @PreAuthorize("hasAuthority('example:save')")
+    @Operation(summary = "新增示例", description = "创建示例业务数据并返回新数据主键")
     public ApiResponse<String> save(@Validated(ExampleBO.Save.class) @RequestBody ExampleBO exampleBO) {
         // 返回统一 ApiResponse 结果。
         return ApiResponse.success(exampleService.saveEnhance(exampleBO));
@@ -119,6 +127,7 @@ public class ExampleController {
      */
     @PutMapping("/update")
     @PreAuthorize("hasAuthority('example:update')")
+    @Operation(summary = "修改示例", description = "根据主键和version修改示例业务数据")
     public ApiResponse<Boolean> update(@Validated(ExampleBO.Update.class) @RequestBody ExampleBO exampleBO) {
         // 返回统一 ApiResponse 结果。
         return ApiResponse.success(exampleService.updateEnhance(exampleBO));
@@ -132,6 +141,7 @@ public class ExampleController {
      */
     @DeleteMapping("/remove")
     @PreAuthorize("hasAuthority('example:remove')")
+    @Operation(summary = "删除示例", description = "根据主键逻辑删除示例业务数据")
     public ApiResponse<Boolean> remove(@Validated(ExampleBO.Remove.class) @RequestBody ExampleBO exampleBO) {
         // 返回统一 ApiResponse 结果。
         return ApiResponse.success(exampleService.removeEnhance(exampleBO));

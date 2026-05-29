@@ -66,6 +66,35 @@ app:
       - http://127.0.0.1:8000
 ```
 
+## 接口文档
+
+Knife4j 文档地址：
+
+```text
+http://127.0.0.1:7500/doc.html
+```
+
+OpenAPI 原始文档地址：
+
+```text
+http://127.0.0.1:7500/v3/api-docs
+```
+
+当前 Nacos `knife4j.yaml` 使用 Springdoc 显式分组，只扫描 `com.kellen` 包。Knife4j Basic 认证开启，默认账号密码：
+
+```text
+admin / 123456
+```
+
+Controller 必须使用 OpenAPI3 注解：
+
+```java
+@Tag(name = "用户管理", description = "维护认证用户、所属部门、启用状态和角色授权基础数据")
+@Operation(summary = "分页查询用户", description = "按查询条件分页返回当前租户下的用户数据，用于用户管理列表")
+```
+
+这样 Knife4j 页面会展示业务名称，避免出现 `auth-user-controller`、`list_1`、`save_1` 等默认名称。
+
 ## 管理接口
 
 管理接口按业务资源拆分 Controller：
