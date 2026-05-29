@@ -25,6 +25,10 @@ spring:
           - data-id: reuse-configuration.yaml
             group: DEFAULT_GROUP
             refresh: true
+          # 公共安全认证配置
+          - data-id: security-auth.yaml
+            group: DEFAULT_GROUP
+            refresh: true
           # 参数配置
           - data-id: user.yaml
             group: DEFAULT_GROUP
