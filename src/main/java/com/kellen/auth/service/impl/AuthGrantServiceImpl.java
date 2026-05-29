@@ -9,6 +9,7 @@ import com.kellen.auth.entity.bo.AuthRoleDataScopeSyncBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
+import com.kellen.auth.entity.bo.AuthUserRoleSyncBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.vo.AuthResourceVO;
 import com.kellen.auth.mapper.AuthResourceMapper;
@@ -110,6 +111,63 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     }
 
     /**
+     * 查询用户已绑定角色ID列表。
+     *
+     * @param tenantId 租户ID
+     * @param userId   用户ID
+     * @return 角色ID列表
+     */
+    @Override
+    public List<String> listUserRoleIds(String tenantId, String userId) {
+        try {
+            // 授权关系是认证配置数据，编辑回显不能被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
+            // 设置目标租户上下文。
+            TenantContextHolder.setTenantId(tenantId);
+            // 查询当前用户绑定的角色ID列表。
+            return authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, userId))
+                    .stream()
+                    .map(AuthUserRole::getRoleId)
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .toList();
+        } finally {
+            // 清理上下文。
+            TenantContextHolder.clear();
+            DataPermissionContextHolder.clear();
+        }
+    }
+
+    /**
+     * 按完整角色ID列表同步用户角色关系。
+     *
+     * @param bo 用户角色同步授权参数
+     * @return 是否成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean syncUserRoles(AuthUserRoleSyncBO bo) {
+        // 过滤空角色ID并去重，避免重复授权关系。
+        List<String> roleIds = bo.getRoleIds().stream().filter(StringUtils::isNotBlank).distinct().toList();
+        try {
+            // 授权关系是认证配置数据，覆盖同步不能被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
+            // 设置目标租户上下文，保持后续插入自动填充租户ID一致。
+            TenantContextHolder.setTenantId(bo.getTenantId());
+            // 物理删除旧关系，保存时以当前勾选结果作为完整授权集合。
+            authUserRoleMapper.deleteByUserId(bo.getTenantId(), bo.getUserId());
+            // 补齐当前勾选的用户角色关系。
+            roleIds.forEach(roleId -> insertUserRole(bo.getUserId(), roleId));
+            // 返回成功。
+            return true;
+        } finally {
+            // 清理上下文。
+            TenantContextHolder.clear();
+            DataPermissionContextHolder.clear();
+        }
+    }
+
+    /**
      * 绑定角色资源。
      *
      * @param bo 角色资源授权参数
@@ -173,6 +231,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     @Override
     public List<String> listRoleDataScopeDeptIds(String tenantId, String roleId) {
         try {
+            DataPermissionContextHolder.ignore(); // 授权配置表回显不能被业务数据权限过滤。
             TenantContextHolder.setTenantId(tenantId); // 设置目标租户上下文。
             return authRoleDataScopeMapper.selectList(new LambdaQueryWrapper<AuthRoleDataScope>().eq(AuthRoleDataScope::getRoleId, roleId))
                     .stream()
@@ -182,6 +241,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
                     .toList(); // 返回当前角色绑定的部门ID列表。
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。
+            DataPermissionContextHolder.clear(); // 清理数据权限忽略标记。
         }
     }
 
@@ -276,29 +336,44 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      */
     public void bindUserRole(String tenantId, String userId, String roleId) {
         try {
+            // 授权关系是认证配置数据，不能被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
             // 设置目标租户上下文。
             TenantContextHolder.setTenantId(tenantId);
-            // 查询关系是否已存在。
-            AuthUserRole exists = authUserRoleMapper.selectOne(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, userId).eq(AuthUserRole::getRoleId, roleId).last("LIMIT 1"));
-            // 已存在则不重复插入。
-            if (exists != null) {
-                // 直接返回。
-                return;
-            }
-            // 创建用户角色关系。
-            AuthUserRole userRole = new AuthUserRole();
-            // 设置用户ID。
-            userRole.setUserId(userId);
-            // 设置角色ID。
-            userRole.setRoleId(roleId);
-            // 设置关系编码。
-            userRole.setCode(userId + ":" + roleId);
-            // 插入关系。
-            authUserRoleMapper.insert(userRole);
+            // 插入用户角色关系。
+            insertUserRole(userId, roleId);
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();
+            // 清理数据权限忽略标记。
+            DataPermissionContextHolder.clear();
         }
+    }
+
+    /**
+     * 插入用户角色关系。
+     *
+     * @param userId 用户ID
+     * @param roleId 角色ID
+     */
+    private void insertUserRole(String userId, String roleId) {
+        // 查询关系是否已存在。
+        AuthUserRole exists = authUserRoleMapper.selectOne(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, userId).eq(AuthUserRole::getRoleId, roleId).last("LIMIT 1"));
+        // 已存在则不重复插入。
+        if (exists != null) {
+            // 直接返回。
+            return;
+        }
+        // 创建用户角色关系。
+        AuthUserRole userRole = new AuthUserRole();
+        // 设置用户ID。
+        userRole.setUserId(userId);
+        // 设置角色ID。
+        userRole.setRoleId(roleId);
+        // 设置关系编码。
+        userRole.setCode(userId + ":" + roleId);
+        // 插入关系。
+        authUserRoleMapper.insert(userRole);
     }
 
     /**

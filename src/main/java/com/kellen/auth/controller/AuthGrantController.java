@@ -4,6 +4,7 @@ import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.entity.bo.AuthRoleDataScopeSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
+import com.kellen.auth.entity.bo.AuthUserRoleSyncBO;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,6 +63,39 @@ public class AuthGrantController {
     public ApiResponse<Boolean> bindUserRole(@Validated @RequestBody AuthUserRoleBO bo) {
         // 绑定用户和角色关系。
         return ApiResponse.success(authGrantService.bindUserRole(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 查询用户已绑定角色。
+     *
+     * @param tenantId 租户ID
+     * @param userId   用户ID
+     * @return 角色ID列表
+     * @author sunkailun
+     * @DateTime 2026/05/29
+     * @email 376253703@qq.com
+     */
+    @GetMapping("/user-roles")
+    @Operation(summary = "查询用户角色", description = "查询用户已绑定的角色ID列表，用于用户授权回显")
+    public ApiResponse<List<String>> listUserRoleIds(@RequestParam String tenantId, @RequestParam String userId) {
+        // 返回当前用户已绑定的角色ID列表，用于前端多选授权回显。
+        return ApiResponse.success(authGrantService.listUserRoleIds(tenantId, userId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 同步用户角色。
+     *
+     * @param bo 用户角色同步授权参数
+     * @return 是否成功
+     * @author sunkailun
+     * @DateTime 2026/05/29
+     * @email 376253703@qq.com
+     */
+    @PutMapping("/user-roles")
+    @Operation(summary = "同步用户角色", description = "按完整角色ID列表覆盖同步用户角色关系")
+    public ApiResponse<Boolean> syncUserRoles(@Validated @RequestBody AuthUserRoleSyncBO bo) {
+        // 按完整角色ID列表同步用户和角色关系。
+        return ApiResponse.success(authGrantService.syncUserRoles(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**

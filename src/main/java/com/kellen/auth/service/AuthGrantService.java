@@ -5,6 +5,7 @@ import com.kellen.auth.entity.bo.AuthRoleResourceBO;
 import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.entity.bo.AuthRoleDataScopeSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
+import com.kellen.auth.entity.bo.AuthUserRoleSyncBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.vo.AuthResourceVO;
 
@@ -26,6 +27,23 @@ public interface AuthGrantService {
      * @return 是否成功
      */
     Boolean bindUserRole(AuthUserRoleBO bo);
+
+    /**
+     * 查询用户已绑定角色ID列表。
+     *
+     * @param tenantId 租户ID
+     * @param userId   用户ID
+     * @return 角色ID列表
+     */
+    List<String> listUserRoleIds(String tenantId, String userId);
+
+    /**
+     * 按完整角色ID列表同步用户角色关系。
+     *
+     * @param bo 用户角色同步授权参数
+     * @return 是否成功
+     */
+    Boolean syncUserRoles(AuthUserRoleSyncBO bo);
 
     /**
      * 绑定角色资源。
