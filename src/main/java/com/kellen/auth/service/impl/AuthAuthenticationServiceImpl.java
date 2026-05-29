@@ -555,13 +555,26 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             List<AuthUser> users = authUserMapper.selectList(new LambdaQueryWrapper<AuthUser>()
                     .eq(AuthUser::getUsername, username)
                     .eq(AuthUser::getState, AuthStateEnum.启用));
-            // 优先匹配当前登录租户内的账号，其次匹配平台超管和显式关联账号。
-            return users.stream()
+            // 先校验账号密码，避免把租户权限错误误判为密码错误。
+            List<AuthUser> passwordMatchedUsers = users.stream()
                     .sorted((left, right) -> Boolean.compare(!tenantId.equals(left.getTenantId()), !tenantId.equals(right.getTenantId())))
                     .filter(user -> passwordEncoder.matches(password, user.getPassword()))
+                    .toList();
+            if (passwordMatchedUsers.isEmpty()) {
+                // 没有密码匹配账号时按用户名或密码错误处理。
+                return null;
+            }
+            // 再校验目标租户访问权限。
+            AuthUser accessUser = passwordMatchedUsers.stream()
                     .filter(user -> canAccessTenant(user, tenantId))
                     .findFirst()
                     .orElse(null);
+            if (accessUser == null) {
+                // 账号密码正确但没有目标租户权限时给出明确提示。
+                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+            }
+            // 返回可登录用户。
+            return accessUser;
         } finally {
             // 清理忽略标记。
             TenantContextHolder.clearIgnore();
