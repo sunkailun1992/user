@@ -72,6 +72,12 @@ public class AuthLoginVO implements Serializable {
     private List<String> dataScopeDeptIds;
 
     /**
+     * 当前用户可切换租户。
+     */
+    @Schema(description = "当前用户可切换租户")
+    private List<AuthTenantVO> availableTenants;
+
+    /**
      * 后端权限码。
      */
     @Schema(description = "后端权限码")

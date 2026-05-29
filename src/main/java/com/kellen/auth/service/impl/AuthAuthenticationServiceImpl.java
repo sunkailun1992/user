@@ -14,6 +14,7 @@ import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
+import com.kellen.auth.entity.vo.AuthTenantVO;
 import com.kellen.auth.mapper.AuthDeptMapper;
 import com.kellen.auth.mapper.AuthRoleDataScopeMapper;
 import com.kellen.auth.mapper.AuthRoleMapper;
@@ -219,6 +220,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             vo.setDataScope(dataScopeSnapshot.dataScope());
             // 设置数据权限部门ID集合。
             vo.setDataScopeDeptIds(dataScopeSnapshot.deptIds());
+            // 设置当前用户可切换租户。
+            vo.setAvailableTenants(findAvailableTenants(user.getUsername()));
             // 设置权限码。
             vo.setPermissions(permissions);
             // 设置前端资源。
@@ -260,6 +263,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             vo.setTenantId(currentUser.getTenantId());
             // 设置部门ID。
             vo.setDeptId(currentUser.getDeptId());
+            // 设置当前用户可切换租户。
+            vo.setAvailableTenants(findAvailableTenants(currentUser.getUsername()));
             // 设置权限码。
             vo.setPermissions(authGrantService.toPermissionCodes(resources));
             // 设置前端资源。
@@ -272,6 +277,24 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 清理租户上下文。
             TenantContextHolder.clear();
         }
+    }
+
+    /**
+     * 查询当前登录用户可切换租户。
+     *
+     * @return 当前登录用户可切换租户
+     */
+    @Override
+    public List<AuthTenantVO> currentTenants() {
+        // 获取当前登录用户。
+        SecurityUser currentUser = UserContextHolder.get();
+        // 校验用户是否登录。
+        if (currentUser == null) {
+            // 未登录时返回身份校验失败。
+            throw new UserException(ReturnCode.用户身份校验失败, "用户未登录");
+        }
+        // 按当前登录用户名查询可切换租户。
+        return findAvailableTenants(currentUser.getUsername());
     }
 
     /**
@@ -424,6 +447,74 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         } while (changed);
         // 返回部门树ID集合。
         return deptIds.stream().toList();
+    }
+
+    /**
+     * 按用户名查询启用账号所在的租户列表。
+     *
+     * @param username 用户名
+     * @return 可切换租户列表
+     * @author sunkailun
+     * @DateTime 2026/05/29
+     * @email 376253703@qq.com
+     */
+    private List<AuthTenantVO> findAvailableTenants(String username) {
+        if (StringUtils.isBlank(username)) {
+            // 用户名为空时不能推导租户关联。
+            return List.of();
+        }
+        try {
+            // 跨租户读取同名启用账号，用于计算当前用户可切换租户。
+            TenantContextHolder.ignore();
+            // 认证基础表查询不应被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
+            // 查询同名启用账号所在租户ID。
+            Set<String> tenantIds = authUserMapper.selectList(new LambdaQueryWrapper<AuthUser>()
+                            .eq(AuthUser::getUsername, username)
+                            .eq(AuthUser::getState, AuthStateEnum.启用))
+                    .stream()
+                    .map(AuthUser::getTenantId)
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            if (tenantIds.isEmpty()) {
+                // 没有关联账号时返回空租户列表。
+                return List.of();
+            }
+            // 查询启用租户详情。
+            return authTenantMapper.selectList(new LambdaQueryWrapper<AuthTenant>()
+                            .in(AuthTenant::getId, tenantIds)
+                            .eq(AuthTenant::getState, AuthStateEnum.启用)
+                            .orderByAsc(AuthTenant::getSorting))
+                    .stream()
+                    .map(this::toTenantVO)
+                    .toList();
+        } finally {
+            // 清理租户忽略标记。
+            TenantContextHolder.clearIgnore();
+            // 清理数据权限忽略标记。
+            DataPermissionContextHolder.clear();
+        }
+    }
+
+    /**
+     * 转换租户返回对象。
+     *
+     * @param tenant 租户实体
+     * @return 租户返回对象
+     * @author sunkailun
+     * @DateTime 2026/05/29
+     * @email 376253703@qq.com
+     */
+    private AuthTenantVO toTenantVO(AuthTenant tenant) {
+        AuthTenantVO vo = new AuthTenantVO();
+        vo.setId(tenant.getId());
+        vo.setCode(tenant.getCode());
+        vo.setName(tenant.getName());
+        vo.setState(tenant.getState());
+        vo.setStateDesc(tenant.getState() == null ? null : tenant.getState().getDesc());
+        vo.setSorting(tenant.getSorting());
+        vo.setVersion(tenant.getVersion());
+        return vo;
     }
 
     /**

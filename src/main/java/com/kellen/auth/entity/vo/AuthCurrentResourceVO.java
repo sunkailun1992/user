@@ -42,6 +42,12 @@ public class AuthCurrentResourceVO implements Serializable {
     private List<String> permissions;
 
     /**
+     * 当前用户可切换租户。
+     */
+    @Schema(description = "当前用户可切换租户")
+    private List<AuthTenantVO> availableTenants;
+
+    /**
      * 前端资源。
      */
     @Schema(description = "前端资源")

@@ -3,6 +3,9 @@ package com.kellen.auth.service;
 import com.kellen.auth.dto.LoginRequest;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
+import com.kellen.auth.entity.vo.AuthTenantVO;
+
+import java.util.List;
 
 /**
  * 认证登录业务服务。
@@ -27,4 +30,11 @@ public interface AuthAuthenticationService {
      * @return 当前登录用户资源
      */
     AuthCurrentResourceVO currentResources();
+
+    /**
+     * 查询当前登录用户可切换租户。
+     *
+     * @return 当前登录用户可切换租户
+     */
+    List<AuthTenantVO> currentTenants();
 }

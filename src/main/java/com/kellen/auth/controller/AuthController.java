@@ -107,4 +107,19 @@ public class AuthController {
         // 调用业务服务查询当前用户拥有的前端资源和后端权限码。
         return ApiResponse.success(authAuthenticationService.currentResources()); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
+
+    /**
+     * 当前用户可切换租户。
+     *
+     * @return 当前用户可切换租户
+     * @author sunkailun
+     * @DateTime 2026/05/29
+     * @email 376253703@qq.com
+     */
+    @GetMapping("/current/tenants")
+    @Operation(summary = "查询当前用户可切换租户", description = "根据当前登录用户名返回该用户在各租户下拥有启用账号的租户列表")
+    public ApiResponse<List<AuthTenantVO>> currentTenants() {
+        // 调用认证服务按当前登录用户名查询可切换租户。
+        return ApiResponse.success(authAuthenticationService.currentTenants()); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
 }
