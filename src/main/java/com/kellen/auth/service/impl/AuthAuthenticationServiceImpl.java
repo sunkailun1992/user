@@ -22,6 +22,7 @@ import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthGrantService;
+import com.kellen.datapermission.DataPermissionContextHolder;
 import com.kellen.security.SecurityUser;
 import com.kellen.security.UserContextHolder;
 import com.kellen.utils.auth.JwtUtils;
@@ -293,6 +294,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         try {
             // 租户表是全局主数据，按编码查询时忽略租户条件。
             TenantContextHolder.ignore();
+            // 登录前租户解析不应被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
             // 查询租户。
             AuthTenant tenant = authTenantMapper.selectOne(new LambdaQueryWrapper<AuthTenant>().eq(AuthTenant::getCode, request.getTenantCode()).last("LIMIT 1"));
             // 校验租户是否存在。
@@ -305,6 +308,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         } finally {
             // 清理忽略租户标记。
             TenantContextHolder.clearIgnore();
+            // 清理数据权限忽略标记。
+            DataPermissionContextHolder.clear();
         }
     }
 
@@ -318,48 +323,55 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @email 376253703@qq.com
      */
     private DataScopeSnapshot resolveDataScope(AuthUser user) {
-        // 查询当前用户角色关系。
-        List<AuthUserRole> userRoles = authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, user.getId()));
-        // 提取角色ID集合。
-        Set<String> roleIds = userRoles.stream().map(AuthUserRole::getRoleId).filter(StringUtils::isNotBlank).collect(Collectors.toCollection(LinkedHashSet::new));
-        // 没有角色时按本人数据范围兜底。
-        if (roleIds.isEmpty()) {
-            // 返回本人数据范围。
+        try {
+            // 角色和部门授权配置用于计算数据范围自身，不能被尚未计算出的数据范围过滤。
+            DataPermissionContextHolder.ignore();
+            // 查询当前用户角色关系。
+            List<AuthUserRole> userRoles = authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, user.getId()));
+            // 提取角色ID集合。
+            Set<String> roleIds = userRoles.stream().map(AuthUserRole::getRoleId).filter(StringUtils::isNotBlank).collect(Collectors.toCollection(LinkedHashSet::new));
+            // 没有角色时按本人数据范围兜底。
+            if (roleIds.isEmpty()) {
+                // 返回本人数据范围。
+                return new DataScopeSnapshot(AuthDataScopeEnum.SELF.getValue(), List.of());
+            }
+            // 查询角色详情。
+            List<AuthRole> roles = authRoleMapper.selectList(new LambdaQueryWrapper<AuthRole>().in(AuthRole::getId, roleIds));
+            // 任一角色拥有全部数据时，合并结果就是全部数据。
+            if (roles.stream().anyMatch(role -> AuthDataScopeEnum.ALL == role.getDataScope())) {
+                // 返回全部数据范围。
+                return new DataScopeSnapshot(AuthDataScopeEnum.ALL.getValue(), List.of());
+            }
+            // 创建可访问部门集合。
+            Set<String> deptIds = new LinkedHashSet<>();
+            // 遍历角色合并部门范围。
+            for (AuthRole role : roles) {
+                // 空数据范围按本人处理。
+                AuthDataScopeEnum dataScope = role.getDataScope() == null ? AuthDataScopeEnum.SELF : role.getDataScope();
+                // 本部门范围加入当前用户部门。
+                if (AuthDataScopeEnum.DEPT == dataScope && StringUtils.isNotBlank(user.getDeptId())) {
+                    deptIds.add(user.getDeptId());
+                }
+                // 本部门及下级部门范围加入部门树。
+                if (AuthDataScopeEnum.DEPT_TREE == dataScope && StringUtils.isNotBlank(user.getDeptId())) {
+                    deptIds.addAll(findDeptTreeIds(user.getDeptId()));
+                }
+                // 自定义范围加入角色绑定部门。
+                if (AuthDataScopeEnum.CUSTOM == dataScope) {
+                    deptIds.addAll(findCustomDeptIds(role.getId()));
+                }
+            }
+            // 有部门范围时按自定义部门集合下发，SQL 层按集合过滤。
+            if (!deptIds.isEmpty()) {
+                // 返回自定义部门数据范围。
+                return new DataScopeSnapshot(AuthDataScopeEnum.CUSTOM.getValue(), deptIds.stream().toList());
+            }
+            // 无部门范围时按本人数据范围兜底。
             return new DataScopeSnapshot(AuthDataScopeEnum.SELF.getValue(), List.of());
+        } finally {
+            // 清理数据权限忽略标记。
+            DataPermissionContextHolder.clear();
         }
-        // 查询角色详情。
-        List<AuthRole> roles = authRoleMapper.selectList(new LambdaQueryWrapper<AuthRole>().in(AuthRole::getId, roleIds));
-        // 任一角色拥有全部数据时，合并结果就是全部数据。
-        if (roles.stream().anyMatch(role -> AuthDataScopeEnum.ALL == role.getDataScope())) {
-            // 返回全部数据范围。
-            return new DataScopeSnapshot(AuthDataScopeEnum.ALL.getValue(), List.of());
-        }
-        // 创建可访问部门集合。
-        Set<String> deptIds = new LinkedHashSet<>();
-        // 遍历角色合并部门范围。
-        for (AuthRole role : roles) {
-            // 空数据范围按本人处理。
-            AuthDataScopeEnum dataScope = role.getDataScope() == null ? AuthDataScopeEnum.SELF : role.getDataScope();
-            // 本部门范围加入当前用户部门。
-            if (AuthDataScopeEnum.DEPT == dataScope && StringUtils.isNotBlank(user.getDeptId())) {
-                deptIds.add(user.getDeptId());
-            }
-            // 本部门及下级部门范围加入部门树。
-            if (AuthDataScopeEnum.DEPT_TREE == dataScope && StringUtils.isNotBlank(user.getDeptId())) {
-                deptIds.addAll(findDeptTreeIds(user.getDeptId()));
-            }
-            // 自定义范围加入角色绑定部门。
-            if (AuthDataScopeEnum.CUSTOM == dataScope) {
-                deptIds.addAll(findCustomDeptIds(role.getId()));
-            }
-        }
-        // 有部门范围时按自定义部门集合下发，SQL 层按集合过滤。
-        if (!deptIds.isEmpty()) {
-            // 返回自定义部门数据范围。
-            return new DataScopeSnapshot(AuthDataScopeEnum.CUSTOM.getValue(), deptIds.stream().toList());
-        }
-        // 无部门范围时按本人数据范围兜底。
-        return new DataScopeSnapshot(AuthDataScopeEnum.SELF.getValue(), List.of());
     }
 
     /**

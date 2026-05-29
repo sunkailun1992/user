@@ -17,6 +17,7 @@ import com.kellen.auth.mapper.AuthRoleResourceMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.auth.service.results.AuthResourceServiceResults;
+import com.kellen.datapermission.DataPermissionContextHolder;
 import com.kellen.utils.context.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -212,26 +213,33 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      */
     @Override
     public List<AuthResource> findResourcesByUserId(String userId) {
-        // 查询用户角色关系。
-        List<AuthUserRole> userRoles = authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, userId));
-        // 提取角色ID集合。
-        Set<String> roleIds = userRoles.stream().map(AuthUserRole::getRoleId).collect(Collectors.toSet());
-        // 无角色时返回空资源。
-        if (roleIds.isEmpty()) {
-            // 返回空列表。
-            return List.of();
+        try {
+            // 授权配置表是认证基础数据，登录和当前资源查询不能被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
+            // 查询用户角色关系。
+            List<AuthUserRole> userRoles = authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, userId));
+            // 提取角色ID集合。
+            Set<String> roleIds = userRoles.stream().map(AuthUserRole::getRoleId).collect(Collectors.toSet());
+            // 无角色时返回空资源。
+            if (roleIds.isEmpty()) {
+                // 返回空列表。
+                return List.of();
+            }
+            // 查询角色资源关系。
+            List<AuthRoleResource> roleResources = authRoleResourceMapper.selectList(new LambdaQueryWrapper<AuthRoleResource>().in(AuthRoleResource::getRoleId, roleIds));
+            // 提取资源ID集合。
+            Set<String> resourceIds = roleResources.stream().map(AuthRoleResource::getResourceId).collect(Collectors.toSet());
+            // 无资源时返回空列表。
+            if (resourceIds.isEmpty()) {
+                // 返回空列表。
+                return List.of();
+            }
+            // 查询资源详情。
+            return authResourceMapper.selectList(new LambdaQueryWrapper<AuthResource>().in(AuthResource::getId, resourceIds).orderByAsc(AuthResource::getSorting));
+        } finally {
+            // 清理数据权限忽略标记。
+            DataPermissionContextHolder.clear();
         }
-        // 查询角色资源关系。
-        List<AuthRoleResource> roleResources = authRoleResourceMapper.selectList(new LambdaQueryWrapper<AuthRoleResource>().in(AuthRoleResource::getRoleId, roleIds));
-        // 提取资源ID集合。
-        Set<String> resourceIds = roleResources.stream().map(AuthRoleResource::getResourceId).collect(Collectors.toSet());
-        // 无资源时返回空列表。
-        if (resourceIds.isEmpty()) {
-            // 返回空列表。
-            return List.of();
-        }
-        // 查询资源详情。
-        return authResourceMapper.selectList(new LambdaQueryWrapper<AuthResource>().in(AuthResource::getId, resourceIds).orderByAsc(AuthResource::getSorting));
     }
 
     /**

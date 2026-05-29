@@ -69,7 +69,8 @@ public class MysqlDdl implements IDdl {
                 "db/auth-schema.sql",
                 "db/20260527-auth-resource-tree-data.sql",
                 "db/20260527-auth-data-permission.sql",
-                "db/20260529-auth-permission-test-data.sql"
+                "db/20260529-auth-permission-test-data.sql",
+                "db/20260529-auth-admin-permission-repair.sql"
         );
     }
 }

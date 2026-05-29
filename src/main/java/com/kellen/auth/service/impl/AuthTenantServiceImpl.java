@@ -11,6 +11,7 @@ import com.kellen.auth.mapper.AuthTenantMapper;
 import com.kellen.auth.service.AuthTenantService;
 import com.kellen.auth.service.query.AuthTenantServiceQuery;
 import com.kellen.auth.service.results.AuthTenantServiceResults;
+import com.kellen.datapermission.DataPermissionContextHolder;
 import com.kellen.utils.convert.GeneralConvertor;
 import com.kellen.utils.context.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
@@ -75,6 +76,8 @@ public class AuthTenantServiceImpl implements AuthTenantService {
         try {
             // 租户是全局主数据，查询时忽略租户插件。
             TenantContextHolder.ignore();
+            // 租户下拉和租户管理不能被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
             // 构建完整查询包装器。
             QueryWrapper<AuthTenant> queryWrapper = buildQueryWrapper(query);
             // 执行分页查询。
@@ -86,6 +89,8 @@ public class AuthTenantServiceImpl implements AuthTenantService {
         } finally {
             // 清理租户忽略标记。
             TenantContextHolder.clearIgnore();
+            // 清理数据权限忽略标记。
+            DataPermissionContextHolder.clear();
         }
     }
 
@@ -100,6 +105,8 @@ public class AuthTenantServiceImpl implements AuthTenantService {
         try {
             // 租户是全局主数据，查询时忽略租户插件。
             TenantContextHolder.ignore();
+            // 租户下拉和租户管理不能被业务数据权限过滤。
+            DataPermissionContextHolder.ignore();
             // 构建完整查询包装器。
             QueryWrapper<AuthTenant> queryWrapper = buildQueryWrapper(query);
             // 查询租户实体列表。
@@ -111,6 +118,8 @@ public class AuthTenantServiceImpl implements AuthTenantService {
         } finally {
             // 清理租户忽略标记。
             TenantContextHolder.clearIgnore();
+            // 清理数据权限忽略标记。
+            DataPermissionContextHolder.clear();
         }
     }
 

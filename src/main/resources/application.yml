@@ -3,3 +3,13 @@ server:
 spring:
   main:
     allow-bean-definition-overriding: true
+security:
+  auth:
+    permit-urls:
+      - /actuator/**
+      - /doc.html
+      - /webjars/**
+      - /swagger-ui/**
+      - /v3/api-docs/**
+      - /auth/tenants
+      - /auth/login
