@@ -400,10 +400,18 @@ security:
       - auth_tenant
       - auth_resource
     table-rules:
+      auth_user:
+        user-column: id
+        dept-column: dept_id
+      auth_dept:
+        user-column: id
+        dept-column: id
       business_order:
         user-column: create_name
         dept-column: dept_id
 ```
+
+`auth_user` 和 `auth_dept` 这类认证管理页面也必须走 `DataPermissionInterceptor` 的全局表规则，不要在 Service 查询方法里为每个页面手写数据范围过滤。`auth_dept` 没有 `dept_id` 字段时，使用部门表自身 `id` 作为 `dept-column`。
 
 ## 逻辑删除规范
 
