@@ -287,6 +287,7 @@ SQL 脚本：
 src/main/resources/db/auth-schema.sql
 src/main/resources/db/20260527-auth-resource-tree-data.sql
 src/main/resources/db/20260527-auth-data-permission.sql
+src/main/resources/db/20260529-auth-permission-test-data.sql
 ```
 
 脚本由 MyBatis-Plus 按 `MysqlDdl#getSqlFiles()` 顺序执行，并写入 `ddl_history`。修改历史 SQL 前必须先查当前数据库 `ddl_history`；已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
@@ -298,6 +299,55 @@ src/main/resources/db/20260527-auth-data-permission.sql
 - 默认管理员：`username = admin`，`password = 123456`
 - 默认管理员角色：`admin`，数据范围 `ALL`
 - 默认权限资源和授权关系
+
+## 租户和数据权限测试账号
+
+测试账号由 `src/main/resources/db/20260529-auth-permission-test-data.sql` 维护，所有账号密码统一为：
+
+```text
+123456
+```
+
+登录默认租户时，前端选择 `默认租户`；直接调用接口时可传：
+
+```json
+{
+  "tenantCode": "default",
+  "username": "org_all",
+  "password": "123456"
+}
+```
+
+默认租户 `100` 的部门树：
+
+```text
+默认部门 dept_root_100
+├── 技术部 dept_tech_100
+│   ├── 后端组 dept_backend_100
+│   └── 前端组 dept_frontend_100
+├── 财务部 dept_finance_100
+└── 人事部 dept_hr_100
+```
+
+默认租户数据权限账号：
+
+| 登录租户 | tenantCode | 用户名 | 密码 | 所属部门 | 角色数据范围 | 登录后 dataScope | 登录后 dataScopeDeptIds |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 默认租户 | `default` | `org_all` | `123456` | 默认部门 | `ALL` 全部数据 | `ALL` | 空 |
+| 默认租户 | `default` | `org_self` | `123456` | 技术部 | `SELF` 仅本人数据 | `SELF` | 空 |
+| 默认租户 | `default` | `org_dept` | `123456` | 技术部 | `DEPT` 本部门数据 | `CUSTOM` | `dept_tech_100` |
+| 默认租户 | `default` | `org_tree` | `123456` | 技术部 | `DEPT_TREE` 本部门及下级部门 | `CUSTOM` | `dept_tech_100,dept_backend_100,dept_frontend_100` |
+| 默认租户 | `default` | `org_custom` | `123456` | 财务部 | `CUSTOM` 自定义部门 | `CUSTOM` | `dept_backend_100,dept_finance_100` |
+
+租户隔离测试账号：
+
+| 登录租户 | tenantCode | 用户名 | 密码 | tenantId | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| 测试租户 | `test-org` | `org200_all` | `123456` | `200` | 用于验证只能看到租户 `200` 的组织、用户、角色和资源 |
+
+这些账号均绑定了后台管理所需的基础前端菜单和 `user:auth:manage` 后端权限，便于在前端页面直接测试租户隔离和数据范围回显。
+
+注意：`DataPermissionInterceptor` 只会对配置在 `security.data-permission.table-rules` 中的业务表自动追加数据权限条件。使用上述账号验证业务数据过滤时，目标业务表必须至少具备 `tenant_id`、`dept_id` 和 `create_name` 字段，并在配置中声明对应表规则。
 
 不要再新增 `/auth/init` 这类业务初始化接口。
 

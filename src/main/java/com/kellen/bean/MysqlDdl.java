@@ -68,7 +68,8 @@ public class MysqlDdl implements IDdl {
         return List.of(
                 "db/auth-schema.sql",
                 "db/20260527-auth-resource-tree-data.sql",
-                "db/20260527-auth-data-permission.sql"
+                "db/20260527-auth-data-permission.sql",
+                "db/20260529-auth-permission-test-data.sql"
         );
     }
 }
