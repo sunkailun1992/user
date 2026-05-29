@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthUser;
 import com.kellen.auth.entity.AuthUserTenant;
 import com.kellen.auth.entity.bo.AuthUserBO;
-import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import com.kellen.auth.entity.enums.AuthAdminTypeEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.query.AuthUserQuery;
@@ -16,9 +15,6 @@ import com.kellen.auth.mapper.AuthUserTenantMapper;
 import com.kellen.auth.service.AuthUserService;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
 import com.kellen.auth.service.results.AuthUserServiceResults;
-import com.kellen.datapermission.DataPermissionContextHolder;
-import com.kellen.security.SecurityUser;
-import com.kellen.security.UserContextHolder;
 import com.kellen.utils.convert.GeneralConvertor;
 import com.kellen.utils.context.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
@@ -98,7 +94,6 @@ public class AuthUserServiceImpl implements AuthUserService {
     @Override
     public Page<AuthUserVO> page(Page<AuthUser> page, AuthUserQuery query) {
         try {
-            DataPermissionContextHolder.ignore(); // 用户管理使用本服务按用户/部门处理数据范围，避免通用表规则重复叠加。
             // 设置目标租户上下文。
             TenantContextHolder.setTenantId(query.getTenantId());
             // 构建完整查询包装器。
@@ -110,8 +105,6 @@ public class AuthUserServiceImpl implements AuthUserService {
             // 根据查询参数决定是否执行结果增强。
             return needAssignment(query) ? authUserServiceResults.assignment(pageVO) : pageVO;
         } finally {
-            // 清理数据权限忽略标记。
-            DataPermissionContextHolder.clear();
             // 清理租户上下文。
             TenantContextHolder.clear();
         }
@@ -126,7 +119,6 @@ public class AuthUserServiceImpl implements AuthUserService {
     @Override
     public List<AuthUserVO> list(AuthUserQuery query) {
         try {
-            DataPermissionContextHolder.ignore(); // 用户管理使用本服务按用户/部门处理数据范围，避免通用表规则重复叠加。
             // 设置目标租户上下文。
             TenantContextHolder.setTenantId(query.getTenantId());
             // 构建完整查询包装器。
@@ -138,8 +130,6 @@ public class AuthUserServiceImpl implements AuthUserService {
             // 根据查询参数决定是否执行结果增强。
             return needAssignment(query) ? authUserServiceResults.assignment(voRecords) : voRecords;
         } finally {
-            // 清理数据权限忽略标记。
-            DataPermissionContextHolder.clear();
             // 清理租户上下文。
             TenantContextHolder.clear();
         }
@@ -265,8 +255,6 @@ public class AuthUserServiceImpl implements AuthUserService {
         authUserServiceQuery.query(query, queryWrapper);
         // 拼接人工查询条件。
         queryArtificial(query, queryWrapper);
-        // 拼接当前登录用户数据范围条件。
-        applyUserDataScope(queryWrapper);
         // 返回完整查询包装器。
         return queryWrapper;
     }
@@ -334,43 +322,6 @@ public class AuthUserServiceImpl implements AuthUserService {
         queryWrapper.and(wrapper -> wrapper.like("username", query.getQuery()).or().like("nickname", query.getQuery()));
         // 返回完整查询包装器。
         return queryWrapper;
-    }
-
-    /**
-     * 按当前登录用户数据范围过滤用户列表。
-     *
-     * @param queryWrapper 查询包装器
-     */
-    private void applyUserDataScope(QueryWrapper<AuthUser> queryWrapper) {
-        SecurityUser user = UserContextHolder.get(); // 读取认证过滤器写入的当前用户快照。
-        if (user == null || StringUtils.isBlank(user.getDataScope())) {
-            return; // 未登录或未携带数据范围时交给接口鉴权和租户隔离处理。
-        }
-        if (AuthDataScopeEnum.ALL.getValue().equalsIgnoreCase(user.getDataScope())) {
-            return; // 全部数据不追加用户条件。
-        }
-        if (AuthDataScopeEnum.SELF.getValue().equalsIgnoreCase(user.getDataScope())) {
-            queryWrapper.eq("id", user.getUserId()); // 仅本人数据只展示当前登录用户。
-            return;
-        }
-        Set<String> deptIds = new LinkedHashSet<>(); // 创建可见部门集合。
-        if (AuthDataScopeEnum.DEPT.getValue().equalsIgnoreCase(user.getDataScope())) {
-            if (StringUtils.isNotBlank(user.getDeptId())) {
-                deptIds.add(user.getDeptId()); // 本部门数据按用户所属部门过滤。
-            }
-        } else {
-            if (user.getDataScopeDeptIds() != null) {
-                user.getDataScopeDeptIds().stream().filter(StringUtils::isNotBlank).forEach(deptIds::add); // 加入角色计算出的可见部门。
-            }
-            if (StringUtils.isNotBlank(user.getDeptId())) {
-                deptIds.add(user.getDeptId()); // 部门树和自定义范围保留当前所属部门。
-            }
-        }
-        if (deptIds.isEmpty()) {
-            queryWrapper.eq("id", "__NO_VISIBLE_USER__"); // 没有可见部门时强制返回空结果。
-            return;
-        }
-        queryWrapper.in("dept_id", deptIds); // 用户表按所属部门过滤。
     }
 
     /**
