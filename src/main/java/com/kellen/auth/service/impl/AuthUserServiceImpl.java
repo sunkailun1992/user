@@ -4,11 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthUser;
+import com.kellen.auth.entity.AuthUserTenant;
 import com.kellen.auth.entity.bo.AuthUserBO;
+import com.kellen.auth.entity.enums.AuthAdminTypeEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.query.AuthUserQuery;
 import com.kellen.auth.entity.vo.AuthUserVO;
 import com.kellen.auth.mapper.AuthUserMapper;
+import com.kellen.auth.mapper.AuthUserTenantMapper;
 import com.kellen.auth.service.AuthUserService;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
 import com.kellen.auth.service.results.AuthUserServiceResults;
@@ -19,7 +22,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * 用户业务服务实现。
@@ -35,6 +41,11 @@ public class AuthUserServiceImpl implements AuthUserService {
      * 用户Mapper。
      */
     private final AuthUserMapper authUserMapper;
+
+    /**
+     * 用户租户关联Mapper。
+     */
+    private final AuthUserTenantMapper authUserTenantMapper;
 
     /**
      * 用户查询增强。
@@ -57,16 +68,20 @@ public class AuthUserServiceImpl implements AuthUserService {
      * @param authUserMapper         用户Mapper
      * @param authUserServiceQuery   用户查询增强
      * @param authUserServiceResults 用户结果增强
+     * @param authUserTenantMapper   用户租户关联Mapper
      */
     public AuthUserServiceImpl(AuthUserMapper authUserMapper,
                                AuthUserServiceQuery authUserServiceQuery,
-                               AuthUserServiceResults authUserServiceResults) {
+                               AuthUserServiceResults authUserServiceResults,
+                               AuthUserTenantMapper authUserTenantMapper) {
         // 保存用户Mapper。
         this.authUserMapper = authUserMapper;
         // 保存用户查询增强。
         this.authUserServiceQuery = authUserServiceQuery;
         // 保存用户结果增强。
         this.authUserServiceResults = authUserServiceResults;
+        // 保存用户租户关联Mapper。
+        this.authUserTenantMapper = authUserTenantMapper;
     }
 
     /**
@@ -145,8 +160,12 @@ public class AuthUserServiceImpl implements AuthUserService {
             user.setPassword(passwordEncoder.encode(bo.getPassword()));
             // 设置默认启用状态。
             user.setState(bo.getState() == null ? AuthStateEnum.启用 : bo.getState());
+            // 设置默认管理员分类。
+            user.setAdminType(bo.getAdminType() == null ? AuthAdminTypeEnum.TENANT_ADMIN : bo.getAdminType());
             // 插入用户。
             authUserMapper.insert(user);
+            // 同步用户可访问租户。
+            syncUserTenants(user.getId(), bo);
             // 返回用户ID。
             return user.getId();
         } finally {
@@ -180,7 +199,13 @@ public class AuthUserServiceImpl implements AuthUserService {
                 user.setPassword(passwordEncoder.encode(bo.getPassword()));
             }
             // 使用updateById执行乐观锁更新。
-            return authUserMapper.updateById(user) > 0;
+            boolean updated = authUserMapper.updateById(user) > 0;
+            if (updated) {
+                // 同步用户可访问租户。
+                syncUserTenants(bo.getId(), bo);
+            }
+            // 返回更新结果。
+            return updated;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();
@@ -232,6 +257,52 @@ public class AuthUserServiceImpl implements AuthUserService {
         queryArtificial(query, queryWrapper);
         // 返回完整查询包装器。
         return queryWrapper;
+    }
+
+    /**
+     * 同步用户租户关联。
+     *
+     * @param userId 用户ID
+     * @param bo     用户写入参数
+     */
+    private void syncUserTenants(String userId, AuthUserBO bo) {
+        if (StringUtils.isBlank(userId) || bo == null) {
+            // 缺少必要参数时不处理关联。
+            return;
+        }
+        try {
+            // 用户租户关联是跨租户认证配置，写入时忽略当前租户插件条件。
+            TenantContextHolder.ignore();
+            // 删除旧关联。
+            authUserTenantMapper.deleteByUserId(userId);
+            // 创建待写入租户集合。
+            Set<String> tenantIds = new LinkedHashSet<>();
+            if (bo.getTenantIds() != null) {
+                // 加入表单选择的关联租户。
+                bo.getTenantIds().stream().filter(StringUtils::isNotBlank).forEach(tenantIds::add);
+            }
+            if (StringUtils.isNotBlank(bo.getTenantId())) {
+                // 默认租户必须纳入关联范围。
+                tenantIds.add(bo.getTenantId());
+            }
+            for (String tenantId : tenantIds) {
+                // 创建用户租户关联。
+                AuthUserTenant userTenant = new AuthUserTenant();
+                userTenant.setId(UUID.randomUUID().toString());
+                userTenant.setUserId(userId);
+                userTenant.setRelationTenantId(tenantId);
+                userTenant.setDeptId(tenantId.equals(bo.getTenantId()) ? bo.getDeptId() : null);
+                userTenant.setDefaultTenant(tenantId.equals(bo.getTenantId()));
+                userTenant.setCode(userId + ":" + tenantId);
+                userTenant.setDescription("用户租户关联");
+                userTenant.setState(AuthStateEnum.启用);
+                userTenant.setTenantId(tenantId);
+                authUserTenantMapper.insert(userTenant);
+            }
+        } finally {
+            // 清理租户忽略标记。
+            TenantContextHolder.clearIgnore();
+        }
     }
 
     /**

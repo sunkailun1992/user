@@ -1,12 +1,14 @@
 package com.kellen.auth.entity.bo;
 
 import com.kellen.auth.entity.enums.AuthStateEnum;
+import com.kellen.auth.entity.enums.AuthAdminTypeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 认证用户写入参数。
@@ -59,6 +61,18 @@ public class AuthUserBO implements Serializable {
      */
     @Schema(description = "用户昵称")
     private String nickname;
+
+    /**
+     * 管理员分类。
+     */
+    @Schema(description = "管理员分类")
+    private AuthAdminTypeEnum adminType;
+
+    /**
+     * 用户关联租户ID集合。
+     */
+    @Schema(description = "用户关联租户ID集合")
+    private List<String> tenantIds;
 
     /**
      * 所属部门ID。

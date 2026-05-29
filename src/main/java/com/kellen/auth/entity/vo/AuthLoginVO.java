@@ -60,6 +60,12 @@ public class AuthLoginVO implements Serializable {
     private String deptId;
 
     /**
+     * 管理员分类。
+     */
+    @Schema(description = "管理员分类")
+    private String adminType;
+
+    /**
      * 当前登录用户合并后的数据权限范围。
      */
     @Schema(description = "当前登录用户合并后的数据权限范围")

@@ -36,6 +36,12 @@ public class AuthCurrentResourceVO implements Serializable {
     private String deptId;
 
     /**
+     * 管理员分类。
+     */
+    @Schema(description = "管理员分类")
+    private String adminType;
+
+    /**
      * 后端权限码。
      */
     @Schema(description = "后端权限码")

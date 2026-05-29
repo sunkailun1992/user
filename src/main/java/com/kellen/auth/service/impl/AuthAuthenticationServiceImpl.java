@@ -9,6 +9,8 @@ import com.kellen.auth.entity.AuthRoleDataScope;
 import com.kellen.auth.entity.AuthTenant;
 import com.kellen.auth.entity.AuthUser;
 import com.kellen.auth.entity.AuthUserRole;
+import com.kellen.auth.entity.AuthUserTenant;
+import com.kellen.auth.entity.enums.AuthAdminTypeEnum;
 import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
@@ -21,6 +23,7 @@ import com.kellen.auth.mapper.AuthRoleMapper;
 import com.kellen.auth.mapper.AuthTenantMapper;
 import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
+import com.kellen.auth.mapper.AuthUserTenantMapper;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.datapermission.DataPermissionContextHolder;
@@ -78,6 +81,11 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
     private final AuthUserMapper authUserMapper;
 
     /**
+     * 用户租户关联Mapper。
+     */
+    private final AuthUserTenantMapper authUserTenantMapper;
+
+    /**
      * 用户角色Mapper。
      */
     private final AuthUserRoleMapper authUserRoleMapper;
@@ -113,6 +121,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param authTenantMapper 租户Mapper
      * @param authUserMapper   用户Mapper
      * @param authUserRoleMapper       用户角色Mapper
+     * @param authUserTenantMapper     用户租户关联Mapper
      * @param authRoleMapper           角色Mapper
      * @param authDeptMapper           部门Mapper
      * @param authRoleDataScopeMapper  角色自定义数据范围Mapper
@@ -121,6 +130,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
     public AuthAuthenticationServiceImpl(AuthTenantMapper authTenantMapper,
                                          AuthUserMapper authUserMapper,
                                          AuthUserRoleMapper authUserRoleMapper,
+                                         AuthUserTenantMapper authUserTenantMapper,
                                          AuthRoleMapper authRoleMapper,
                                          AuthDeptMapper authDeptMapper,
                                          AuthRoleDataScopeMapper authRoleDataScopeMapper,
@@ -131,6 +141,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         this.authUserMapper = authUserMapper;
         // 保存用户角色Mapper。
         this.authUserRoleMapper = authUserRoleMapper;
+        // 保存用户租户关联Mapper。
+        this.authUserTenantMapper = authUserTenantMapper;
         // 保存角色Mapper。
         this.authRoleMapper = authRoleMapper;
         // 保存部门Mapper。
@@ -164,10 +176,10 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         try {
             // 设置租户上下文。
             TenantContextHolder.setTenantId(tenantId);
-            // 查询当前租户用户。
-            AuthUser user = authUserMapper.selectOne(new LambdaQueryWrapper<AuthUser>().eq(AuthUser::getUsername, request.getUsername()).last("LIMIT 1"));
+            // 查询并校验当前登录用户。
+            AuthUser user = findLoginUser(request.getUsername(), request.getPassword(), tenantId);
             // 校验用户和密码。
-            if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            if (user == null) {
                 // 登录失败时不暴露账号是否存在。
                 throw new UserException(ReturnCode.用户密码错误, "用户名或密码错误");
             }
@@ -196,6 +208,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             claims.put("dataScope", dataScopeSnapshot.dataScope());
             // 写入数据权限部门ID集合。
             claims.put("dataScopeDeptIds", dataScopeSnapshot.deptIds());
+            // 写入管理员分类。
+            claims.put("adminType", resolveAdminType(user).getValue());
             // 写入权限码。
             claims.put("permissions", permissions);
             // 签发JWT。
@@ -220,8 +234,10 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             vo.setDataScope(dataScopeSnapshot.dataScope());
             // 设置数据权限部门ID集合。
             vo.setDataScopeDeptIds(dataScopeSnapshot.deptIds());
+            // 设置管理员分类。
+            vo.setAdminType(resolveAdminType(user).getValue());
             // 设置当前用户可切换租户。
-            vo.setAvailableTenants(findAvailableTenants(user.getUsername()));
+            vo.setAvailableTenants(findAvailableTenants(user));
             // 设置权限码。
             vo.setPermissions(permissions);
             // 设置前端资源。
@@ -253,6 +269,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         try {
             // 设置租户上下文。
             TenantContextHolder.setTenantId(currentUser.getTenantId());
+            // 查询当前用户实体。
+            AuthUser user = findCurrentUser(currentUser.getUserId());
             // 查询用户资源。
             List<AuthResource> resources = authGrantService.findResourcesByUserId(currentUser.getUserId());
             // 创建当前资源响应。
@@ -263,8 +281,10 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             vo.setTenantId(currentUser.getTenantId());
             // 设置部门ID。
             vo.setDeptId(currentUser.getDeptId());
+            // 设置管理员分类。
+            vo.setAdminType(user == null ? null : resolveAdminType(user).getValue());
             // 设置当前用户可切换租户。
-            vo.setAvailableTenants(findAvailableTenants(currentUser.getUsername()));
+            vo.setAvailableTenants(findAvailableTenants(user));
             // 设置权限码。
             vo.setPermissions(authGrantService.toPermissionCodes(resources));
             // 设置前端资源。
@@ -293,8 +313,15 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 未登录时返回身份校验失败。
             throw new UserException(ReturnCode.用户身份校验失败, "用户未登录");
         }
-        // 按当前登录用户名查询可切换租户。
-        return findAvailableTenants(currentUser.getUsername());
+        try {
+            // 设置当前租户上下文。
+            TenantContextHolder.setTenantId(currentUser.getTenantId());
+            // 按当前登录用户查询可切换租户。
+            return findAvailableTenants(findCurrentUser(currentUser.getUserId()));
+        } finally {
+            // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
     }
 
     /**
@@ -450,34 +477,48 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
     }
 
     /**
-     * 按用户名查询启用账号所在的租户列表。
+     * 查询当前用户可切换租户列表。
      *
-     * @param username 用户名
+     * @param user 当前用户
      * @return 可切换租户列表
      * @author sunkailun
      * @DateTime 2026/05/29
      * @email 376253703@qq.com
      */
-    private List<AuthTenantVO> findAvailableTenants(String username) {
-        if (StringUtils.isBlank(username)) {
-            // 用户名为空时不能推导租户关联。
+    private List<AuthTenantVO> findAvailableTenants(AuthUser user) {
+        if (user == null || StringUtils.isBlank(user.getId())) {
+            // 用户为空时不能推导租户关联。
             return List.of();
         }
         try {
-            // 跨租户读取同名启用账号，用于计算当前用户可切换租户。
+            // 跨租户读取认证配置，用于计算当前用户可切换租户。
             TenantContextHolder.ignore();
             // 认证基础表查询不应被业务数据权限过滤。
             DataPermissionContextHolder.ignore();
-            // 查询同名启用账号所在租户ID。
-            Set<String> tenantIds = authUserMapper.selectList(new LambdaQueryWrapper<AuthUser>()
-                            .eq(AuthUser::getUsername, username)
-                            .eq(AuthUser::getState, AuthStateEnum.启用))
+            // 平台超级管理员可切换全部启用租户。
+            if (AuthAdminTypeEnum.PLATFORM_SUPER_ADMIN == resolveAdminType(user)) {
+                // 查询全部启用租户详情。
+                return authTenantMapper.selectList(new LambdaQueryWrapper<AuthTenant>()
+                                .eq(AuthTenant::getState, AuthStateEnum.启用)
+                                .orderByAsc(AuthTenant::getSorting))
+                        .stream()
+                        .map(this::toTenantVO)
+                        .toList();
+            }
+            // 查询显式绑定的启用租户ID。
+            Set<String> tenantIds = authUserTenantMapper.selectList(new LambdaQueryWrapper<AuthUserTenant>()
+                            .eq(AuthUserTenant::getUserId, user.getId())
+                            .eq(AuthUserTenant::getState, AuthStateEnum.启用))
                     .stream()
-                    .map(AuthUser::getTenantId)
+                    .map(AuthUserTenant::getRelationTenantId)
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toCollection(LinkedHashSet::new));
+            if (StringUtils.isNotBlank(user.getTenantId())) {
+                // 历史账号默认租户兜底纳入可切换租户。
+                tenantIds.add(user.getTenantId());
+            }
             if (tenantIds.isEmpty()) {
-                // 没有关联账号时返回空租户列表。
+                // 没有关联租户时返回空租户列表。
                 return List.of();
             }
             // 查询启用租户详情。
@@ -494,6 +535,98 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 清理数据权限忽略标记。
             DataPermissionContextHolder.clear();
         }
+    }
+
+    /**
+     * 查询登录账号。
+     *
+     * @param username 用户名
+     * @param password 明文密码
+     * @param tenantId 登录租户ID
+     * @return 登录用户
+     */
+    private AuthUser findLoginUser(String username, String password, String tenantId) {
+        try {
+            // 登录账号归属可能通过 auth_user_tenant 跨租户授权，先跨租户读取同名启用账号。
+            TenantContextHolder.ignore();
+            // 登录认证不应被数据权限过滤。
+            DataPermissionContextHolder.ignore();
+            // 查询同名启用账号。
+            List<AuthUser> users = authUserMapper.selectList(new LambdaQueryWrapper<AuthUser>()
+                    .eq(AuthUser::getUsername, username)
+                    .eq(AuthUser::getState, AuthStateEnum.启用));
+            // 优先匹配当前登录租户内的账号，其次匹配平台超管和显式关联账号。
+            return users.stream()
+                    .sorted((left, right) -> Boolean.compare(!tenantId.equals(left.getTenantId()), !tenantId.equals(right.getTenantId())))
+                    .filter(user -> passwordEncoder.matches(password, user.getPassword()))
+                    .filter(user -> canAccessTenant(user, tenantId))
+                    .findFirst()
+                    .orElse(null);
+        } finally {
+            // 清理忽略标记。
+            TenantContextHolder.clearIgnore();
+            DataPermissionContextHolder.clear();
+        }
+    }
+
+    /**
+     * 查询当前登录用户实体。
+     *
+     * @param userId 用户ID
+     * @return 用户实体
+     */
+    private AuthUser findCurrentUser(String userId) {
+        if (StringUtils.isBlank(userId)) {
+            // 用户ID为空时返回空。
+            return null;
+        }
+        return authUserMapper.selectById(userId);
+    }
+
+    /**
+     * 判断用户是否可访问目标租户。
+     *
+     * @param user     用户实体
+     * @param tenantId 目标租户ID
+     * @return 是否可访问
+     */
+    private boolean canAccessTenant(AuthUser user, String tenantId) {
+        if (user == null || StringUtils.isBlank(tenantId)) {
+            // 缺少必要参数时不可访问。
+            return false;
+        }
+        if (AuthAdminTypeEnum.PLATFORM_SUPER_ADMIN == resolveAdminType(user)) {
+            // 平台超级管理员允许访问全部租户。
+            return true;
+        }
+        if (tenantId.equals(user.getTenantId())) {
+            // 用户默认租户允许访问。
+            return true;
+        }
+        try {
+            // 用户租户关系是跨租户认证配置，校验时忽略租户和数据权限过滤。
+            TenantContextHolder.ignore();
+            DataPermissionContextHolder.ignore();
+            // 查询用户租户关联。
+            return authUserTenantMapper.selectCount(new LambdaQueryWrapper<AuthUserTenant>()
+                    .eq(AuthUserTenant::getUserId, user.getId())
+                    .eq(AuthUserTenant::getRelationTenantId, tenantId)
+                    .eq(AuthUserTenant::getState, AuthStateEnum.启用)) > 0;
+        } finally {
+            // 清理忽略标记。
+            TenantContextHolder.clearIgnore();
+            DataPermissionContextHolder.clear();
+        }
+    }
+
+    /**
+     * 解析用户管理员分类。
+     *
+     * @param user 用户实体
+     * @return 管理员分类
+     */
+    private AuthAdminTypeEnum resolveAdminType(AuthUser user) {
+        return user.getAdminType() == null ? AuthAdminTypeEnum.TENANT_ADMIN : user.getAdminType();
     }
 
     /**

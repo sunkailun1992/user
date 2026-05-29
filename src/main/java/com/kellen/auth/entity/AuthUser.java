@@ -1,6 +1,7 @@
 package com.kellen.auth.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.kellen.auth.entity.enums.AuthAdminTypeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,6 +29,12 @@ public class AuthUser extends AuthEntity {
 
     @Schema(description = "用户昵称")
     private String nickname;
+
+    /**
+     * 管理员分类。
+     */
+    @Schema(description = "管理员分类：PLATFORM_SUPER_ADMIN/TENANT_ADMIN")
+    private AuthAdminTypeEnum adminType;
 
     /**
      * 所属部门ID。

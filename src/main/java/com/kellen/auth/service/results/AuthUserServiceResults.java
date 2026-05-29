@@ -1,9 +1,14 @@
 package com.kellen.auth.service.results;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthUser;
+import com.kellen.auth.entity.AuthUserTenant;
 import com.kellen.auth.entity.vo.AuthUserVO;
+import com.kellen.auth.mapper.AuthUserTenantMapper;
+import com.kellen.datapermission.DataPermissionContextHolder;
 import com.kellen.utils.convert.GeneralConvertor;
+import com.kellen.utils.context.TenantContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -18,6 +23,20 @@ import java.util.List;
  */
 @Component
 public class AuthUserServiceResults {
+
+    /**
+     * 用户租户关联Mapper。
+     */
+    private final AuthUserTenantMapper authUserTenantMapper;
+
+    /**
+     * 构造用户查询结果转换增强。
+     *
+     * @param authUserTenantMapper 用户租户关联Mapper
+     */
+    public AuthUserServiceResults(AuthUserTenantMapper authUserTenantMapper) {
+        this.authUserTenantMapper = authUserTenantMapper;
+    }
 
     /**
      * 转换单条用户结果。
@@ -35,8 +54,33 @@ public class AuthUserServiceResults {
         AuthUserVO vo = GeneralConvertor.convertor(recordDO, AuthUserVO.class);
         // 补充状态说明。
         vo.setStateDesc(recordDO.getState() == null ? null : recordDO.getState().getDesc());
+        // 补充管理员分类说明。
+        vo.setAdminTypeDesc(recordDO.getAdminType() == null ? null : recordDO.getAdminType().getDesc());
+        // 补充关联租户ID集合。
+        vo.setTenantIds(listTenantIds(recordDO.getId()));
         // 返回响应对象。
         return vo;
+    }
+
+    /**
+     * 查询用户关联租户ID集合。
+     *
+     * @param userId 用户ID
+     * @return 租户ID集合
+     */
+    private List<String> listTenantIds(String userId) {
+        try {
+            TenantContextHolder.ignore(); // 用户租户关联是认证配置数据，转换结果时跨租户读取。
+            DataPermissionContextHolder.ignore();
+            return authUserTenantMapper.selectList(new LambdaQueryWrapper<AuthUserTenant>().eq(AuthUserTenant::getUserId, userId))
+                    .stream()
+                    .map(AuthUserTenant::getRelationTenantId)
+                    .distinct()
+                    .toList();
+        } finally {
+            TenantContextHolder.clearIgnore();
+            DataPermissionContextHolder.clear();
+        }
     }
 
     /**
