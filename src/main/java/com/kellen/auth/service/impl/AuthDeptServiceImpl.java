@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthDept;
 import com.kellen.auth.entity.bo.AuthDeptBO;
+import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.query.AuthDeptQuery;
 import com.kellen.auth.entity.vo.AuthDeptVO;
@@ -12,13 +13,18 @@ import com.kellen.auth.mapper.AuthDeptMapper;
 import com.kellen.auth.service.AuthDeptService;
 import com.kellen.auth.service.query.AuthDeptServiceQuery;
 import com.kellen.auth.service.results.AuthDeptServiceResults;
+import com.kellen.datapermission.DataPermissionContextHolder;
+import com.kellen.security.SecurityUser;
+import com.kellen.security.UserContextHolder;
 import com.kellen.utils.context.TenantContextHolder;
 import com.kellen.utils.convert.GeneralConvertor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 部门业务服务实现。
@@ -68,10 +74,12 @@ public class AuthDeptServiceImpl implements AuthDeptService {
     @Override
     public Page<AuthDeptVO> page(Page<AuthDept> page, AuthDeptQuery query) {
         try {
+            DataPermissionContextHolder.ignore(); // 部门管理使用本服务按部门ID处理组织树数据范围，避免通用表规则重复叠加。
             TenantContextHolder.setTenantId(query.getTenantId()); // 设置目标租户上下文。
             Page<AuthDept> pageDO = authDeptMapper.selectPage(page, buildQueryWrapper(query)); // 执行分页查询。
             return authDeptServiceResults.toPageVO(pageDO); // 转换为响应分页。
         } finally {
+            DataPermissionContextHolder.clear(); // 清理数据权限忽略标记。
             TenantContextHolder.clear(); // 清理租户上下文。
         }
     }
@@ -85,10 +93,12 @@ public class AuthDeptServiceImpl implements AuthDeptService {
     @Override
     public List<AuthDeptVO> list(AuthDeptQuery query) {
         try {
+            DataPermissionContextHolder.ignore(); // 部门管理使用本服务按部门ID处理组织树数据范围，避免通用表规则重复叠加。
             TenantContextHolder.setTenantId(query.getTenantId()); // 设置目标租户上下文。
             List<AuthDept> records = authDeptMapper.selectList(buildQueryWrapper(query)); // 查询部门实体列表。
             return authDeptServiceResults.toListVO(records); // 转换为响应列表。
         } finally {
+            DataPermissionContextHolder.clear(); // 清理数据权限忽略标记。
             TenantContextHolder.clear(); // 清理租户上下文。
         }
     }
@@ -170,6 +180,41 @@ public class AuthDeptServiceImpl implements AuthDeptService {
         if (query != null && StringUtils.isNotBlank(query.getQuery())) {
             queryWrapper.and(wrapper -> wrapper.like("code", query.getQuery()).or().like("name", query.getQuery())); // 拼接关键字查询。
         }
+        applyDeptDataScope(queryWrapper); // 部门表没有 dept_id，按部门自身ID应用当前用户数据范围。
         return queryWrapper; // 返回完整查询包装器。
+    }
+
+    /**
+     * 按当前登录用户数据范围过滤部门树。
+     *
+     * @param queryWrapper 查询包装器
+     */
+    private void applyDeptDataScope(QueryWrapper<AuthDept> queryWrapper) {
+        SecurityUser user = UserContextHolder.get(); // 读取认证过滤器写入的当前用户快照。
+        if (user == null || StringUtils.isBlank(user.getDataScope())) {
+            return; // 未登录或未携带数据范围时交给接口鉴权和租户隔离处理。
+        }
+        if (AuthDataScopeEnum.ALL.getValue().equalsIgnoreCase(user.getDataScope())) {
+            return; // 全部数据不追加部门条件。
+        }
+        Set<String> deptIds = new LinkedHashSet<>(); // 创建可见部门集合。
+        if (AuthDataScopeEnum.SELF.getValue().equalsIgnoreCase(user.getDataScope())
+                || AuthDataScopeEnum.DEPT.getValue().equalsIgnoreCase(user.getDataScope())) {
+            if (StringUtils.isNotBlank(user.getDeptId())) {
+                deptIds.add(user.getDeptId()); // 本人和本部门在组织树中只展示用户所在部门。
+            }
+        } else {
+            if (user.getDataScopeDeptIds() != null) {
+                user.getDataScopeDeptIds().stream().filter(StringUtils::isNotBlank).forEach(deptIds::add); // 加入角色计算出的可见部门。
+            }
+            if (StringUtils.isNotBlank(user.getDeptId())) {
+                deptIds.add(user.getDeptId()); // 部门树和自定义范围保留当前所属部门。
+            }
+        }
+        if (deptIds.isEmpty()) {
+            queryWrapper.eq("id", "__NO_VISIBLE_DEPT__"); // 没有可见部门时强制返回空结果。
+            return;
+        }
+        queryWrapper.in("id", deptIds); // 部门表按自身ID过滤。
     }
 }
