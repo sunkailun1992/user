@@ -46,6 +46,7 @@ docs/ai-coding/
 - 实体公共字段继承 `com.kellen.bean.EntityBase`。
 - `type/state` 等业务状态字段由具体业务模块定义 `IEnum`，不要塞进 `EntityBase`。
 - 多租户和逻辑删除由框架处理，业务查询不要重复拼 `tenant_id` 或 `is_delete = 0`。
+- 需要数据权限控制的业务主表默认设计 `owner_user_id` 和 `dept_id`；纯关系表、租户表、资源表等没有负责人过滤语义时不要硬加。
 - 权限接口使用 `@PreAuthorize("hasAuthority('权限码')")`。
 - `examples/` 示例按当前分层规范编写，类、字段、方法和关键逻辑都保留注释，AI 写代码时优先模仿该风格。
 - AI 新增或修改 Java 代码时，新增类、字段、方法、方法参数、关键分支、关键赋值、关键返回值都要写清楚注释；复杂或框架衔接逻辑按行补充行尾注释。

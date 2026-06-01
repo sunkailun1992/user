@@ -35,6 +35,8 @@
 - 如果 `ddl_history` 已记录某个脚本，或无法连接数据库确认执行状态，后续表结构、默认数据、树状权限资源等变更必须新增独立 SQL 脚本，并按顺序追加到 `MysqlDdl#getSqlFiles()`。
 - 新增 SQL 必须具备重复执行安全性，优先使用 `CREATE TABLE IF NOT EXISTS`、`INSERT IGNORE` 和带租户/主键条件的确定性 `UPDATE`。
 - 新增字段不要默认使用 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`，当前 MySQL 环境可能不支持；需要用 `information_schema.COLUMNS` 判断后配合 `PREPARE/EXECUTE` 动态执行。
+- 新增需要数据权限控制的业务主表时，默认同时设计 `owner_user_id` 和 `dept_id` 字段，并同步补齐 Entity、BO、VO、Query、ServiceQuery 与 Nacos `security.data-permission.table-rules`。
+- `owner_user_id` 不是所有表的强制字段；租户表、资源表、字典表、初始化配置表和纯关系表没有明确负责人过滤语义时不要硬加。
 
 `examples/` 是当前 AI 编码的主要参考，不是可编译源码目录。示例需要贴近当前分层规范：完整分层、统一方法命名、类/字段/方法/关键逻辑注释齐全。
 

@@ -126,6 +126,9 @@ src/main/resources/db/*.sql
 - 不再为基础数据新增业务初始化接口，避免启动后还需要人工调用初始化接口。
 - 表结构必须包含 `version`，并由实体继承 `EntityBase.@Version`。
 - 多租户业务表必须包含 `tenant_id`，业务 SQL 不手写租户条件。
+- 需要参与数据权限的业务主表默认包含 `owner_user_id` 和 `dept_id`：`owner_user_id` 表示数据负责人或归属用户，`dept_id` 表示数据归属部门。
+- `owner_user_id` 不要求无脑加到所有表；租户表、权限资源表、字典表、登录/初始化类配置表、纯关系表通常不加，除非业务明确需要按负责人过滤。
+- 关系表优先通过主表做权限控制，例如用户角色、角色资源、角色数据范围这类关系表不要为了统一字段而强行补 `owner_user_id`。
 
 ## 公共字段
 
@@ -153,6 +156,15 @@ public class Xxx extends EntityBase {
 ```
 
 `type` 和 `state` 不放入 `EntityBase`。如果某张表需要 `type/state`，由业务模块自己定义字段和枚举。
+
+数据归属字段：
+
+```sql
+owner_user_id varchar(64) DEFAULT NULL COMMENT '负责人用户ID',
+dept_id varchar(64) DEFAULT NULL COMMENT '归属部门ID'
+```
+
+`owner_user_id` 和 `dept_id` 不属于所有表的硬性公共字段，只有需要数据权限过滤的业务主表才默认添加。本人数据优先使用 `owner_user_id`；部门数据使用 `dept_id`。如果表自身就是用户表或部门表，可以按业务语义使用主键字段作为数据权限列，例如 `auth_user.id`、`auth_dept.id`。
 
 ## 枚举规范
 
@@ -367,6 +379,7 @@ X-Tenant-Id: 100
 用户表：dept_id
 角色表：data_scope
 角色自定义部门表：role_id、dept_id
+业务主表：owner_user_id、dept_id
 ```
 
 标准数据范围：
@@ -384,7 +397,9 @@ CUSTOM     自定义部门数据
 - 部门归属挂在用户下，角色只维护授权能力和数据范围。
 - 用户有多个角色时，登录或网关侧应合并数据范围；`ALL` 最大，其他部门范围按部门集合并集处理。
 - 登录态或网关 Header 需要携带 `deptId`、`dataScope`、`dataScopeDeptIds`，供 `utils` 数据权限插件拼接 SQL。
-- 业务表只有声明了数据权限表规则后才会追加条件，避免给没有 `dept_id` 或创建人字段的表拼错 SQL。
+- 业务表只有声明了数据权限表规则后才会追加条件，避免给没有 `owner_user_id` 或 `dept_id` 字段的表拼错 SQL。
+- 新增需要数据权限控制的业务主表时，DDL、Entity、BO、VO、Query、ServiceQuery 和 Nacos `security.data-permission.table-rules` 要同步补齐 `owner_user_id` 与 `dept_id`。
+- 本人数据默认按 `owner_user_id` 过滤；如果历史表没有该字段，必须在表规则中明确指定可替代的用户字段，例如 `auth_user.id`。
 - 多租户字段仍由租户插件处理，数据权限不要重复拼 `tenant_id`。
 - 不需要数据权限的初始化、登录、字典、资源树等查询，要通过配置或 `DataPermissionContextHolder.ignore()` 显式跳过。
 
@@ -394,7 +409,7 @@ Nacos 配置示例：
 security:
   data-permission:
     enabled: true
-    default-user-column: create_name
+    default-user-column: owner_user_id
     default-dept-column: dept_id
     ignore-tables:
       - auth_tenant
@@ -407,7 +422,7 @@ security:
         user-column: id
         dept-column: id
       business_order:
-        user-column: create_name
+        user-column: owner_user_id
         dept-column: dept_id
 ```
 

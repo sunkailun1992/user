@@ -64,14 +64,9 @@ public class MysqlDdl implements IDdl {
      */
     @Override
     public List<String> getSqlFiles() {
-        // 原始DDL脚本执行后会记录到ddl_history，后续变更必须追加新脚本并保持顺序。
+        // 当前本地清库重建只执行统一初始化脚本，后续已发布环境仍按AI规范新增增量脚本。
         return List.of(
-                "db/auth-schema.sql",
-                "db/20260527-auth-resource-tree-data.sql",
-                "db/20260527-auth-data-permission.sql",
-                "db/20260529-auth-permission-test-data.sql",
-                "db/20260529-auth-admin-permission-repair.sql",
-                "db/20260529-auth-user-tenant-admin-type.sql"
+                "db/auth-schema.sql"
         );
     }
 }

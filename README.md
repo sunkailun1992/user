@@ -199,6 +199,9 @@ menu:resource:tree
 | --- | --- |
 | `auth_dept` | 租户内部门树 |
 | `auth_user.dept_id` | 用户所属部门 |
+| `auth_dept.owner_user_id` | 部门负责人用户 |
+| `auth_role.owner_user_id` | 角色负责人用户 |
+| `auth_role.dept_id` | 角色归属部门 |
 | `auth_role.data_scope` | 角色数据范围 |
 | `auth_role_data_scope` | 角色自定义可见部门 |
 
@@ -234,7 +237,7 @@ Nacos 数据权限配置示例：
 security:
   data-permission:
     enabled: true
-    default-user-column: create_name
+    default-user-column: owner_user_id
     default-dept-column: dept_id
     table-rules:
       auth_user:
@@ -253,6 +256,7 @@ security:
 - 没有在 `table-rules` 声明的表不会自动追加数据权限条件。
 - `auth_user` 的本人数据用用户表 `id` 匹配当前登录用户ID，部门范围用 `dept_id`。
 - `auth_dept` 没有 `dept_id` 字段，部门范围用部门表自身 `id` 匹配可见部门ID；`SELF` 对部门表不会返回全量。
+- 新业务主表如果需要参与数据权限，默认设计 `owner_user_id` 和 `dept_id`；纯关系表、租户表、权限资源表没有明确负责人过滤语义时不强制添加。
 
 ## 代码拆分约定
 
@@ -319,12 +323,9 @@ SQL 脚本：
 
 ```text
 src/main/resources/db/auth-schema.sql
-src/main/resources/db/20260527-auth-resource-tree-data.sql
-src/main/resources/db/20260527-auth-data-permission.sql
-src/main/resources/db/20260529-auth-permission-test-data.sql
 ```
 
-脚本由 MyBatis-Plus 按 `MysqlDdl#getSqlFiles()` 顺序执行，并写入 `ddl_history`。修改历史 SQL 前必须先查当前数据库 `ddl_history`；已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
+当前为清库重建准备，`MysqlDdl#getSqlFiles()` 只执行 `db/auth-schema.sql`。脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
 
 默认数据包含：
 
@@ -336,7 +337,7 @@ src/main/resources/db/20260529-auth-permission-test-data.sql
 
 ## 租户和数据权限测试账号
 
-测试账号由 `src/main/resources/db/20260529-auth-permission-test-data.sql` 维护，所有账号密码统一为：
+测试账号由 `src/main/resources/db/auth-schema.sql` 统一维护，所有账号密码统一为：
 
 ```text
 123456
