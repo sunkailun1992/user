@@ -25,6 +25,18 @@ public class AuthRole extends AuthEntity {
     private String name;
 
     /**
+     * 负责人用户ID。
+     */
+    @Schema(description = "负责人用户ID")
+    private String ownerUserId;
+
+    /**
+     * 归属部门ID。
+     */
+    @Schema(description = "归属部门ID")
+    private String deptId;
+
+    /**
      * 数据权限范围。
      */
     @Schema(description = "数据权限范围")

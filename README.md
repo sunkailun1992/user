@@ -244,8 +244,11 @@ security:
         user-column: id
         dept-column: dept_id
       auth_dept:
-        user-column: id
+        user-column: owner_user_id
         dept-column: id
+      auth_role:
+        user-column: owner_user_id
+        dept-column: dept_id
 ```
 
 说明：
@@ -255,7 +258,8 @@ security:
 - 数据权限只负责同一租户内的数据范围。
 - 没有在 `table-rules` 声明的表不会自动追加数据权限条件。
 - `auth_user` 的本人数据用用户表 `id` 匹配当前登录用户ID，部门范围用 `dept_id`。
-- `auth_dept` 没有 `dept_id` 字段，部门范围用部门表自身 `id` 匹配可见部门ID；`SELF` 对部门表不会返回全量。
+- `auth_dept` 没有 `dept_id` 字段，部门范围用部门表自身 `id` 匹配可见部门ID；本人范围用 `owner_user_id`。
+- `auth_role` 使用 `owner_user_id` 匹配本人范围，使用 `dept_id` 匹配部门范围。
 - 新业务主表如果需要参与数据权限，默认设计 `owner_user_id` 和 `dept_id`；纯关系表、租户表、权限资源表没有明确负责人过滤语义时不强制添加。
 
 ## 代码拆分约定
@@ -382,7 +386,7 @@ src/main/resources/db/auth-schema.sql
 
 这些账号均绑定了后台管理所需的基础前端菜单和 `user:auth:manage` 后端权限，便于在前端页面直接测试租户隔离和数据范围回显。
 
-注意：`DataPermissionInterceptor` 只会对配置在 `security.data-permission.table-rules` 中的表自动追加数据权限条件。使用上述账号验证业务数据过滤时，目标表必须具备租户字段，并在配置中声明本人字段和部门字段；例如 `auth_dept` 使用 `id` 作为部门字段。
+注意：`DataPermissionInterceptor` 只会对配置在 `security.data-permission.table-rules` 中的表自动追加数据权限条件。使用上述账号验证业务数据过滤时，目标表必须具备租户字段，并在配置中声明本人字段和部门字段；例如 `auth_dept` 使用 `owner_user_id` 作为本人字段，使用 `id` 作为部门字段。
 
 不要再新增 `/auth/init` 这类业务初始化接口。
 

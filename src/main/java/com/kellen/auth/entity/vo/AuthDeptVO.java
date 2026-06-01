@@ -48,6 +48,12 @@ public class AuthDeptVO implements Serializable {
     private String parentId;
 
     /**
+     * 负责人用户ID。
+     */
+    @Schema(description = "负责人用户ID")
+    private String ownerUserId;
+
+    /**
      * 部门状态。
      */
     @Schema(description = "部门状态")

@@ -31,4 +31,10 @@ public class AuthDept extends AuthEntity {
      */
     @Schema(description = "父级部门ID")
     private String parentId;
+
+    /**
+     * 负责人用户ID。
+     */
+    @Schema(description = "负责人用户ID")
+    private String ownerUserId;
 }

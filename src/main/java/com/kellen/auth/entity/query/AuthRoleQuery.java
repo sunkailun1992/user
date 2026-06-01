@@ -64,6 +64,18 @@ public class AuthRoleQuery implements Serializable {
     private String name;
 
     /**
+     * 负责人用户ID。
+     */
+    @Schema(description = "负责人用户ID")
+    private String ownerUserId;
+
+    /**
+     * 归属部门ID。
+     */
+    @Schema(description = "归属部门ID")
+    private String deptId;
+
+    /**
      * 角色状态。
      */
     @Schema(description = "角色状态")
