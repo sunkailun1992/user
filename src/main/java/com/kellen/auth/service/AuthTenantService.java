@@ -53,8 +53,8 @@ public interface AuthTenantService {
     /**
      * 删除租户。
      *
-     * @param bo 租户删除参数
+     * @param id 租户主键
      * @return 是否成功
      */
-    Boolean remove(AuthTenantBO bo);
+    Boolean remove(String id);
 }

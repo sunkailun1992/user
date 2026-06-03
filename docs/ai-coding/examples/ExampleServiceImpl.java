@@ -167,16 +167,16 @@ public class ExampleServiceImpl extends ServiceImpl<ExampleMapper, ExampleEntity
     /**
      * 删除。
      *
-     * @param exampleBO 删除参数
+     * @param id 示例主键
      * @return 是否成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean removeEnhance(ExampleBO exampleBO) {
+    public Boolean removeEnhance(String id) {
         // 创建查询包装器。
         QueryWrapper<ExampleEntity> queryWrapper = new QueryWrapper<>();
         // 根据主键删除。
-        queryWrapper.eq("id", exampleBO.getId());
+        queryWrapper.eq("id", id);
         // 执行逻辑删除。
         int count = exampleMapper.delete(queryWrapper);
         // 返回是否成功。

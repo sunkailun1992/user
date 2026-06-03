@@ -13,16 +13,17 @@
 7. 判断本次代码是否属于公共工具类、通用组件、基础配置或跨微服务复用能力；如果是，先切到同级 `utils` 项目检索已有实现。
 8. `utils` 已有能力时优先复用，不要在当前微服务重复编写；确实缺失时再在 `utils` 实现并安装依赖。
 9. 只有明确属于当前微服务业务边界的代码，才按当前项目现有结构创建 Java 文件。
-10. 新增或修改 Controller 时，补齐 `@Tag`、`@Operation`、必要的 `@Parameter` 和请求/响应对象 `@Schema`，确保 Knife4j 页面展示业务名称而不是默认方法名。
-11. 涉及 MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana、Zipkin 等基础设施地址时，优先读取项目根目录 `README.md` 的基础设施地址约定，不要在业务配置中新增裸 IP。
-12. 代码编写完成后补充或更新 JUnit 5 测试用例；接口功能优先从 Controller 请求层覆盖请求参数、权限、统一响应和 Service 调用，再按风险补充 Service/Mapper 单元测试。
-13. 检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
-14. 编译和测试验证。
+10. 新增或修改 Controller 时，先按 `PROJECT_CODING_SPEC.md` 的 RESTful 接口规范设计路径和 HTTP 方法。
+11. 新增或修改 Controller 时，补齐 `@Tag`、`@Operation`、必要的 `@Parameter` 和请求/响应对象 `@Schema`，确保 Knife4j 页面展示业务名称而不是默认方法名。
+12. 涉及 MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana、Zipkin 等基础设施地址时，优先读取项目根目录 `README.md` 的基础设施地址约定，不要在业务配置中新增裸 IP。
+13. 代码编写完成后补充或更新 JUnit 5 测试用例；接口功能优先从 Controller 请求层覆盖请求参数、权限、统一响应和 Service 调用，再按风险补充 Service/Mapper 单元测试。
+14. 检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
+15. 编译和测试验证。
 
 ## 编码生成规则
 
 - 业务编码必须由后端统一生成，不允许前端、脚本或测试数据各自拼接随机编码。
-- 新增需要人工输入 `code` 的业务表单时，必须优先检查是否可复用 `/auth/manage/codes/generate`。
+- 新增需要人工输入 `code` 的业务表单时，必须优先检查是否可复用 `POST /auth/manage/codes`。
 - 编码生成接口必须受管理权限保护，当前统一要求 `user:auth:manage`。
 - 生成规则集中在 `AuthCodeGenerateService`，不要把编码格式散落在 Controller、前端或 SQL 脚本中。
 - 编码生成目标必须覆盖当前所有需要人工输入 `code` 的表单；当前包括 `TENANT`、`DEPT`、`ROLE`、`RESOURCE`。
@@ -74,6 +75,7 @@ private String getRepeatKey(JoinPoint joinPoint) {
 - 不要让普通测试默认依赖真实 MQ、Redis、Nacos、数据库或第三方服务；这些必须 mock、使用测试容器、测试 profile 或显式集成测试开关。
 - 不要忽略 `UTILS_PUBLIC_SPEC.md` 中的乐观锁、枚举、错误码和数据库变更记录要求。
 - 不要在 Nacos 业务配置或本地配置中新增散落的基础设施裸 IP；除连接 Nacos 自身的启动入口外，基础设施地址统一放入公共配置并通过变量引用。
+- 不要为标准 CRUD 新增 `/save`、`/update`、`/remove`、`/select`、`/page` 等动词路径；标准 CRUD 必须优先使用 RESTful 资源路径和 HTTP 方法表达。
 
 ## 推荐生成顺序
 

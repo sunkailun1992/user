@@ -23,7 +23,6 @@ public class AuthTenantBO implements Serializable {
      * 租户主键。
      */
     @Schema(description = "租户主键", example = "100")
-    @NotBlank(groups = {Update.class, Remove.class}, message = "id不能为空")
     private String id;
 
     /**
@@ -63,11 +62,5 @@ public class AuthTenantBO implements Serializable {
      * 修改校验分组。
      */
     public interface Update {
-    }
-
-    /**
-     * 删除校验分组。
-     */
-    public interface Remove {
     }
 }

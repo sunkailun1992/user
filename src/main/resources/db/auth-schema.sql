@@ -275,16 +275,16 @@ VALUES
 ('res_menu_resource_100', '权限资源', 'FRONTEND', '/system/resource', NULL, 'res_root_system_100', 'menu:resource', '前端权限资源菜单', 'system', 'system', 40, 1, 1, '100'),
 ('res_menu_resource_tree_100', '资源树维护', 'FRONTEND', '/system/resource#tree', NULL, 'res_menu_resource_100', 'menu:resource:tree', '前端资源树维护按钮示例', 'system', 'system', 41, 1, 1, '100'),
 ('res_api_auth_root_100', '认证接口', 'BACKEND', '/auth', '*', NULL, 'api:auth', '认证授权接口根节点', 'system', 'system', 1, 1, 1, '100'),
-('res_api_auth_resource_100', '当前资源列表', 'BACKEND', '/auth/resources', 'GET', 'res_api_auth_root_100', 'user:auth:resources', '当前用户资源接口权限', 'system', 'system', 10, 1, 1, '100'),
+('res_api_auth_resource_100', '当前资源列表', 'BACKEND', '/auth/current/resources', 'GET', 'res_api_auth_root_100', 'user:auth:resources', '当前用户资源接口权限', 'system', 'system', 10, 1, 1, '100'),
 ('res_api_auth_manage_100', '认证体系维护', 'BACKEND', '/auth/manage/**', '*', 'res_api_auth_root_100', 'user:auth:manage', '认证体系维护接口权限', 'system', 'system', 20, 1, 1, '100'),
-('res_api_code_generate_100', '编码自动生成', 'BACKEND', '/auth/manage/codes/generate', 'GET', 'res_api_auth_manage_100', 'user:auth:code-generate', '业务编码自动生成接口权限', 'system', 'system', 21, 1, 1, '100'),
+('res_api_code_generate_100', '编码自动生成', 'BACKEND', '/auth/manage/codes', 'POST', 'res_api_auth_manage_100', 'user:auth:code-generate', '业务编码自动生成接口权限', 'system', 'system', 21, 1, 1, '100'),
 ('res_api_resource_tree_100', '资源树查询', 'BACKEND', '/auth/manage/resources', 'GET', 'res_api_auth_manage_100', 'user:auth:resource-tree', '资源树查询接口权限示例', 'system', 'system', 22, 1, 1, '100'),
 ('res_root_system_200', '系统管理', 'FRONTEND', '/system', NULL, NULL, 'menu:system', '测试租户前端系统管理根菜单', 'system', 'system', 1, 1, 1, '200'),
 ('res_menu_dept_200', '部门管理', 'FRONTEND', '/system/dept', NULL, 'res_root_system_200', 'menu:dept', '测试租户前端部门菜单', 'system', 'system', 15, 1, 1, '200'),
 ('res_menu_user_200', '用户管理', 'FRONTEND', '/system/user', NULL, 'res_root_system_200', 'menu:user', '测试租户前端用户菜单', 'system', 'system', 20, 1, 1, '200'),
 ('res_menu_role_200', '角色管理', 'FRONTEND', '/system/role', NULL, 'res_root_system_200', 'menu:role', '测试租户前端角色菜单', 'system', 'system', 30, 1, 1, '200'),
 ('res_menu_resource_200', '权限资源', 'FRONTEND', '/system/resource', NULL, 'res_root_system_200', 'menu:resource', '测试租户前端权限资源菜单', 'system', 'system', 40, 1, 1, '200'),
-('res_api_auth_resource_200', '当前资源列表', 'BACKEND', '/auth/resources', 'GET', NULL, 'user:auth:resources', '测试租户当前用户资源接口权限', 'system', 'system', 10, 1, 1, '200'),
+('res_api_auth_resource_200', '当前资源列表', 'BACKEND', '/auth/current/resources', 'GET', NULL, 'user:auth:resources', '测试租户当前用户资源接口权限', 'system', 'system', 10, 1, 1, '200'),
 ('res_api_auth_manage_200', '认证体系维护', 'BACKEND', '/auth/manage/**', '*', NULL, 'user:auth:manage', '测试租户认证体系维护接口权限', 'system', 'system', 20, 1, 1, '200');
 
 INSERT IGNORE INTO auth_user_role

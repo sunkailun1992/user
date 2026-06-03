@@ -7,7 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -48,9 +49,9 @@ public class AuthCodeController {
      * @DateTime 2026/05/27
      * @email 376253703@qq.com
      */
-    @GetMapping("/generate")
-    @Operation(summary = "生成业务编码", description = "根据编码类型生成认证模块统一业务编码")
-    public ApiResponse<String> generate(@Validated AuthCodeGenerateQuery query) {
+    @PostMapping
+    @Operation(summary = "创建业务编码候选", description = "根据编码类型创建认证模块统一业务编码候选值")
+    public ApiResponse<String> generate(@Validated @RequestBody AuthCodeGenerateQuery query) {
         // 调用业务服务生成后端统一编码，避免前端分散拼接规则。
         return ApiResponse.success(authCodeGenerateService.generate(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }

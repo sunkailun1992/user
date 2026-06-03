@@ -28,7 +28,6 @@ public class AuthUserRoleBO implements Serializable {
      * 用户ID。
      */
     @Schema(description = "用户ID")
-    @NotBlank(message = "userId不能为空")
     private String userId;
 
     /**

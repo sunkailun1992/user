@@ -70,8 +70,8 @@ public interface ExampleService extends IService<ExampleEntity> {
     /**
      * 删除。
      *
-     * @param exampleBO 删除参数
+     * @param id 示例主键
      * @return 是否成功
      */
-    Boolean removeEnhance(ExampleBO exampleBO);
+    Boolean removeEnhance(String id);
 }

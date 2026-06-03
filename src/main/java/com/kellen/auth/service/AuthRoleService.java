@@ -53,8 +53,9 @@ public interface AuthRoleService {
     /**
      * 删除角色。
      *
-     * @param bo 角色删除参数
+     * @param tenantId 租户ID
+     * @param id       角色主键
      * @return 是否成功
      */
-    Boolean remove(AuthRoleBO bo);
+    Boolean remove(String tenantId, String id);
 }

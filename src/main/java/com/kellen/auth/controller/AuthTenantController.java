@@ -12,7 +12,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -58,7 +60,7 @@ public class AuthTenantController {
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @GetMapping
+    @GetMapping(params = "!current")
     @Operation(summary = "查询租户列表", description = "按查询条件返回租户列表，用于登录页选择和管理端轻量列表展示")
     public ApiResponse<List<AuthTenantVO>> list(@ParameterObject @Validated AuthTenantQuery query) {
         // 查询全部租户主数据。
@@ -74,9 +76,9 @@ public class AuthTenantController {
      * @DateTime 2026/05/27
      * @email 376253703@qq.com
      */
-    @PostMapping("/page")
+    @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询租户", description = "按查询条件分页返回租户主数据，用于租户管理列表")
-    public ApiResponse<Page<AuthTenantVO>> page(@Validated(AuthTenantQuery.Select.class) @RequestBody AuthTenantQuery query) {
+    public ApiResponse<Page<AuthTenantVO>> page(@ParameterObject @Validated(AuthTenantQuery.Select.class) AuthTenantQuery query) {
         // 创建MyBatis-Plus分页对象。
         Page<AuthTenant> page = new Page<>(query.getCurrent(), query.getSize());
         // 查询租户分页并转换为VO。
@@ -86,6 +88,7 @@ public class AuthTenantController {
     /**
      * 新增租户。
      *
+     * @param id 租户主键
      * @param bo 租户写入参数
      * @return 租户ID
      * @author sunkailun
@@ -108,9 +111,11 @@ public class AuthTenantController {
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @PutMapping
+    @PutMapping("/{id}")
     @Operation(summary = "修改租户", description = "根据租户ID和version修改租户资料，并通过乐观锁防止并发覆盖")
-    public ApiResponse<Boolean> update(@Validated(AuthTenantBO.Update.class) @RequestBody AuthTenantBO bo) {
+    public ApiResponse<Boolean> update(@PathVariable String id, @Validated(AuthTenantBO.Update.class) @RequestBody AuthTenantBO bo) {
+        // 将路径主键写入 BO，避免请求体主键和路径主键不一致。
+        bo.setId(id);
         // 修改租户并使用version触发乐观锁。
         return ApiResponse.success(authTenantService.update(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
@@ -118,16 +123,16 @@ public class AuthTenantController {
     /**
      * 删除租户。
      *
-     * @param bo 租户删除参数
+     * @param id 租户主键
      * @return 是否成功
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @PostMapping("/remove")
+    @DeleteMapping("/{id}")
     @Operation(summary = "删除租户", description = "根据租户ID逻辑删除租户，不物理删除历史数据")
-    public ApiResponse<Boolean> remove(@Validated(AuthTenantBO.Remove.class) @RequestBody AuthTenantBO bo) {
+    public ApiResponse<Boolean> remove(@PathVariable String id) {
         // 逻辑删除租户。
-        return ApiResponse.success(authTenantService.remove(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+        return ApiResponse.success(authTenantService.remove(id)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

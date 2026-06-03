@@ -11,7 +11,7 @@ import java.io.Serializable;
 /**
  * 示例业务写入参数。
  * <p>
- * 简单 CRUD 可以使用一个 BO 配合 Save、Update、Remove 校验分组；字段差异很大时再拆分 SaveBO、UpdateBO、RemoveBO。
+ * 简单 CRUD 可以使用一个 BO 配合 Save、Update 校验分组；标准删除使用 RESTful 路径 id，不需要删除 BO。
  *
  * @author sunkailun
  * @className ExampleBO
@@ -25,7 +25,6 @@ public class ExampleBO implements Serializable {
      * 主键。
      */
     @Schema(description = "主键")
-    @NotBlank(groups = {Update.class, Remove.class}, message = "id不能为空")
     private String id;
 
     /**
@@ -72,11 +71,5 @@ public class ExampleBO implements Serializable {
      * 修改校验分组。
      */
     public interface Update {
-    }
-
-    /**
-     * 删除校验分组。
-     */
-    public interface Remove {
     }
 }

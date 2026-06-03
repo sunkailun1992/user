@@ -176,17 +176,18 @@ public class AuthResourceServiceImpl implements AuthResourceService {
     /**
      * 删除资源。
      *
-     * @param bo 资源删除参数
+     * @param tenantId 租户ID
+     * @param id       资源主键
      * @return 是否成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean remove(AuthResourceBO bo) {
+    public Boolean remove(String tenantId, String id) {
         try {
             // 设置目标租户上下文，避免删除依赖请求头隐式租户。
-            TenantContextHolder.setTenantId(bo.getTenantId());
+            TenantContextHolder.setTenantId(tenantId);
             // 按ID逻辑删除资源。
-            return authResourceMapper.deleteById(bo.getId()) > 0;
+            return authResourceMapper.deleteById(id) > 0;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();

@@ -185,17 +185,17 @@ public class AuthTenantServiceImpl implements AuthTenantService {
     /**
      * 删除租户。
      *
-     * @param bo 租户删除参数
+     * @param id 租户主键
      * @return 是否成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean remove(AuthTenantBO bo) {
+    public Boolean remove(String id) {
         try {
             // 租户是全局主数据，删除时忽略租户插件。
             TenantContextHolder.ignore();
             // 按ID逻辑删除租户。
-            return authTenantMapper.deleteById(bo.getId()) > 0;
+            return authTenantMapper.deleteById(id) > 0;
         } finally {
             // 清理租户忽略标记。
             TenantContextHolder.clearIgnore();

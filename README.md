@@ -33,16 +33,16 @@
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
 | `GET` | `/auth/tenants` | 登录前公开查询租户列表，用于前端租户下拉选择 |
-| `POST` | `/auth/login` | 用户登录 |
-| `GET` | `/auth/resources` | 查询当前用户权限资源 |
+| `POST` | `/auth/sessions` | 创建登录会话 |
+| `GET` | `/auth/current/resources` | 查询当前用户权限资源 |
 
-`GET /auth/tenants` 和 `POST /auth/login` 不加 `@PreAuthorize`。
+`GET /auth/tenants` 和 `POST /auth/sessions` 不加 `@PreAuthorize`。
 
 如果 `security.auth.enabled=true`，需要在 Nacos `security.auth.permit-urls` 中放行：
 
 ```text
 /auth/tenants
-/auth/login
+/auth/sessions
 ```
 
 ## 基础设施地址
@@ -122,7 +122,7 @@ http://127.0.0.1:7500/v3/api-docs
 admin / 123456
 ```
 
-Knife4j Basic 认证只保护文档页面，不代表已经登录业务系统。调试需要鉴权的接口时，先调用 `POST /auth/login` 获取登录响应中的 `accessToken`，再点击 Knife4j 左侧 `Authorize`，将 JWT 写入 `Authorization`。当前 OpenAPI 已声明 Bearer JWT 安全方案，页面会把该值带到后续请求头中。
+Knife4j Basic 认证只保护文档页面，不代表已经登录业务系统。调试需要鉴权的接口时，先调用 `POST /auth/sessions` 获取登录响应中的 `accessToken`，再点击 Knife4j 左侧 `Authorize`，将 JWT 写入 `Authorization`。当前 OpenAPI 已声明 Bearer JWT 安全方案，页面会把该值带到后续请求头中。
 
 登录示例：
 
@@ -157,28 +157,30 @@ Controller 必须使用 OpenAPI3 注解：
 | `AuthUserController` | `/auth/manage/users` |
 | `AuthRoleController` | `/auth/manage/roles` |
 | `AuthResourceController` | `/auth/manage/resources` |
-| `AuthGrantController` | `/auth/manage/user-roles`、`/auth/manage/role-resources`、`/auth/manage/role-data-scopes` |
+| `AuthGrantController` | `/auth/manage/users/{userId}/roles`、`/auth/manage/roles/{roleId}/resources`、`/auth/manage/roles/{roleId}/data-scope-depts` |
 
 授权关系接口：
 
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
-| `POST` | `/auth/manage/user-roles` | 绑定用户角色 |
-| `POST` | `/auth/manage/role-resources` | 追加绑定单个角色资源 |
-| `GET` | `/auth/manage/role-resources` | 查询角色已绑定资源 ID 列表 |
-| `PUT` | `/auth/manage/role-resources` | 按完整资源 ID 列表同步角色资源 |
-| `GET` | `/auth/manage/role-data-scopes` | 查询角色自定义数据范围部门 ID 列表 |
-| `PUT` | `/auth/manage/role-data-scopes` | 按完整部门 ID 列表同步角色自定义数据范围 |
+| `POST` | `/auth/manage/users/{userId}/roles` | 绑定用户角色 |
+| `GET` | `/auth/manage/users/{userId}/roles` | 查询用户已绑定角色 ID 列表 |
+| `PUT` | `/auth/manage/users/{userId}/roles` | 按完整角色 ID 列表同步用户角色 |
+| `POST` | `/auth/manage/roles/{roleId}/resources` | 追加绑定单个角色资源 |
+| `GET` | `/auth/manage/roles/{roleId}/resources` | 查询角色已绑定资源 ID 列表 |
+| `PUT` | `/auth/manage/roles/{roleId}/resources` | 按完整资源 ID 列表同步角色资源 |
+| `GET` | `/auth/manage/roles/{roleId}/data-scope-depts` | 查询角色自定义数据范围部门 ID 列表 |
+| `PUT` | `/auth/manage/roles/{roleId}/data-scope-depts` | 按完整部门 ID 列表同步角色自定义数据范围 |
 
 租户、部门、用户、角色、权限资源维护接口均提供：
 
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
 | `GET` | 当前资源地址 | 列表查询，使用 `*Query` 承接查询条件 |
-| `POST` | 当前资源地址 `/page` | 分页查询，使用 `*Query.current` 和 `*Query.size` |
+| `GET` | 当前资源地址 | 分页查询，使用 URL 参数 `current` 和 `size` |
 | `POST` | 当前资源地址 | 新增，使用 `*BO` |
-| `PUT` | 当前资源地址 | 修改，租户内资源使用 `*BO.tenantId` 设置租户上下文，并使用 `*BO.version` 触发 MyBatis-Plus 乐观锁 |
-| `POST` | 当前资源地址 `/remove` | 逻辑删除，租户内资源使用 `*BO.tenantId` 设置租户上下文，并使用 `*BO.id` 定位记录 |
+| `PUT` | 当前资源地址 `/{id}` | 修改，路径 `id` 定位资源，租户内资源使用 `*BO.tenantId` 设置租户上下文，并使用 `*BO.version` 触发 MyBatis-Plus 乐观锁 |
+| `DELETE` | 当前资源地址 `/{id}` | 逻辑删除，租户内资源使用 `tenantId` 查询参数设置租户上下文 |
 
 管理接口统一要求：
 
@@ -190,7 +192,7 @@ Controller 必须使用 OpenAPI3 注解：
 
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
-| `GET` | `/auth/manage/codes/generate` | 按 `target`、`resourceCategory`、`name` 生成租户、部门、角色或权限资源编码 |
+| `POST` | `/auth/manage/codes` | 按 `target`、`resourceCategory`、`name` 创建租户、部门、角色或权限资源编码候选 |
 
 编码生成规则统一在后端 `AuthCodeGenerateService` 维护，前端只调用接口，不自行拼接随机编码。当前目标值：
 

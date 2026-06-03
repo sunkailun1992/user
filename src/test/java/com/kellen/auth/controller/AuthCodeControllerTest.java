@@ -1,5 +1,6 @@
 package com.kellen.auth.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kellen.auth.entity.query.AuthCodeGenerateQuery;
 import com.kellen.auth.service.AuthCodeGenerateService;
 import com.kellen.bean.GlobalExceptionHandler;
@@ -14,6 +15,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,7 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -53,6 +55,12 @@ class AuthCodeControllerTest {
     private AuthCodeGenerateService authCodeGenerateService;
 
     /**
+     * JSON 序列化工具。
+     */
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    /**
      * 请求层测试最小启动配置。
      */
     @SpringBootConfiguration
@@ -72,11 +80,14 @@ class AuthCodeControllerTest {
     @WithMockUser(authorities = "user:auth:manage")
     void shouldGenerateCodeWhenUserHasManageAuthority() throws Exception {
         when(authCodeGenerateService.generate(any(AuthCodeGenerateQuery.class))).thenReturn("role_admin_20260527162000_0001"); // Mock 后端统一生成结果。
+        AuthCodeGenerateQuery request = new AuthCodeGenerateQuery(); // 创建编码生成请求对象。
+        request.setTarget("ROLE"); // 设置编码目标。
+        request.setTenantId("100"); // 设置租户ID。
+        request.setName("管理员"); // 设置业务名称。
 
-        mockMvc.perform(get("/auth/manage/codes/generate")
-                        .param("target", "ROLE")
-                        .param("tenantId", "100")
-                        .param("name", "管理员"))
+        mockMvc.perform(post("/auth/manage/codes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").value("role_admin_20260527162000_0001"));
@@ -98,7 +109,12 @@ class AuthCodeControllerTest {
     @Test
     @WithMockUser(authorities = "user:auth:resources")
     void shouldForbidGenerateCodeWhenUserHasNoManageAuthority() throws Exception {
-        mockMvc.perform(get("/auth/manage/codes/generate").param("target", "ROLE"))
+        AuthCodeGenerateQuery request = new AuthCodeGenerateQuery(); // 创建编码生成请求对象。
+        request.setTarget("ROLE"); // 设置编码目标。
+
+        mockMvc.perform(post("/auth/manage/codes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(authCodeGenerateService); // 权限不足时不进入业务服务。

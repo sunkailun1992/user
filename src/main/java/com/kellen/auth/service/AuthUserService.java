@@ -53,8 +53,9 @@ public interface AuthUserService {
     /**
      * 删除用户。
      *
-     * @param bo 用户删除参数
+     * @param tenantId 租户ID
+     * @param id       用户主键
      * @return 是否成功
      */
-    Boolean remove(AuthUserBO bo);
+    Boolean remove(String tenantId, String id);
 }

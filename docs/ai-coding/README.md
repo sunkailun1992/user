@@ -42,6 +42,7 @@ docs/ai-coding/
 ## 必读结论
 
 - Controller 返回统一使用 `com.kellen.utils.ApiResponse`。
+- Controller 接口严格优先使用 RESTful 风格：资源路径用复数名词，`GET` 查询、`POST` 新增、`PUT` 修改、`DELETE` 删除，标准 CRUD 不使用 `/save`、`/update`、`/remove`、`/select`、`/page` 等动词路径。
 - Controller 类必须添加 `@Tag`，方法必须添加 `@Operation`，避免 Knife4j 展示默认 `xxx-controller`、`list_1`、`save_1` 等不可读名称。
 - 实体公共字段继承 `com.kellen.bean.EntityBase`。
 - `type/state` 等业务状态字段由具体业务模块定义 `IEnum`，不要塞进 `EntityBase`。

@@ -12,11 +12,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -58,7 +61,7 @@ public class AuthResourceController {
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @GetMapping
+    @GetMapping(params = "!current")
     @Operation(summary = "查询权限资源列表", description = "按查询条件返回当前租户下的权限资源列表，用于资源树和授权回显")
     public ApiResponse<List<AuthResourceVO>> list(@ParameterObject @Validated AuthResourceQuery query) {
         // 查询指定租户的权限资源列表。
@@ -74,9 +77,9 @@ public class AuthResourceController {
      * @DateTime 2026/05/27
      * @email 376253703@qq.com
      */
-    @PostMapping("/page")
+    @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询权限资源", description = "按查询条件分页返回当前租户下的权限资源数据")
-    public ApiResponse<Page<AuthResourceVO>> page(@Validated(AuthResourceQuery.Select.class) @RequestBody AuthResourceQuery query) {
+    public ApiResponse<Page<AuthResourceVO>> page(@ParameterObject @Validated(AuthResourceQuery.Select.class) AuthResourceQuery query) {
         // 创建MyBatis-Plus分页对象。
         Page<AuthResource> page = new Page<>(query.getCurrent(), query.getSize());
         // 查询资源分页并转换为VO。
@@ -86,6 +89,7 @@ public class AuthResourceController {
     /**
      * 新增资源。
      *
+     * @param id 资源主键
      * @param bo 资源写入参数
      * @return 资源ID
      * @author sunkailun
@@ -108,9 +112,11 @@ public class AuthResourceController {
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @PutMapping
+    @PutMapping("/{id}")
     @Operation(summary = "修改权限资源", description = "根据资源ID和version修改权限资源，并通过乐观锁防止并发覆盖")
-    public ApiResponse<Boolean> update(@Validated(AuthResourceBO.Update.class) @RequestBody AuthResourceBO bo) {
+    public ApiResponse<Boolean> update(@PathVariable String id, @Validated(AuthResourceBO.Update.class) @RequestBody AuthResourceBO bo) {
+        // 将路径主键写入 BO，避免请求体主键和路径主键不一致。
+        bo.setId(id);
         // 修改权限资源并使用version触发乐观锁。
         return ApiResponse.success(authResourceService.update(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
@@ -118,16 +124,17 @@ public class AuthResourceController {
     /**
      * 删除资源。
      *
-     * @param bo 资源删除参数
+     * @param id       资源主键
+     * @param tenantId 租户ID
      * @return 是否成功
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @PostMapping("/remove")
+    @DeleteMapping("/{id}")
     @Operation(summary = "删除权限资源", description = "根据资源ID逻辑删除权限资源，不物理删除历史数据")
-    public ApiResponse<Boolean> remove(@Validated(AuthResourceBO.Remove.class) @RequestBody AuthResourceBO bo) {
+    public ApiResponse<Boolean> remove(@PathVariable String id, @RequestParam String tenantId) {
         // 逻辑删除权限资源。
-        return ApiResponse.success(authResourceService.remove(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+        return ApiResponse.success(authResourceService.remove(tenantId, id)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 }

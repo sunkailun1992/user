@@ -93,13 +93,13 @@ XxxBindResourceBO
 
 规则：
 
-- 简单 CRUD 可以使用一个 `XxxBO`，通过 `Save`、`Update`、`Remove` 校验分组区分新增、修改、删除必填字段。
-- 新增、修改、删除字段差异很大，或授权/绑定等语义独立时，再拆成 `XxxSaveBO`、`XxxUpdateBO`、`XxxRemoveBO`、`XxxBindBO` 等专项对象。
+- 简单 CRUD 可以使用一个 `XxxBO`，通过 `Save`、`Update` 校验分组区分新增和修改；标准删除优先使用路径 `id`，不要为了删除强制创建删除 BO。
+- 新增、修改字段差异很大，或授权、绑定、批量删除等语义独立时，再拆成 `XxxSaveBO`、`XxxUpdateBO`、`XxxBindBO`、`XxxBatchRemoveBO` 等专项对象。
 - 修改入参必须包含数据库旧 `version`，用于 MyBatis-Plus 乐观锁。
-- 删除入参只校验删除所需字段，例如 `id` 和必要的业务校验字段。
+- 删除优先使用路径参数 `/{id}` 定位资源；只有删除还必须携带复杂业务条件时，才增加专项删除对象或专项动作接口。
 - 查询条件使用 `Query`，不要和写入 BO 混用。
-- GET 列表查询使用 Query 对象承接 URL 查询参数，并使用 Springdoc `@ParameterObject` 展开 Knife4j 参数；不要给 GET 查询接口添加 `@RequestBody`。
-- 需要 JSON 请求体的复杂查询使用 POST 分页或专项查询接口，并显式添加 `@RequestBody`。
+- GET 列表和分页查询使用 Query 对象承接 URL 查询参数，并使用 Springdoc `@ParameterObject` 展开 Knife4j 参数；不要给 GET 查询接口添加 `@RequestBody`。
+- 复杂查询参数过多导致 URL 不可控时，可以新增 `POST /<resources>/search` 作为搜索动作接口；普通 CRUD 分页不使用 `POST /page`。
 - 响应对象使用 `VO`，不要直接把包含密码等敏感字段的 Entity 返回给前端。
 - Controller 只接收请求对象、调用 Service、组装 `ApiResponse`，不写业务规则、不写 SQL、不写初始化数据。
 - Controller 必须按业务资源拆分，例如租户、用户、角色、资源、授权关系分别建 Controller，不要把多个资源维护接口塞进一个 `ManageController`。
@@ -108,6 +108,33 @@ XxxBindResourceBO
 - ServiceQuery 负责 `QueryWrapper` 查询条件、排序、显示字段、通用关键字等查询增强。
 - ServiceResults 负责 DO 转 VO、分页转换、枚举说明、关联信息补全等结果增强。
 - Mapper 只负责数据访问，普通 CRUD 优先使用 MyBatis-Plus。
+
+## RESTful 接口规范
+
+Controller 必须优先使用严格 RESTful 风格，路径表达资源，HTTP 方法表达动作。
+
+基础资源接口：
+
+```text
+GET    /<resources>              列表或分页查询，Query 参数通过 URL 传递
+GET    /<resources>/{id}         查询单个资源详情
+POST   /<resources>              新增资源，body 使用 BO
+PUT    /<resources>/{id}         修改资源，body 使用 BO，路径 id 与 body id 必须一致或由 Service 校验
+PATCH  /<resources>/{id}         局部修改，可选；没有明确局部更新需求时不创建
+DELETE /<resources>/{id}         删除资源，不使用 `POST /remove`
+```
+
+规则：
+
+- 路径使用复数名词，例如 `/auth/manage/users`、`/auth/manage/roles`。
+- 不使用动词路径表达标准 CRUD，例如 `/save`、`/update`、`/remove`、`/select`、`/page`。
+- 查询使用 `GET`，普通列表和分页都通过 query 参数表达，例如 `GET /users?tenantId=100&current=1&size=10`。
+- 修改和删除时，资源 ID 放在 path 里，例如 `PUT /users/{id}`、`DELETE /users/{id}`。
+- 写入 body 不重复表达 path 已经表达的动作；body 只承接资源字段和乐观锁 `version`。
+- 当前租户优先从请求头、登录上下文或路径父资源中获取；不要在所有 body 中机械重复租户字段。
+- 授权关系按子资源表达，例如 `GET /users/{userId}/roles`、`PUT /users/{userId}/roles`、`GET /roles/{roleId}/resources`、`PUT /roles/{roleId}/resources`。
+- 无法自然映射为资源 CRUD 的业务动作，也要优先转成资源创建或子资源维护，例如登录使用 `POST /auth/sessions` 创建会话，编码生成使用 `POST /auth/manage/codes` 创建编码候选。
+- 旧接口改造为 RESTful 时，必须同步更新 Controller、Service 入参、权限资源初始化 SQL、前端调用、Knife4j 文档、README 和测试用例。
 
 ## DDL 维护规范
 

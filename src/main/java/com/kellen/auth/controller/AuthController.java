@@ -86,8 +86,8 @@ public class AuthController {
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @PostMapping("/login")
-    @Operation(summary = "用户登录", description = "校验租户、账号和密码，签发JWT并返回当前用户权限资源")
+    @PostMapping("/sessions")
+    @Operation(summary = "创建登录会话", description = "校验租户、账号和密码，签发JWT并返回当前用户权限资源")
     public ApiResponse<AuthLoginVO> login(@RequestBody LoginRequest request) {
         // 调用业务服务完成租户解析、密码校验、JWT签发和资源组装。
         return ApiResponse.success(authAuthenticationService.login(request)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
@@ -101,7 +101,7 @@ public class AuthController {
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @GetMapping("/resources")
+    @GetMapping("/current/resources")
     @PreAuthorize("hasAuthority('user:auth:resources')")
     @Operation(summary = "查询当前用户资源", description = "根据当前认证用户返回前端菜单资源和后端权限码")
     public ApiResponse<AuthCurrentResourceVO> resources() {

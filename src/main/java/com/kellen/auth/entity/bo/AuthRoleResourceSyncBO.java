@@ -30,7 +30,6 @@ public class AuthRoleResourceSyncBO implements Serializable {
      * 角色ID。
      */
     @Schema(description = "角色ID", example = "2000")
-    @NotBlank(message = "roleId不能为空")
     private String roleId;
 
     /**

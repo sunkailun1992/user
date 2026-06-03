@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -101,7 +102,7 @@ class AuthResourceControllerTest {
         // 设置资源分类，验证枚举请求参数可以完成 JSON 反序列化。
         request.setResourceCategory(AuthResourceCategoryEnum.BACKEND);
         // 设置接口路径，验证普通业务字段会传入业务层。
-        request.setPath("/auth/resources");
+        request.setPath("/auth/current/resources");
         // 设置请求方法，验证普通业务字段会传入业务层。
         request.setMethod("GET");
 
@@ -221,9 +222,10 @@ class AuthResourceControllerTest {
         request.setSize(10L);
 
         // 发起 HTTP 分页请求，并验证统一响应和分页记录。
-        mockMvc.perform(post("/auth/manage/resources/page")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(get("/auth/manage/resources")
+                        .param("tenantId", request.getTenantId())
+                        .param("current", String.valueOf(request.getCurrent()))
+                        .param("size", String.valueOf(request.getSize())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.current").value(1))

@@ -53,8 +53,9 @@ public interface AuthDeptService {
     /**
      * 删除部门。
      *
-     * @param bo 部门删除参数
+     * @param tenantId 租户ID
+     * @param id       部门主键
      * @return 是否成功
      */
-    Boolean remove(AuthDeptBO bo);
+    Boolean remove(String tenantId, String id);
 }

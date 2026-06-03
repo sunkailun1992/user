@@ -215,17 +215,18 @@ public class AuthUserServiceImpl implements AuthUserService {
     /**
      * 删除用户。
      *
-     * @param bo 用户删除参数
+     * @param tenantId 租户ID
+     * @param id       用户主键
      * @return 是否成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean remove(AuthUserBO bo) {
+    public Boolean remove(String tenantId, String id) {
         try {
             // 设置目标租户上下文，避免删除依赖请求头隐式租户。
-            TenantContextHolder.setTenantId(bo.getTenantId());
+            TenantContextHolder.setTenantId(tenantId);
             // 按ID逻辑删除用户。
-            return authUserMapper.deleteById(bo.getId()) > 0;
+            return authUserMapper.deleteById(id) > 0;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();

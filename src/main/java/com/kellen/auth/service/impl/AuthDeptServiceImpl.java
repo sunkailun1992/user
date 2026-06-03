@@ -140,15 +140,16 @@ public class AuthDeptServiceImpl implements AuthDeptService {
     /**
      * 删除部门。
      *
-     * @param bo 部门删除参数
+     * @param tenantId 租户ID
+     * @param id       部门主键
      * @return 是否成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean remove(AuthDeptBO bo) {
+    public Boolean remove(String tenantId, String id) {
         try {
-            TenantContextHolder.setTenantId(bo.getTenantId()); // 设置目标租户上下文。
-            return authDeptMapper.deleteById(bo.getId()) > 0; // 按ID逻辑删除部门。
+            TenantContextHolder.setTenantId(tenantId); // 设置目标租户上下文。
+            return authDeptMapper.deleteById(id) > 0; // 按ID逻辑删除部门。
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。
         }

@@ -53,8 +53,9 @@ public interface AuthResourceService {
     /**
      * 删除资源。
      *
-     * @param bo 资源删除参数
+     * @param tenantId 租户ID
+     * @param id       资源主键
      * @return 是否成功
      */
-    Boolean remove(AuthResourceBO bo);
+    Boolean remove(String tenantId, String id);
 }

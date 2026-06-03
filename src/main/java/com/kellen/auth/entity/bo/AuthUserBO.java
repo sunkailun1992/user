@@ -25,7 +25,6 @@ public class AuthUserBO implements Serializable {
      * 用户主键。
      */
     @Schema(description = "用户主键", example = "1000000000000000001")
-    @NotBlank(groups = {Update.class, Remove.class}, message = "id不能为空")
     private String id;
 
     /**
@@ -39,7 +38,7 @@ public class AuthUserBO implements Serializable {
      * 租户ID。
      */
     @Schema(description = "租户ID", example = "100")
-    @NotBlank(groups = {Save.class, Update.class, Remove.class}, message = "tenantId不能为空")
+    @NotBlank(groups = {Save.class, Update.class}, message = "tenantId不能为空")
     private String tenantId;
 
     /**
@@ -96,11 +95,5 @@ public class AuthUserBO implements Serializable {
      * 修改校验分组。
      */
     public interface Update {
-    }
-
-    /**
-     * 删除校验分组。
-     */
-    public interface Remove {
     }
 }
