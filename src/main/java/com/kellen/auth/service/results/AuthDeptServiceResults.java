@@ -61,4 +61,24 @@ public class AuthDeptServiceResults {
         pageVO.setRecords(toListVO(pageDO.getRecords())); // 设置响应记录。
         return pageVO; // 返回响应分页。
     }
+
+    /**
+     * 增强部门列表结果。
+     *
+     * @param records 部门响应列表
+     * @return 部门响应列表
+     */
+    public List<AuthDeptVO> assignment(List<AuthDeptVO> records) {
+        return records == null ? Collections.emptyList() : records; // 当前暂无额外补全，统一返回非空列表。
+    }
+
+    /**
+     * 增强部门分页结果。
+     *
+     * @param page 部门响应分页
+     * @return 部门响应分页
+     */
+    public Page<AuthDeptVO> assignment(Page<AuthDeptVO> page) {
+        return page; // 当前暂无额外补全，直接返回分页。
+    }
 }

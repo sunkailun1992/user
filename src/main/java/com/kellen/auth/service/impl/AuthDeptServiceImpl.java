@@ -70,7 +70,8 @@ public class AuthDeptServiceImpl implements AuthDeptService {
         try {
             TenantContextHolder.setTenantId(query.getTenantId()); // 设置目标租户上下文。
             Page<AuthDept> pageDO = authDeptMapper.selectPage(page, buildQueryWrapper(query)); // 执行分页查询。
-            return authDeptServiceResults.toPageVO(pageDO); // 转换为响应分页。
+            Page<AuthDeptVO> pageVO = authDeptServiceResults.toPageVO(pageDO); // 转换为响应分页。
+            return needAssignment(query) ? authDeptServiceResults.assignment(pageVO) : pageVO; // 根据查询参数决定是否执行结果增强。
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。
         }
@@ -87,7 +88,8 @@ public class AuthDeptServiceImpl implements AuthDeptService {
         try {
             TenantContextHolder.setTenantId(query.getTenantId()); // 设置目标租户上下文。
             List<AuthDept> records = authDeptMapper.selectList(buildQueryWrapper(query)); // 查询部门实体列表。
-            return authDeptServiceResults.toListVO(records); // 转换为响应列表。
+            List<AuthDeptVO> voRecords = authDeptServiceResults.toListVO(records); // 转换为响应列表。
+            return needAssignment(query) ? authDeptServiceResults.assignment(voRecords) : voRecords; // 根据查询参数决定是否执行结果增强。
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。
         }
@@ -172,5 +174,18 @@ public class AuthDeptServiceImpl implements AuthDeptService {
             queryWrapper.and(wrapper -> wrapper.like("code", query.getQuery()).or().like("name", query.getQuery())); // 拼接关键字查询。
         }
         return queryWrapper; // 返回完整查询包装器。
+    }
+
+    /**
+     * 判断是否需要结果增强。
+     *
+     * @param query 部门查询参数
+     * @return boolean
+     */
+    private boolean needAssignment(AuthDeptQuery query) {
+        if (query == null) {
+            return true; // 查询对象为空时默认执行结果增强。
+        }
+        return !Boolean.FALSE.equals(query.getAssignment()); // assignment 明确传 false 时跳过结果增强，其余情况默认增强。
     }
 }

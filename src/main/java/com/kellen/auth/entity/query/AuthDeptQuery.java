@@ -81,10 +81,34 @@ public class AuthDeptQuery implements Serializable {
     private AuthStateEnum state;
 
     /**
+     * 指定查询字段。
+     */
+    @Schema(description = "指定查询字段", example = "id,name,parent_id,state,version")
+    private String fields;
+
+    /**
+     * 是否升序。
+     */
+    @Schema(description = "是否升序，true为升序，false为降序", example = "true")
+    private Boolean collation;
+
+    /**
+     * 排序字段。
+     */
+    @Schema(description = "排序字段", example = "sorting")
+    private String collationFields;
+
+    /**
      * 通用关键字。
      */
-    @Schema(description = "通用关键字")
+    @Schema(description = "通用关键字", example = "研发")
     private String query;
+
+    /**
+     * 是否执行结果增强。
+     */
+    @Schema(description = "是否执行结果增强", example = "true")
+    private Boolean assignment;
 
     /**
      * 分页查询校验分组。
