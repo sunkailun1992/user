@@ -4,7 +4,6 @@ import com.kellen.auth.entity.enums.AuthStateEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -24,7 +23,6 @@ public class AuthDeptQuery implements Serializable {
      * 当前页码。
      */
     @Schema(description = "当前页码")
-    @NotNull(groups = {Select.class}, message = "current不能为空")
     @Min(groups = {Select.class}, value = 1, message = "current最小为1")
     private Long current;
 
@@ -32,7 +30,6 @@ public class AuthDeptQuery implements Serializable {
      * 每页数量。
      */
     @Schema(description = "每页数量")
-    @NotNull(groups = {Select.class}, message = "size不能为空")
     @Min(groups = {Select.class}, value = 1, message = "size最小为1")
     private Long size;
 

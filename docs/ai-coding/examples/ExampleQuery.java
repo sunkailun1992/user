@@ -3,7 +3,6 @@ package com.kellen.example.entity.query;
 import com.kellen.example.entity.enums.ExampleStateEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -89,17 +88,21 @@ public class ExampleQuery implements Serializable {
 
     /**
      * 当前页。
+     * <p>
+     * 分页接口通过 Controller 的 `@GetMapping(params = {"current", "size"})` 保证分页参数存在；
+     * 这里不要加 `@NotNull(groups = Select.class)`，否则 Knife4j 会忽略校验分组并把 options 接口也标记为必填。
      */
     @Schema(description = "当前页", example = "1")
-    @NotNull(groups = {Select.class}, message = "current不能为空")
     @Min(groups = {Select.class}, value = 1, message = "current最小为1")
     private Integer current;
 
     /**
      * 分页显示数量。
+     * <p>
+     * 分页接口通过 Controller 的 `@GetMapping(params = {"current", "size"})` 保证分页参数存在；
+     * 这里只校验取值范围，避免非分页 options 接口被 Knife4j 错误标记为必填。
      */
     @Schema(description = "分页显示数量", example = "10")
-    @NotNull(groups = {Select.class}, message = "size不能为空")
     @Min(groups = {Select.class}, value = 1, message = "size最小为1")
     private Integer size;
 
