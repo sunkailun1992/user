@@ -53,7 +53,7 @@
 
 ```yaml
 custom:
-  infra-host: 172.16.1.39
+  infra-host: <INFRA_HOST>
   infra-nacos-addr: ${custom.infra-host}:8848
   infra-mysql-addr: ${custom.infra-host}:3306
   infra-redis-addr: ${custom.infra-host}:6379
@@ -63,9 +63,9 @@ custom:
   infra-elasticsearch-addr: ${custom.infra-host}:9200
   infra-elasticsearch-uri: http://${custom.infra-host}:9200
   infra-kibana-url: http://${custom.infra-host}:5601
-  admin-server-url: 127.0.0.1:8002
-  zipkin-base-url: http://172.16.200.212:9411
-  local-service-host: 172.16.0.102
+  admin-server-url: <ADMIN_SERVER_URL>
+  zipkin-base-url: <ZIPKIN_BASE_URL>
+  local-service-host: <LOCAL_SERVICE_HOST>
 ```
 
 其他 Nacos 配置只引用公共变量，不直接写裸 IP：
