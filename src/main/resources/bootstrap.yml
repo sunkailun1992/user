@@ -1,5 +1,5 @@
 custom:
-  nacos-ip: 127.0.0.1:8848
+  nacos-ip: 172.16.1.39:8848
   namespace: cfbf4c42-5ebb-4566-a095-30a568556a85
   nacos-group: DEFAULT_GROUP
 spring:
@@ -41,16 +41,12 @@ spring:
           - data-id: redis.yaml
             group: DEFAULT_GROUP
             refresh: true
-          # mongodb配置
-          - data-id: mongodb.yaml
-            group: DEFAULT_GROUP
-            refresh: true
           # 分布式事务配置
           - data-id: seata.yaml
             group: DEFAULT_GROUP
             refresh: true
           # 任务调度中心
-          - data-id: schedulerx.yaml
+          - data-id: xxl-job.yaml
             group: DEFAULT_GROUP
             refresh: true
           # 链路监控
