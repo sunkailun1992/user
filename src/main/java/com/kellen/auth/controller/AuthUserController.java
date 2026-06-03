@@ -53,18 +53,18 @@ public class AuthUserController {
     }
 
     /**
-     * 查询用户列表。
+     * 查询用户选项。
      *
      * @param query 用户查询参数
-     * @return 用户列表
+     * @return 用户选项列表
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @GetMapping(params = "!current")
-    @Operation(summary = "查询用户列表", description = "按查询条件返回当前租户下的用户列表，用于下拉选择和轻量列表展示")
+    @GetMapping("/options")
+    @Operation(summary = "查询用户选项", description = "按查询条件返回当前租户下的用户轻量选项列表，用于下拉选择和授权回显")
     public ApiResponse<List<AuthUserVO>> list(@ParameterObject @Validated AuthUserQuery query) {
-        // 查询指定租户的用户列表。
+        // 查询指定租户的用户轻量选项列表。
         return ApiResponse.success(authUserService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
@@ -89,7 +89,6 @@ public class AuthUserController {
     /**
      * 新增用户。
      *
-     * @param id 用户主键
      * @param bo 用户写入参数
      * @return 用户ID
      * @author sunkailun

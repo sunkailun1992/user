@@ -52,15 +52,15 @@ public class AuthDeptController {
     }
 
     /**
-     * 查询部门列表。
+     * 查询部门选项。
      *
      * @param query 部门查询参数
-     * @return 部门列表
+     * @return 部门选项列表
      */
-    @GetMapping(params = "!current")
-    @Operation(summary = "查询部门列表", description = "按查询条件返回当前租户下的部门列表，用于组织树和数据权限选择")
+    @GetMapping("/options")
+    @Operation(summary = "查询部门选项", description = "按查询条件返回当前租户下的部门轻量选项列表，用于组织树和数据权限选择")
     public ApiResponse<List<AuthDeptVO>> list(@ParameterObject @Validated AuthDeptQuery query) {
-        return ApiResponse.success(authDeptService.list(query)); // 查询指定租户的部门列表。
+        return ApiResponse.success(authDeptService.list(query)); // 查询指定租户的部门轻量选项列表。
     }
 
     /**
@@ -79,7 +79,6 @@ public class AuthDeptController {
     /**
      * 新增部门。
      *
-     * @param id 部门主键
      * @param bo 部门写入参数
      * @return 部门ID
      */

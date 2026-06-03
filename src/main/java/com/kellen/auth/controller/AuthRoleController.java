@@ -53,18 +53,18 @@ public class AuthRoleController {
     }
 
     /**
-     * 查询角色列表。
+     * 查询角色选项。
      *
      * @param query 角色查询参数
-     * @return 角色列表
+     * @return 角色选项列表
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @GetMapping(params = "!current")
-    @Operation(summary = "查询角色列表", description = "按查询条件返回当前租户下的角色列表，用于授权选择和轻量列表展示")
+    @GetMapping("/options")
+    @Operation(summary = "查询角色选项", description = "按查询条件返回当前租户下的角色轻量选项列表，用于授权选择和回显")
     public ApiResponse<List<AuthRoleVO>> list(@ParameterObject @Validated AuthRoleQuery query) {
-        // 查询指定租户的角色列表。
+        // 查询指定租户的角色轻量选项列表。
         return ApiResponse.success(authRoleService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
@@ -89,7 +89,6 @@ public class AuthRoleController {
     /**
      * 新增角色。
      *
-     * @param id 角色主键
      * @param bo 角色写入参数
      * @return 角色ID
      * @author sunkailun

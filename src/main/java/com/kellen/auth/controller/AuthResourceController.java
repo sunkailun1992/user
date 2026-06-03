@@ -53,18 +53,18 @@ public class AuthResourceController {
     }
 
     /**
-     * 查询资源列表。
+     * 查询资源选项。
      *
      * @param query 资源查询参数
-     * @return 资源列表
+     * @return 资源选项列表
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @GetMapping(params = "!current")
-    @Operation(summary = "查询权限资源列表", description = "按查询条件返回当前租户下的权限资源列表，用于资源树和授权回显")
+    @GetMapping("/options")
+    @Operation(summary = "查询权限资源选项", description = "按查询条件返回当前租户下的权限资源轻量选项列表，用于资源树和授权回显")
     public ApiResponse<List<AuthResourceVO>> list(@ParameterObject @Validated AuthResourceQuery query) {
-        // 查询指定租户的权限资源列表。
+        // 查询指定租户的权限资源轻量选项列表。
         return ApiResponse.success(authResourceService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
@@ -89,7 +89,6 @@ public class AuthResourceController {
     /**
      * 新增资源。
      *
-     * @param id 资源主键
      * @param bo 资源写入参数
      * @return 资源ID
      * @author sunkailun

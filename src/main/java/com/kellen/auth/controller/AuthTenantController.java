@@ -52,18 +52,18 @@ public class AuthTenantController {
     }
 
     /**
-     * 查询租户列表。
+     * 查询租户选项。
      *
      * @param query 租户查询参数
-     * @return 租户列表
+     * @return 租户选项列表
      * @author sunkailun
      * @DateTime 2026/05/26
      * @email 376253703@qq.com
      */
-    @GetMapping(params = "!current")
-    @Operation(summary = "查询租户列表", description = "按查询条件返回租户列表，用于登录页选择和管理端轻量列表展示")
+    @GetMapping("/options")
+    @Operation(summary = "查询租户选项", description = "按查询条件返回租户轻量选项列表，用于登录页选择和管理端选择器展示")
     public ApiResponse<List<AuthTenantVO>> list(@ParameterObject @Validated AuthTenantQuery query) {
-        // 查询全部租户主数据。
+        // 查询全部租户轻量选项数据。
         return ApiResponse.success(authTenantService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
@@ -88,7 +88,6 @@ public class AuthTenantController {
     /**
      * 新增租户。
      *
-     * @param id 租户主键
      * @param bo 租户写入参数
      * @return 租户ID
      * @author sunkailun
