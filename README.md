@@ -122,6 +122,20 @@ http://127.0.0.1:7500/v3/api-docs
 admin / 123456
 ```
 
+Knife4j Basic 认证只保护文档页面，不代表已经登录业务系统。调试需要鉴权的接口时，先调用 `POST /auth/login` 获取登录响应中的 `accessToken`，再点击 Knife4j 左侧 `Authorize`，将 JWT 写入 `Authorization`。当前 OpenAPI 已声明 Bearer JWT 安全方案，页面会把该值带到后续请求头中。
+
+登录示例：
+
+```json
+{
+  "tenantId": "100",
+  "username": "admin",
+  "password": "123456"
+}
+```
+
+如果通过网关聚合文档访问，调试地址会带 `/user` 前缀；如果直接访问 `user` 服务文档，调试地址不带网关前缀。
+
 Controller 必须使用 OpenAPI3 注解：
 
 ```java

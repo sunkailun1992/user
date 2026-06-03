@@ -19,24 +19,24 @@ public class LoginRequest {
     /**
      * 租户ID。
      */
-    @Schema(description = "租户ID")
+    @Schema(description = "租户ID", example = "100")
     private String tenantId;
 
     /**
      * 租户编码。
      */
-    @Schema(description = "租户编码")
+    @Schema(description = "租户编码", example = "default")
     private String tenantCode;
 
     /**
      * 用户名。
      */
-    @Schema(description = "用户名")
+    @Schema(description = "用户名", example = "admin")
     private String username;
 
     /**
      * 密码。
      */
-    @Schema(description = "密码")
+    @Schema(description = "密码", example = "123456")
     private String password;
 }

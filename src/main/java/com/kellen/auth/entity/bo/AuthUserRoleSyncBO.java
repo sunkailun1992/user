@@ -22,21 +22,21 @@ public class AuthUserRoleSyncBO implements Serializable {
     /**
      * 租户ID。
      */
-    @Schema(description = "租户ID")
+    @Schema(description = "租户ID", example = "100")
     @NotBlank(message = "tenantId不能为空")
     private String tenantId;
 
     /**
      * 用户ID。
      */
-    @Schema(description = "用户ID")
+    @Schema(description = "用户ID", example = "1000000000000000001")
     @NotBlank(message = "userId不能为空")
     private String userId;
 
     /**
      * 角色ID列表。
      */
-    @Schema(description = "角色ID列表")
+    @Schema(description = "角色ID列表", example = "[\"2000\"]")
     @NotNull(message = "roleIds不能为空")
     private List<String> roleIds;
 }
