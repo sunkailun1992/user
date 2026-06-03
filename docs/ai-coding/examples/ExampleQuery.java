@@ -13,7 +13,7 @@ import java.io.Serializable;
  * <p>
  * Query 用于分页、列表、单条、总数等查询入参。
  * GET 列表、分页和统计查询由 Controller 使用 @ParameterObject 展开为 URL 查询参数；
- * 只有复杂搜索条件过多导致 URL 不可控时，才额外设计 POST /resources/search 接收 JSON 请求体。
+ * 普通查询和分页统一使用 GET URL 参数，避免为常规查询额外设计 POST 搜索接口。
  * 与 Entity 同名的字段会先转换成 Entity，再由 QueryWrapper 自动拼接等值条件；
  * 不属于 Entity 的分页、排序、显示字段和关键字条件，由 ServiceQuery 或人工查询方法处理。
  *

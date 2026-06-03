@@ -72,7 +72,7 @@ public class ExampleController {
      * @param exampleQuery 查询参数
      * @return 列表结果
      */
-    @GetMapping(params = "!current")
+    @GetMapping("/options")
     @PreAuthorize("hasAuthority('example:select-list')")
     @Operation(summary = "查询示例列表", description = "按查询条件返回示例业务列表数据，GET 查询使用 URL 参数并通过 ParameterObject 展开 Knife4j 参数")
     public ApiResponse<List<ExampleVO>> list(@ParameterObject @Validated(ExampleQuery.SelectList.class) ExampleQuery exampleQuery) {
@@ -129,7 +129,6 @@ public class ExampleController {
     /**
      * 修改。
      *
-     * @param id        示例主键
      * @param exampleBO 修改参数
      * @return 是否成功
      */

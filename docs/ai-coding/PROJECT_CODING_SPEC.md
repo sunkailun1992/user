@@ -99,7 +99,7 @@ XxxBindResourceBO
 - 删除优先使用路径参数 `/{id}` 定位资源；只有删除还必须携带复杂业务条件时，才增加专项删除对象或专项动作接口。
 - 查询条件使用 `Query`，不要和写入 BO 混用。
 - GET 列表和分页查询使用 Query 对象承接 URL 查询参数，并使用 Springdoc `@ParameterObject` 展开 Knife4j 参数；不要给 GET 查询接口添加 `@RequestBody`。
-- 复杂查询参数过多导致 URL 不可控时，可以新增 `POST /<resources>/search` 作为搜索动作接口；普通 CRUD 分页不使用 `POST /page`。
+- 普通查询和分页统一使用 `GET` URL 参数；普通 CRUD 分页不使用 `POST /page`。
 - 响应对象使用 `VO`，不要直接把包含密码等敏感字段的 Entity 返回给前端。
 - Controller 只接收请求对象、调用 Service、组装 `ApiResponse`，不写业务规则、不写 SQL、不写初始化数据。
 - Controller 必须按业务资源拆分，例如租户、用户、角色、资源、授权关系分别建 Controller，不要把多个资源维护接口塞进一个 `ManageController`。
@@ -116,7 +116,7 @@ Controller 必须优先使用严格 RESTful 风格，路径表达资源，HTTP �
 基础资源接口：
 
 ```text
-GET    /<resources>              列表或分页查询，Query 参数通过 URL 传递
+GET    /<resources>              分页查询，Query 参数通过 URL 传递
 GET    /<resources>/{id}         查询单个资源详情
 POST   /<resources>              新增资源，body 使用 BO
 PUT    /<resources>/{id}         修改资源，body 使用 BO，路径 id 与 body id 必须一致或由 Service 校验
@@ -124,11 +124,21 @@ PATCH  /<resources>/{id}         局部修改，可选；没有明确局部更�
 DELETE /<resources>/{id}         删除资源，不使用 `POST /remove`
 ```
 
+集合辅助接口：
+
+```text
+GET    /<resources>/options      非分页轻量选择项列表，用于下拉、树、授权回显等选择场景
+GET    /<resources>/count        按 Query 条件统计数量；只有页面确实需要独立统计时创建
+```
+
 规则：
 
 - 路径使用复数名词，例如 `/auth/manage/users`、`/auth/manage/roles`。
 - 不使用动词路径表达标准 CRUD，例如 `/save`、`/update`、`/remove`、`/select`、`/page`。
-- 查询使用 `GET`，普通列表和分页都通过 query 参数表达，例如 `GET /users?tenantId=100&current=1&size=10`。
+- 查询使用 `GET`，分页通过集合资源表达，例如 `GET /users?tenantId=100&current=1&size=10`。
+- 如果同一个资源既需要分页管理列表，又需要非分页轻量列表，不要用两个相同的 `GET /<resources>` 依赖 `params` 区分；OpenAPI/Knife4j 无法稳定展示同一 path + method 的两个操作。非分页轻量列表统一使用 `GET /<resources>/options`。
+- `/options`、`/count` 是集合辅助接口，不是每个资源必写；只在前端页面或业务流程明确需要时创建。
+- `options` 表示当前资源的轻量选择项集合，适合下拉框、树选择器、授权回显等场景；如果接口返回完整管理列表，应使用分页 `GET /<resources>`，不要滥用 `/options`。
 - 修改和删除时，资源 ID 放在 path 里，例如 `PUT /users/{id}`、`DELETE /users/{id}`。
 - 写入 body 不重复表达 path 已经表达的动作；body 只承接资源字段和乐观锁 `version`。
 - 当前租户优先从请求头、登录上下文或路径父资源中获取；不要在所有 body 中机械重复租户字段。
