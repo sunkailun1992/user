@@ -9,6 +9,7 @@ import com.kellen.auth.service.AuthUserService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,7 +60,7 @@ public class AuthUserController {
      */
     @GetMapping
     @Operation(summary = "查询用户列表", description = "按查询条件返回当前租户下的用户列表，用于下拉选择和轻量列表展示")
-    public ApiResponse<List<AuthUserVO>> list(@Validated AuthUserQuery query) {
+    public ApiResponse<List<AuthUserVO>> list(@ParameterObject @Validated AuthUserQuery query) {
         // 查询指定租户的用户列表。
         return ApiResponse.success(authUserService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }

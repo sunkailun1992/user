@@ -9,9 +9,11 @@ import com.kellen.example.service.ExampleService;
 import com.kellen.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -53,7 +55,7 @@ public class ExampleController {
      * @param exampleQuery 查询参数
      * @return 分页结果
      */
-    @PostMapping("/select")
+    @PostMapping("/page")
     @PreAuthorize("hasAuthority('example:select')")
     @Operation(summary = "分页查询示例", description = "按查询条件分页返回示例业务数据")
     public ApiResponse<Page<ExampleVO>> select(@Validated(ExampleQuery.Select.class) @RequestBody ExampleQuery exampleQuery) {
@@ -64,15 +66,15 @@ public class ExampleController {
     }
 
     /**
-     * 集合查询。
+     * 列表查询。
      *
      * @param exampleQuery 查询参数
-     * @return 集合结果
+     * @return 列表结果
      */
-    @PostMapping("/selectList")
+    @GetMapping
     @PreAuthorize("hasAuthority('example:select-list')")
-    @Operation(summary = "查询示例集合", description = "按查询条件返回示例业务集合数据")
-    public ApiResponse<List<ExampleVO>> selectList(@Validated(ExampleQuery.SelectList.class) @RequestBody ExampleQuery exampleQuery) {
+    @Operation(summary = "查询示例列表", description = "按查询条件返回示例业务列表数据，GET 查询使用 URL 参数并通过 ParameterObject 展开 Knife4j 参数")
+    public ApiResponse<List<ExampleVO>> selectList(@ParameterObject @Validated(ExampleQuery.SelectList.class) ExampleQuery exampleQuery) {
         // 返回统一 ApiResponse 结果。
         return ApiResponse.success(exampleService.listEnhance(exampleQuery));
     }

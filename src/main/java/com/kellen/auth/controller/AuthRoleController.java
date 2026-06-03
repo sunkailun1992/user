@@ -9,6 +9,7 @@ import com.kellen.auth.service.AuthRoleService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,7 +60,7 @@ public class AuthRoleController {
      */
     @GetMapping
     @Operation(summary = "查询角色列表", description = "按查询条件返回当前租户下的角色列表，用于授权选择和轻量列表展示")
-    public ApiResponse<List<AuthRoleVO>> list(@Validated AuthRoleQuery query) {
+    public ApiResponse<List<AuthRoleVO>> list(@ParameterObject @Validated AuthRoleQuery query) {
         // 查询指定租户的角色列表。
         return ApiResponse.success(authRoleService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }

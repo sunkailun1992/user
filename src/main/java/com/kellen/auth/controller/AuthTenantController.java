@@ -9,6 +9,7 @@ import com.kellen.auth.service.AuthTenantService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,7 +60,7 @@ public class AuthTenantController {
      */
     @GetMapping
     @Operation(summary = "查询租户列表", description = "按查询条件返回租户列表，用于登录页选择和管理端轻量列表展示")
-    public ApiResponse<List<AuthTenantVO>> list(@Validated AuthTenantQuery query) {
+    public ApiResponse<List<AuthTenantVO>> list(@ParameterObject @Validated AuthTenantQuery query) {
         // 查询全部租户主数据。
         return ApiResponse.success(authTenantService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }

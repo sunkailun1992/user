@@ -98,6 +98,8 @@ XxxBindResourceBO
 - 修改入参必须包含数据库旧 `version`，用于 MyBatis-Plus 乐观锁。
 - 删除入参只校验删除所需字段，例如 `id` 和必要的业务校验字段。
 - 查询条件使用 `Query`，不要和写入 BO 混用。
+- GET 列表查询使用 Query 对象承接 URL 查询参数，并使用 Springdoc `@ParameterObject` 展开 Knife4j 参数；不要给 GET 查询接口添加 `@RequestBody`。
+- 需要 JSON 请求体的复杂查询使用 POST 分页或专项查询接口，并显式添加 `@RequestBody`。
 - 响应对象使用 `VO`，不要直接把包含密码等敏感字段的 Entity 返回给前端。
 - Controller 只接收请求对象、调用 Service、组装 `ApiResponse`，不写业务规则、不写 SQL、不写初始化数据。
 - Controller 必须按业务资源拆分，例如租户、用户、角色、资源、授权关系分别建 Controller，不要把多个资源维护接口塞进一个 `ManageController`。

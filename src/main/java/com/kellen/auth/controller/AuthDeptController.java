@@ -9,6 +9,7 @@ import com.kellen.auth.service.AuthDeptService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -55,7 +56,7 @@ public class AuthDeptController {
      */
     @GetMapping
     @Operation(summary = "查询部门列表", description = "按查询条件返回当前租户下的部门列表，用于组织树和数据权限选择")
-    public ApiResponse<List<AuthDeptVO>> list(@Validated AuthDeptQuery query) {
+    public ApiResponse<List<AuthDeptVO>> list(@ParameterObject @Validated AuthDeptQuery query) {
         return ApiResponse.success(authDeptService.list(query)); // 查询指定租户的部门列表。
     }
 

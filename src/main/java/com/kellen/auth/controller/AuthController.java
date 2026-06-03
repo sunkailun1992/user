@@ -10,6 +10,7 @@ import com.kellen.auth.service.AuthTenantService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,7 +70,7 @@ public class AuthController {
      */
     @GetMapping("/tenants")
     @Operation(summary = "登录前查询租户", description = "公开返回可选租户列表，用于登录页租户下拉选择")
-    public ApiResponse<List<AuthTenantVO>> tenants(AuthTenantQuery query) {
+    public ApiResponse<List<AuthTenantVO>> tenants(@ParameterObject AuthTenantQuery query) {
         // 标记执行结果增强，确保前端可以直接展示状态说明等补充字段。
         query.setAssignment(Boolean.TRUE);
         // 复用租户服务查询全局租户主数据，租户服务内部会忽略租户条件。
