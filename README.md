@@ -45,6 +45,42 @@
 /auth/login
 ```
 
+## 基础设施地址
+
+除 `bootstrap.yml` 中连接 Nacos 自身的入口地址外，MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana 等基础设施地址统一放在 Nacos `reuse-configuration.yaml`。
+
+蒲公英、Tailscale、节点小宝等组网地址变化时，优先只修改 `custom.infra-host` 和 `custom.local-service-host`：
+
+```yaml
+custom:
+  infra-host: 172.16.1.39
+  infra-nacos-addr: ${custom.infra-host}:8848
+  infra-mysql-addr: ${custom.infra-host}:3306
+  infra-redis-addr: ${custom.infra-host}:6379
+  infra-rabbitmq-addr: ${custom.infra-host}:5672
+  infra-seata-addr: ${custom.infra-host}:8091
+  infra-xxl-job-admin: http://${custom.infra-host}:19090/xxl-job-admin
+  infra-elasticsearch-addr: ${custom.infra-host}:9200
+  infra-elasticsearch-uri: http://${custom.infra-host}:9200
+  infra-kibana-url: http://${custom.infra-host}:5601
+  admin-server-url: 127.0.0.1:8002
+  zipkin-base-url: http://172.16.200.212:9411
+  local-service-host: 172.16.0.102
+```
+
+其他 Nacos 配置只引用公共变量，不直接写裸 IP：
+
+```yaml
+xxl:
+  job:
+    admin:
+      addresses: ${custom.infra-xxl-job-admin}
+    executor:
+      ip: ${custom.local-service-host}
+```
+
+本地 `bootstrap.yml` 的 `custom.nacos-ip` 是读取远程配置前必须先使用的启动入口，不能依赖 `reuse-configuration.yaml`。
+
 ## 前端跨域
 
 本地 `admin-web` 直接请求 `http://localhost:7500`，不走 Umi dev proxy。后端通过 `com.kellen.config.CorsConfig` 注册最高优先级 `CorsFilter`，确保浏览器 `OPTIONS` 预检先于 Spring Security 通过。

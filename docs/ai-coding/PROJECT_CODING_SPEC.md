@@ -38,6 +38,19 @@
 - 包名跟随当前微服务已有基础包结构。
 - Servlet 和 Validation 使用 `jakarta.*`
 
+## 配置中心规范
+
+基础设施地址必须集中维护，避免蒲公英、Tailscale、节点小宝等组网地址变化时散落修改。
+
+规则：
+
+- 连接 Nacos 自身所需的启动入口可以保留在本地 `bootstrap.yml`，因为应用读取远程配置前必须先连接 Nacos。
+- MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana、Zipkin 等基础设施地址优先放入 Nacos 公共配置，例如 `reuse-configuration.yaml`。
+- 业务配置只引用公共变量，例如 `${custom.infra-host}`、`${custom.infra-mysql-addr}`、`${custom.infra-xxl-job-admin}`、`${custom.local-service-host}`。
+- 不要在多个 `*.yaml` 配置文件中直接写同一个基础设施 IP。
+- 需要区分服务端地址和本机回调地址时，使用不同变量；例如 XXL-JOB Admin 地址使用基础设施地址，执行器回调 IP 使用当前服务所在机器地址。
+- 如果当前微服务复制到其他项目，只调整公共配置中的基础设施变量，不批量替换各业务配置文件。
+
 ## 标准分层
 
 新业务模块建议使用以下结构：
