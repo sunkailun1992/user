@@ -118,6 +118,7 @@ public class AuthController {
      * @email 376253703@qq.com
      */
     @GetMapping("/current/tenants")
+    @PreAuthorize("hasAuthority('user:auth:resources')")
     @Operation(summary = "查询当前用户可切换租户", description = "根据当前登录用户名返回该用户在各租户下拥有启用账号的租户列表")
     public ApiResponse<List<AuthTenantVO>> currentTenants() {
         // 调用认证服务按当前登录用户名查询可切换租户。

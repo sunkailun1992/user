@@ -348,7 +348,7 @@ Page<VO> pageVO = serviceResults.toPageVO(pageDO);
 
 ## 统一返回
 
-Controller 统一返回 `com.kellen.utils.ApiResponse`。
+Controller 统一返回 `com.kellen.utils.response.ApiResponse`。
 
 成功返回推荐：
 

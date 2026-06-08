@@ -356,7 +356,7 @@ AI 编程产出的代码、SQL、配置、脚本、测试、前端调用示例�
 Controller 返回统一使用：
 
 ```java
-com.kellen.utils.ApiResponse
+com.kellen.utils.response.ApiResponse
 ```
 
 成功：
