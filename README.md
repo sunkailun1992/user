@@ -522,6 +522,7 @@ logging:
 AI 编码规范在：
 
 ```text
+AGENTS.md
 docs/ai-coding
 ```
 
