@@ -8,22 +8,23 @@
 2. 阅读 `AI_AUTOMATION_WORKFLOW.md`，先形成需求说明、验收标准和开发手册。
 3. 阅读 `AI_ENGINEERING_GUARDRAILS.md`，确认风险等级、必须测试、安全门禁、Review 门禁和交付说明。
 4. 阅读 `AI_COMMENT_STYLE_GUIDE.md`，确认当前文件类型对应的注释规则。
-5. 阅读 `PROJECT_CODING_SPEC.md`。
-6. 阅读 `UTILS_PUBLIC_SPEC.md`，确认公共规范、错误码、数据库、乐观锁、分支流程和公共能力边界。
-7. 如果任务涉及当前微服务已有业务、接口、权限码、默认数据或启动配置，阅读项目根目录 `README.md`。
-8. 参考 `examples/` 下的示例。
-9. 如涉及公共规范原文、错误码完整表、团队流程或 `utils` 能力，阅读 `archive/utils-markdown/` 下对应文档。
-10. 判断本次代码是否属于公共工具类、通用组件、基础配置或跨微服务复用能力；如果是，先检查真实同级 `../utils` 项目是否已有实现。
-11. `utils` 已有能力时优先复用，不要在当前微服务重复编写；确实缺失且任务需要时，才在真实同级 `../utils` 实现并安装依赖。
-12. 只有明确属于 `user` 服务业务边界的代码，才按当前项目现有结构创建 Java 文件。
-13. `user` 与 `message` 互相调用时通过 API 契约，不直接复制对方业务代码。
-14. 新增或修改 Controller 时，先按 `PROJECT_CODING_SPEC.md` 的 RESTful 接口规范设计路径和 HTTP 方法。
-15. 新增或修改 Controller 时，补齐 `@Tag`、`@Operation`、必要的 `@Parameter` 和请求/响应对象 `@Schema`，确保 Knife4j 页面展示业务名称而不是默认方法名。
-16. 涉及 MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana、Zipkin 等基础设施地址时，优先读取项目根目录 `README.md` 的基础设施地址约定，不要在业务配置中新增裸 IP。
-17. 新增或修改 README、AI 规范、配置、脚本、测试、示例和代码时，禁止写入个人电脑绝对路径；目录关系使用相对路径，外部安装位置使用环境变量或 `<PLACEHOLDER>` 占位符。
-18. 代码编写完成后补充或更新 JUnit 5 测试用例；接口功能优先从 Controller 请求层覆盖请求参数、权限、统一响应和 Service 调用，再按风险补充 Service/Mapper 单元测试。
-19. 检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
-20. 编译和测试验证，并按 `AI_ENGINEERING_GUARDRAILS.md` 输出风险、回滚和未验证项。
+5. 阅读 `AI_DESIGN_PATTERN_GUIDE.md`，确认当前模块应使用的设计模式和禁止过度抽象规则。
+6. 阅读 `PROJECT_CODING_SPEC.md`。
+7. 阅读 `UTILS_PUBLIC_SPEC.md`，确认公共规范、错误码、数据库、乐观锁、分支流程和公共能力边界。
+8. 如果任务涉及当前微服务已有业务、接口、权限码、默认数据或启动配置，阅读项目根目录 `README.md`。
+9. 参考 `examples/` 下的示例。
+10. 如涉及公共规范原文、错误码完整表、团队流程或 `utils` 能力，阅读 `archive/utils-markdown/` 下对应文档。
+11. 判断本次代码是否属于公共工具类、通用组件、基础配置或跨微服务复用能力；如果是，先检查真实同级 `../utils` 项目是否已有实现。
+12. `utils` 已有能力时优先复用，不要在当前微服务重复编写；确实缺失且任务需要时，才在真实同级 `../utils` 实现并安装依赖。
+13. 只有明确属于 `user` 服务业务边界的代码，才按当前项目现有结构创建 Java 文件。
+14. `user` 与 `message` 互相调用时通过 API 契约，不直接复制对方业务代码。
+15. 新增或修改 Controller 时，先按 `PROJECT_CODING_SPEC.md` 的 RESTful 接口规范设计路径和 HTTP 方法。
+16. 新增或修改 Controller 时，补齐 `@Tag`、`@Operation`、必要的 `@Parameter` 和请求/响应对象 `@Schema`，确保 Knife4j 页面展示业务名称而不是默认方法名。
+17. 涉及 MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana、Zipkin 等基础设施地址时，优先读取项目根目录 `README.md` 的基础设施地址约定，不要在业务配置中新增裸 IP。
+18. 新增或修改 README、AI 规范、配置、脚本、测试、示例和代码时，禁止写入个人电脑绝对路径；目录关系使用相对路径，外部安装位置使用环境变量或 `<PLACEHOLDER>` 占位符。
+19. 代码编写完成后补充或更新 JUnit 5 测试用例；接口功能优先从 Controller 请求层覆盖请求参数、权限、统一响应和 Service 调用，再按风险补充 Service/Mapper 单元测试。
+20. 检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
+21. 编译和测试验证，并按 `AI_ENGINEERING_GUARDRAILS.md` 输出风险、回滚和未验证项。
 
 ## 编码生成规则
 
@@ -73,6 +74,17 @@ AI 新增或修改 Java、SQL、YAML、脚本、测试和示例等编程内容�
 - 注释解释长期维护需要知道的认证、权限、租户、数据范围、乐观锁、SQL 迁移和失败策略。
 - 禁止逐行翻译式注释，禁止用注释保留废弃实现、调试 main、临时 SQL 或整块旧代码。
 - 注释必须保持缩进、对齐、换行和段落美观一致；不能为了补说明把 Java、XML、SQL 或 YAML 弄乱。
+
+## 设计模式要求
+
+AI 新增或重构 Java、SQL、配置、测试和示例结构前，必须遵守 `AI_DESIGN_PATTERN_GUIDE.md`。
+
+核心原则：
+
+- 用户中心业务优先沿用 Controller、Service、Mapper、Entity、BO、Query、VO 分层。
+- 认证、租户、角色权限、数据范围、编码生成和状态迁移出现稳定扩展点时，再使用 Strategy、Template Method、State 或 Adapter。
+- Mapper 只处理数据访问，Service 负责编排和事务，Controller 不承载业务决策。
+- 不为了普通 CRUD 硬套 Factory、Manager、Abstract 层或过深继承。
 
 ## 禁止事项
 
