@@ -18,17 +18,18 @@
 1. `README.md`：确认当前用户中心职责、接口、默认数据、权限模型和验证命令。
 2. `docs/ai-coding/README.md`：确认 AI 编码入口和阅读顺序。
 3. `docs/ai-coding/AI_CODING_GUIDE.md`：确认执行步骤、注释规则、测试和安全要求。
-4. `docs/ai-coding/AI_COMMENT_STYLE_GUIDE.md`：确认注释规范、自解释优先、禁止注释掉死代码和排版要求。
-5. `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md`：确认用户中心分层、Service、Mapper、Strategy、State 等设计模式边界。
-6. `docs/ai-coding/PROJECT_CODING_SPEC.md`：确认微服务分层、RESTful、权限、多租户、数据权限和 DDL 规范。
-7. `docs/ai-coding/AI_ENGINEERING_GUARDRAILS.md`：确认风险分级、Definition of Done 和交付门禁。
-8. `docs/ai-coding/SECURITY_CODING_SPEC.md`：涉及认证、权限、数据隔离、敏感字段、SQL、上传下载或测试安全时必须阅读。
-9. `docs/ai-coding/UTILS_PUBLIC_SPEC.md`：涉及公共规范、错误码、数据库、乐观锁或 `utils` 能力时阅读。
+4. `docs/ai-coding/AI_DIRECTORY_STRUCTURE_GUIDE.md`：确认 Java 微服务目录、测试、资源、文档和跨项目边界。
+5. `docs/ai-coding/AI_COMMENT_STYLE_GUIDE.md`：确认注释规范、自解释优先、禁止注释掉死代码和排版要求。
+6. `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md`：确认用户中心分层、Service、Mapper、Strategy、State 等设计模式边界。
+7. `docs/ai-coding/PROJECT_CODING_SPEC.md`：确认微服务分层、RESTful、权限、多租户、数据权限和 DDL 规范。
+8. `docs/ai-coding/AI_ENGINEERING_GUARDRAILS.md`：确认风险分级、Definition of Done 和交付门禁。
+9. `docs/ai-coding/SECURITY_CODING_SPEC.md`：涉及认证、权限、数据隔离、敏感字段、SQL、上传下载或测试安全时必须阅读。
+10. `docs/ai-coding/UTILS_PUBLIC_SPEC.md`：涉及公共规范、错误码、数据库、乐观锁或 `utils` 能力时阅读。
 
 ## 项目边界
 
 - `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
-- 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
+- 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
 - 认证、租户、用户上下文必须复用 `../utils` 当前公共能力，不恢复旧 token 用户对象或旧响应结构。
 - 与 `message` 等业务模块互调时走 API 契约，不直接复制对方业务代码。
 - `gateway` 只转发请求，不做业务级鉴权；`admin-web` 只展示和调用接口，不能替代后端权限校验。
@@ -39,7 +40,7 @@
 
 - 登录、刷新 token、退出、租户切换、用户禁用、角色权限、数据范围、密码和敏感字段相关改动默认高风险。
 - 新增或修改功能前，必须按 `AI_AUTOMATION_WORKFLOW.md` 整理需求说明、验收标准和开发手册。
-- 完成后必须按 `AI_ENGINEERING_GUARDRAILS.md` 做风险分级、Definition of Done、测试证据、安全检查、风险和回滚说明。
+- 完成后必须按 `docs/ai-coding/AI_ENGINEERING_GUARDRAILS.md` 做风险分级、Definition of Done、测试证据、安全检查、风险和回滚说明。
 - 涉及权限、租户、数据范围或认证状态时，必须补充越权、无权限、租户不匹配、目标不存在和重复提交验证。
 
 ## 多智能体协作规则
