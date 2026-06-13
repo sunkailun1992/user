@@ -30,3 +30,10 @@ build/
 .DS_Store
 **/.DS_Store
 *.log
+
+### Nested checkout copies ###
+/admin-web/
+/ai/
+/gateway/
+/message/
+/utils/

@@ -532,4 +532,5 @@ docs/ai-coding
 
 ```bash
 ./gradlew clean compileJava test
+bash scripts/check-secrets.sh
 ```
