@@ -7,21 +7,23 @@
 1. 阅读当前业务模块已有代码。
 2. 阅读 `AI_AUTOMATION_WORKFLOW.md`，先形成需求说明、验收标准和开发手册。
 3. 阅读 `AI_ENGINEERING_GUARDRAILS.md`，确认风险等级、必须测试、安全门禁、Review 门禁和交付说明。
-4. 阅读 `PROJECT_CODING_SPEC.md`。
-5. 阅读 `UTILS_PUBLIC_SPEC.md`，确认公共规范、错误码、数据库、乐观锁、分支流程和注释要求。
-6. 如果任务涉及当前微服务已有业务、接口、权限码、默认数据或启动配置，阅读项目根目录 `README.md`。
-7. 参考 `examples/` 下的示例。
-8. 如涉及公共规范原文、错误码完整表、团队流程或 `utils` 能力，阅读 `archive/utils-markdown/` 下对应文档。
-9. 判断本次代码是否属于公共工具类、通用组件、基础配置或跨微服务复用能力；如果是，先切到同级 `utils` 项目检索已有实现。
-10. `utils` 已有能力时优先复用，不要在当前微服务重复编写；确实缺失时再在 `utils` 实现并安装依赖。
-11. 只有明确属于当前微服务业务边界的代码，才按当前项目现有结构创建 Java 文件。
-12. 新增或修改 Controller 时，先按 `PROJECT_CODING_SPEC.md` 的 RESTful 接口规范设计路径和 HTTP 方法。
-13. 新增或修改 Controller 时，补齐 `@Tag`、`@Operation`、必要的 `@Parameter` 和请求/响应对象 `@Schema`，确保 Knife4j 页面展示业务名称而不是默认方法名。
-14. 涉及 MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana、Zipkin 等基础设施地址时，优先读取项目根目录 `README.md` 的基础设施地址约定，不要在业务配置中新增裸 IP。
-15. 新增或修改 README、AI 规范、配置、脚本、测试、示例和代码时，禁止写入个人电脑绝对路径；目录关系使用相对路径，外部安装位置使用环境变量或 `<PLACEHOLDER>` 占位符。
-16. 代码编写完成后补充或更新 JUnit 5 测试用例；接口功能优先从 Controller 请求层覆盖请求参数、权限、统一响应和 Service 调用，再按风险补充 Service/Mapper 单元测试。
-17. 检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
-18. 编译和测试验证，并按 `AI_ENGINEERING_GUARDRAILS.md` 输出风险、回滚和未验证项。
+4. 阅读 `AI_COMMENT_STYLE_GUIDE.md`，确认当前文件类型对应的注释规则。
+5. 阅读 `PROJECT_CODING_SPEC.md`。
+6. 阅读 `UTILS_PUBLIC_SPEC.md`，确认公共规范、错误码、数据库、乐观锁、分支流程和公共能力边界。
+7. 如果任务涉及当前微服务已有业务、接口、权限码、默认数据或启动配置，阅读项目根目录 `README.md`。
+8. 参考 `examples/` 下的示例。
+9. 如涉及公共规范原文、错误码完整表、团队流程或 `utils` 能力，阅读 `archive/utils-markdown/` 下对应文档。
+10. 判断本次代码是否属于公共工具类、通用组件、基础配置或跨微服务复用能力；如果是，先检查真实同级 `../utils` 项目是否已有实现。
+11. `utils` 已有能力时优先复用，不要在当前微服务重复编写；确实缺失且任务需要时，才在真实同级 `../utils` 实现并安装依赖。
+12. 只有明确属于 `user` 服务业务边界的代码，才按当前项目现有结构创建 Java 文件。
+13. `user` 与 `message` 互相调用时通过 API 契约，不直接复制对方业务代码。
+14. 新增或修改 Controller 时，先按 `PROJECT_CODING_SPEC.md` 的 RESTful 接口规范设计路径和 HTTP 方法。
+15. 新增或修改 Controller 时，补齐 `@Tag`、`@Operation`、必要的 `@Parameter` 和请求/响应对象 `@Schema`，确保 Knife4j 页面展示业务名称而不是默认方法名。
+16. 涉及 MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana、Zipkin 等基础设施地址时，优先读取项目根目录 `README.md` 的基础设施地址约定，不要在业务配置中新增裸 IP。
+17. 新增或修改 README、AI 规范、配置、脚本、测试、示例和代码时，禁止写入个人电脑绝对路径；目录关系使用相对路径，外部安装位置使用环境变量或 `<PLACEHOLDER>` 占位符。
+18. 代码编写完成后补充或更新 JUnit 5 测试用例；接口功能优先从 Controller 请求层覆盖请求参数、权限、统一响应和 Service 调用，再按风险补充 Service/Mapper 单元测试。
+19. 检查项目根目录 `README.md`，已有内容时补充本次新增或调整的业务说明，缺少文件时新建。
+20. 编译和测试验证，并按 `AI_ENGINEERING_GUARDRAILS.md` 输出风险、回滚和未验证项。
 
 ## 编码生成规则
 
@@ -62,36 +64,27 @@
 
 ## 注释要求
 
-注释规则以 `PROJECT_CODING_SPEC.md` 的“注释规范”为准。新增或修改方法时使用以下 JavaDoc 形态：
+AI 新增或修改 Java、SQL、YAML、脚本、测试和示例等编程内容时，必须遵守 `AI_COMMENT_STYLE_GUIDE.md`。
 
-```java
-/**
- * 获取幂等锁缓存Key
- *
- * @param joinPoint: aop拦截类
- * @return java.lang.String
- * @author sunkailun
- * @DateTime 2026/5/26  下午
- * @email 376253703@qq.com
- */
-private String getRepeatKey(JoinPoint joinPoint) {
-    SecurityUser user = UserContextHolder.get(); // 获取当前认证用户，替代历史 Redis token 用户查询。
-    String tenantId = StringUtils.defaultIfBlank(TenantContextHolder.getTenantId(), "default"); // 缺少租户时使用 default，保证 key 结构稳定。
-    String userFlag = user == null ? "anonymous" : StringUtils.defaultIfBlank(user.getUserId(), user.getUsername()); // 优先使用用户 ID，没有则回退用户名或匿名标识。
-    return "prevent-repeat:" + tenantId + ":" + userFlag + ":" + joinPoint.getTarget().getClass().getName() + "." + joinPoint.getSignature().getName(); // key 粒度为租户、用户、类名和方法名。
-}
-```
+核心原则：
+
+- 修改注释前先识别文件类型和框架上下文；规范未覆盖时，先查官方或主流规范并补充到注释规范文件。
+- 优先让代码自解释，能用类名、方法名、BO/VO/Query 类型、权限常量和小方法表达的意图，不用注释补救。
+- 注释解释长期维护需要知道的认证、权限、租户、数据范围、乐观锁、SQL 迁移和失败策略。
+- 禁止逐行翻译式注释，禁止用注释保留废弃实现、调试 main、临时 SQL 或整块旧代码。
+- 注释必须保持缩进、对齐、换行和段落美观一致；不能为了补说明把 Java、XML、SQL 或 YAML 弄乱。
 
 ## 禁止事项
 
 - 不要把业务状态枚举加入 `EntityBase`。
 - 不要返回裸 `Map` 作为统一响应。
 - 不要在业务 SQL 中重复处理租户和逻辑删除。
-- 不要把公共工具类、通用组件、基础配置或跨微服务复用能力直接写进业务微服务；编写前必须先检查同级 `utils` 是否已有实现，已有则复用，缺失才在 `utils` 维护。
+- 不要把公共工具类、通用组件、基础配置或跨微服务复用能力直接写进业务微服务；编写前必须先检查真实同级 `../utils` 是否已有实现，已有则复用，缺失才在 `../utils` 维护。
 - 不要新增 JUnit4、Spock、Groovy 测试；当前项目统一使用 JUnit 5。
 - 不要只写脱离请求入口的转换类测试来代表接口功能正常；Controller 接口必须优先使用 MockMvc 从 HTTP 请求层验证。
 - 不要让普通测试默认依赖真实 MQ、Redis、Nacos、数据库或第三方服务；这些必须 mock、使用测试容器、测试 profile 或显式集成测试开关。
 - 不要忽略 `UTILS_PUBLIC_SPEC.md` 中的乐观锁、枚举、错误码和数据库变更记录要求。
+- 不要在 `user` 根目录内创建或使用嵌套的 `utils`、`message`、`gateway`、`admin-web`、`ai` 项目副本；需要跨项目修改时切换到真实同级仓库。
 - 不要在 Nacos 业务配置或本地配置中新增散落的基础设施裸 IP；除连接 Nacos 自身的启动入口外，基础设施地址统一放入公共配置并通过变量引用。
 - 不要为标准 CRUD 新增 `/save`、`/update`、`/remove`、`/select`、`/page` 等动词路径；标准 CRUD 必须优先使用 RESTful 资源路径和 HTTP 方法表达。
 - 不要在仓库文件中写入个人电脑绝对路径、下载目录、IDE 路径、JDK 安装路径或本机仓库完整路径；本地私有路径放到环境变量、用户级 Gradle/Maven 配置、IDE 运行配置或未提交的本地配置中。
@@ -120,7 +113,7 @@ private String getRepeatKey(JoinPoint joinPoint) {
 bash scripts/check-secrets.sh
 ```
 
-如果依赖 `utils` 有调整，先在同级 `utils` 项目执行：
+如果依赖 `utils` 有调整，先在真实同级 `../utils` 项目执行：
 
 ```bash
 ./gradlew publishToMavenLocal

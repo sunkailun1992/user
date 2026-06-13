@@ -26,6 +26,8 @@
 - 登录认证
 - 当前用户资源查询
 
+`user` 与 `message` 是同级独立业务模块，可通过 API 互相调用；公共工具、认证上下文、多租户、统一返回、统一异常、数据权限、MyBatis-Plus 公共配置等底层能力统一复用同级 `utils` 项目，不在业务服务内重复实现。
+
 ## 认证入口
 
 认证入口在 `com.kellen.auth.controller.AuthController`：

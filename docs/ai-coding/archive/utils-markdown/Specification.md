@@ -1,6 +1,6 @@
 # Java 开发规范压缩版
 
-本文件用于替代历史图片版规范，方便 AI 直接阅读和执行。具体编码时优先结合 `PROJECT_CODING_SPEC.md`、`UTILS_PUBLIC_SPEC.md` 和项目现有代码。
+本文件用于替代历史图片版规范，方便 AI 直接阅读和执行。具体编码时优先结合 `PROJECT_CODING_SPEC.md`、`UTILS_PUBLIC_SPEC.md`、`AI_COMMENT_STYLE_GUIDE.md` 和项目现有代码。
 
 ## 命名规范
 

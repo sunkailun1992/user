@@ -7,7 +7,8 @@
 - 项目名称：`user`
 - 项目类型：用户中心、认证、租户、角色、权限、数据范围后端
 - 技术栈：Java 17、Spring Boot、Gradle、MyBatis-Plus、Nacos、`com:utils`
-- 同级依赖：`../utils` 提供统一响应、认证上下文、多租户、错误码和公共工具；`../gateway` 负责路由；`../admin-web` 负责后台页面
+- 项目关系：`user` 与 `message` 是同级独立业务模块，可通过 API 互相调用；两者底层统一依赖同级 `../utils` 公共工具项目
+- 同级协作：`../utils` 提供统一响应、认证上下文、多租户、错误码和公共工具；`../message` 提供消息能力；`../gateway` 负责路由；`../admin-web` 负责后台页面
 - 核心风险：登录认证、JWT、租户隔离、角色权限、数据范围、用户状态、敏感字段、密码和 token 生命周期
 
 ## 修改前阅读顺序
@@ -17,17 +18,20 @@
 1. `README.md`：确认当前用户中心职责、接口、默认数据、权限模型和验证命令。
 2. `docs/ai-coding/README.md`：确认 AI 编码入口和阅读顺序。
 3. `docs/ai-coding/AI_CODING_GUIDE.md`：确认执行步骤、注释规则、测试和安全要求。
-4. `docs/ai-coding/PROJECT_CODING_SPEC.md`：确认微服务分层、RESTful、权限、多租户、数据权限和 DDL 规范。
-5. `docs/ai-coding/AI_ENGINEERING_GUARDRAILS.md`：确认风险分级、Definition of Done 和交付门禁。
-6. `docs/ai-coding/SECURITY_CODING_SPEC.md`：涉及认证、权限、数据隔离、敏感字段、SQL、上传下载或测试安全时必须阅读。
-7. `docs/ai-coding/UTILS_PUBLIC_SPEC.md`：涉及公共规范、错误码、数据库、乐观锁或 `utils` 能力时阅读。
+4. `docs/ai-coding/AI_COMMENT_STYLE_GUIDE.md`：确认注释规范、自解释优先、禁止注释掉死代码和排版要求。
+5. `docs/ai-coding/PROJECT_CODING_SPEC.md`：确认微服务分层、RESTful、权限、多租户、数据权限和 DDL 规范。
+6. `docs/ai-coding/AI_ENGINEERING_GUARDRAILS.md`：确认风险分级、Definition of Done 和交付门禁。
+7. `docs/ai-coding/SECURITY_CODING_SPEC.md`：涉及认证、权限、数据隔离、敏感字段、SQL、上传下载或测试安全时必须阅读。
+8. `docs/ai-coding/UTILS_PUBLIC_SPEC.md`：涉及公共规范、错误码、数据库、乐观锁或 `utils` 能力时阅读。
 
 ## 项目边界
 
 - `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
-- 认证、租户、用户上下文必须复用 `utils` 当前公共能力，不恢复旧 token 用户对象或旧响应结构。
+- 认证、租户、用户上下文必须复用 `../utils` 当前公共能力，不恢复旧 token 用户对象或旧响应结构。
+- 与 `message` 等业务模块互调时走 API 契约，不直接复制对方业务代码。
 - `gateway` 只转发请求，不做业务级鉴权；`admin-web` 只展示和调用接口，不能替代后端权限校验。
 - 权限资源、角色绑定、用户状态、租户切换和数据范围变更必须可审计、可回滚、可测试。
+- 不允许在 `user` 根目录嵌套 `utils`、`message`、`gateway`、`admin-web`、`ai` 等项目副本；需要改同级项目时切换到真实同级仓库。
 
 ## AI 工程门禁
 
@@ -38,7 +42,7 @@
 
 ## 多智能体协作规则
 
-- 子智能体可以并行分析 Controller、Service、Mapper、DDL、admin-web 调用、gateway 路由和 utils 公共能力。
+- 子智能体可以并行分析 Controller、Service、Mapper、DDL、admin-web 调用、gateway 路由、message API 契约和 utils 公共能力。
 - 不允许多个 worker 同时修改同一认证链路、权限模型、数据范围逻辑、DDL 脚本或 `utils` 公共 API。
 - 最终认证边界、权限模型、租户隔离和测试结论必须由主智能体统一判断。
 
@@ -52,7 +56,7 @@
 bash scripts/check-secrets.sh
 ```
 
-涉及 `utils` 版本、认证上下文、统一响应、租户或公共异常时，还需要验证 `../utils` 当前制品版本和消费者编译结果。
+涉及 `utils` 版本、认证上下文、统一响应、租户或公共异常时，还需要验证同级 `../utils` 当前制品版本和 `user` 编译结果。
 
 ## 禁止事项
 
@@ -61,3 +65,4 @@ bash scripts/check-secrets.sh
 - 禁止写死默认租户、默认用户、测试密码、Nacos 地址、数据库连接和本机路径。
 - 禁止 AI 自主修改已有密钥、数据库连接、Nacos 地址、默认账号或生产配置值；发现疑似密钥只能告警，由项目负责人决定是否替换。
 - 禁止为了前端页面可用而绕过后端鉴权、授权、租户隔离、数据权限或乐观锁。
+- 禁止在 `user` 仓库内复制其它同级项目源码；公共能力缺失时应评估是否回到真实 `../utils` 实现。
