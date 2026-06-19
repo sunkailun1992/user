@@ -419,8 +419,6 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      * @param deptId 部门ID
      * @return void
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private void insertRoleDataScope(String roleId, String deptId) {
         AuthRoleDataScope roleDataScope = new AuthRoleDataScope(); // 创建角色数据范围关系实体。

@@ -75,8 +75,6 @@ class AuthControllerTest {
      *
      * @throws Exception MockMvc请求异常
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Test
     @DisplayName("GET /auth/tenants returns public tenant list")

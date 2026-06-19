@@ -46,8 +46,6 @@ public class AuthCodeController {
      * @param query 编码生成查询参数
      * @return 业务编码
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @PostMapping
     @Operation(summary = "创建业务编码候选", description = "根据编码类型创建认证模块统一业务编码候选值")

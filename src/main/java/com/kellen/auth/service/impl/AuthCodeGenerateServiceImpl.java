@@ -37,8 +37,6 @@ public class AuthCodeGenerateServiceImpl implements AuthCodeGenerateService {
      * @param query 编码生成查询参数
      * @return 业务编码
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Override
     public String generate(AuthCodeGenerateQuery query) {
@@ -69,8 +67,6 @@ public class AuthCodeGenerateServiceImpl implements AuthCodeGenerateService {
      * @param name 业务名称
      * @return 可读名称片段
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private String toReadableName(String name) {
         String normalized = StringUtils.lowerCase(StringUtils.trimToEmpty(name), Locale.ROOT)
@@ -85,8 +81,6 @@ public class AuthCodeGenerateServiceImpl implements AuthCodeGenerateService {
      *
      * @return 随机后缀
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private String randomSuffix() {
         return String.format("%04d", RANDOM.nextInt(10000)); // 固定四位数字，便于排序和阅读。

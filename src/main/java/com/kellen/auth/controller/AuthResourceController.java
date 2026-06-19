@@ -58,8 +58,6 @@ public class AuthResourceController {
      * @param query 资源查询参数
      * @return 资源选项列表
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @GetMapping("/options")
     @Operation(summary = "查询权限资源选项", description = "按查询条件返回当前租户下的权限资源轻量选项列表，用于资源树和授权回显")
@@ -74,8 +72,6 @@ public class AuthResourceController {
      * @param query 资源查询参数
      * @return 资源分页
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询权限资源", description = "按查询条件分页返回当前租户下的权限资源数据")
@@ -92,8 +88,6 @@ public class AuthResourceController {
      * @param bo 资源写入参数
      * @return 资源ID
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PostMapping
     @Operation(summary = "新增权限资源", description = "创建菜单、按钮或接口权限资源，并返回新资源ID")
@@ -108,8 +102,6 @@ public class AuthResourceController {
      * @param bo 资源写入参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PutMapping("/{id}")
     @Operation(summary = "修改权限资源", description = "根据资源ID和version修改权限资源，并通过乐观锁防止并发覆盖")
@@ -127,8 +119,6 @@ public class AuthResourceController {
      * @param tenantId 租户ID
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除权限资源", description = "根据资源ID逻辑删除权限资源，不物理删除历史数据")

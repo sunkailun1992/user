@@ -53,8 +53,6 @@ public class AuthUserServiceQuery {
      * @param queryWrapper  查询包装器
      * @return 查询包装器
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     public QueryWrapper<AuthUser> query(AuthUserQuery authUserQuery, QueryWrapper<AuthUser> queryWrapper) {
         // 查询参数为空时只返回已有包装器。

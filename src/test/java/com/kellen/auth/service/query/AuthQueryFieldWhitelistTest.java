@@ -30,8 +30,6 @@ class AuthQueryFieldWhitelistTest {
      * 非法排序字段应回退到默认排序字段。
      *
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldFallbackDefaultSortFieldWhenRequestedSortFieldIsUnsafe() {
@@ -44,8 +42,6 @@ class AuthQueryFieldWhitelistTest {
      * 非法显示字段应被过滤。
      *
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldFilterUnsafeSelectFields() {

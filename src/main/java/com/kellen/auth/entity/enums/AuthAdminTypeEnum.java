@@ -8,8 +8,6 @@ import lombok.Getter;
  * 管理员分类。
  *
  * @author sunkailun
- * @className AuthAdminTypeEnum
- * @time 2026/05/29
  */
 @Getter
 @AllArgsConstructor
@@ -29,6 +27,12 @@ public enum AuthAdminTypeEnum implements IEnum<String> {
 
     private final String desc;
 
+    /**
+     * 根据数据库枚举值获取前端展示说明。
+     *
+     * @param value 数据库存储的管理员分类值
+     * @return 管理员分类说明；未匹配时返回 null
+     */
     public static String getDesc(String value) {
         for (AuthAdminTypeEnum item : AuthAdminTypeEnum.values()) {
             if (item.getValue().equals(value)) {

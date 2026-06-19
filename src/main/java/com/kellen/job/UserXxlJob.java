@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
  * 用户模块XXL-JOB测试任务
  *
  * @author sunkailun
- * @DateTime 2026/6/3 11:55
- * @email 376253703@qq.com
  */
 @Slf4j
 @Component
@@ -23,8 +21,6 @@ public class UserXxlJob {
      *
      * @return void
      * @author sunkailun
-     * @DateTime 2026/6/3 11:55
-     * @email 376253703@qq.com
      */
     @XxlJob("userTestJob")
     public void userTestJob() {

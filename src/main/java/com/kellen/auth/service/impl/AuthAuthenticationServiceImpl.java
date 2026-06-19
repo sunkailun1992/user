@@ -369,8 +369,6 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param user 当前登录用户
      * @return 数据范围快照
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private DataScopeSnapshot resolveDataScope(AuthUser user) {
         try {
@@ -430,8 +428,6 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param roleId 角色ID
      * @return 部门ID集合
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private List<String> findCustomDeptIds(String roleId) {
         // 查询角色绑定的数据范围部门。
@@ -449,8 +445,6 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param rootDeptId 根部门ID
      * @return 部门ID集合
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private List<String> findDeptTreeIds(String rootDeptId) {
         // 查询当前租户全部部门。
@@ -482,8 +476,6 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param user 当前用户
      * @return 可切换租户列表
      * @author sunkailun
-     * @DateTime 2026/05/29
-     * @email 376253703@qq.com
      */
     private List<AuthTenantVO> findAvailableTenants(AuthUser user) {
         if (user == null || StringUtils.isBlank(user.getId())) {
@@ -648,8 +640,6 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param tenant 租户实体
      * @return 租户返回对象
      * @author sunkailun
-     * @DateTime 2026/05/29
-     * @email 376253703@qq.com
      */
     private AuthTenantVO toTenantVO(AuthTenant tenant) {
         AuthTenantVO vo = new AuthTenantVO();
@@ -669,8 +659,6 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param dataScope 数据范围
      * @param deptIds   部门ID集合
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private record DataScopeSnapshot(String dataScope, List<String> deptIds) {
     }

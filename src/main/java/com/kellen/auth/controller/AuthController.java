@@ -65,8 +65,6 @@ public class AuthController {
      * @param query 租户查询参数
      * @return 租户列表
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @GetMapping("/tenants")
     @Operation(summary = "登录前查询租户", description = "公开返回可选租户列表，用于登录页租户下拉选择")
@@ -83,8 +81,6 @@ public class AuthController {
      * @param request 登录请求参数
      * @return 登录结果
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PostMapping("/sessions")
     @Operation(summary = "创建登录会话", description = "校验租户、账号和密码，签发JWT并返回当前用户权限资源")
@@ -98,8 +94,6 @@ public class AuthController {
      *
      * @return 当前用户资源
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @GetMapping("/current/resources")
     @PreAuthorize("hasAuthority('user:auth:resources')")
@@ -114,8 +108,6 @@ public class AuthController {
      *
      * @return 当前用户可切换租户
      * @author sunkailun
-     * @DateTime 2026/05/29
-     * @email 376253703@qq.com
      */
     @GetMapping("/current/tenants")
     @PreAuthorize("hasAuthority('user:auth:resources')")

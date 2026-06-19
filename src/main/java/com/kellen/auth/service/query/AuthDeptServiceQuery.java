@@ -52,8 +52,6 @@ public class AuthDeptServiceQuery {
      * @param queryWrapper 查询包装器
      * @return 查询包装器
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     public QueryWrapper<AuthDept> query(AuthDeptQuery query, QueryWrapper<AuthDept> queryWrapper) {
         // 查询参数为空时只返回已有包装器。

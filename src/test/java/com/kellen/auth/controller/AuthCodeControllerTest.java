@@ -72,8 +72,6 @@ class AuthCodeControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Test
     void shouldGenerateCodeWhenUserHasManageAuthority() throws Exception {
@@ -102,8 +100,6 @@ class AuthCodeControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Test
     void shouldForbidGenerateCodeWhenUserHasNoManageAuthority() throws Exception {

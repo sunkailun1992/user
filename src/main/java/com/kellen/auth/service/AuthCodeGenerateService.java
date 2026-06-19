@@ -17,8 +17,6 @@ public interface AuthCodeGenerateService {
      * @param query 编码生成查询参数
      * @return 业务编码
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     String generate(AuthCodeGenerateQuery query);
 }

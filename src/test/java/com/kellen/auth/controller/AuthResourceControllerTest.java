@@ -82,8 +82,6 @@ class AuthResourceControllerTest {
      * @return void
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Test
     void shouldReturnSuccessWhenSaveResourceRequestIsValid() throws Exception {
@@ -132,8 +130,6 @@ class AuthResourceControllerTest {
      * @return void
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Test
     void shouldReturnParameterErrorWhenSaveResourceRequestIsInvalid() throws Exception {
@@ -160,8 +156,6 @@ class AuthResourceControllerTest {
      * @return void
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Test
     void shouldForbidSaveResourceWhenUserHasNoManageAuthority() throws Exception {
@@ -192,8 +186,6 @@ class AuthResourceControllerTest {
      * @return void
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Test
     @SuppressWarnings("unchecked")

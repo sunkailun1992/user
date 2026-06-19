@@ -21,8 +21,6 @@ public final class AuthQueryFieldWhitelist {
      *
      * @return void
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     private AuthQueryFieldWhitelist() {
         // 工具类禁止实例化，所有能力通过静态方法提供。
@@ -36,8 +34,6 @@ public final class AuthQueryFieldWhitelist {
      * @param allowedFields  允许查询字段映射
      * @return 安全排序字段
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     public static String resolveSortField(String requestedField, String defaultField, Map<String, String> allowedFields) {
         // 取出前端传入字段对应的数据库列名，未命中表示字段不在白名单。
@@ -65,8 +61,6 @@ public final class AuthQueryFieldWhitelist {
      * @param allowedFields   允许查询字段映射
      * @return 安全查询字段数组
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     public static String[] resolveSelectFields(String requestedFields, Map<String, String> allowedFields) {
         // 未指定查询字段时返回空数组，由调用方保持默认 select 行为。

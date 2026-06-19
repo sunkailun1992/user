@@ -81,8 +81,6 @@ class AuthDeptControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldReturnDeptOptionsWhenRequestIsValid() throws Exception {
@@ -111,8 +109,6 @@ class AuthDeptControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -143,8 +139,6 @@ class AuthDeptControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldSaveDeptWhenRequestIsValid() throws Exception {
@@ -173,8 +167,6 @@ class AuthDeptControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldForbidDeptOptionsWhenUserHasNoManageAuthority() throws Exception {

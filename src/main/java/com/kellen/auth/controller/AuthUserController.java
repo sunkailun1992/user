@@ -58,8 +58,6 @@ public class AuthUserController {
      * @param query 用户查询参数
      * @return 用户选项列表
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @GetMapping("/options")
     @Operation(summary = "查询用户选项", description = "按查询条件返回当前租户下的用户轻量选项列表，用于下拉选择和授权回显")
@@ -74,8 +72,6 @@ public class AuthUserController {
      * @param query 用户查询参数
      * @return 用户分页
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询用户", description = "按查询条件分页返回当前租户下的用户数据，用于用户管理列表")
@@ -92,8 +88,6 @@ public class AuthUserController {
      * @param bo 用户写入参数
      * @return 用户ID
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PostMapping
     @Operation(summary = "新增用户", description = "创建认证用户并绑定基础账号资料，返回新用户ID")
@@ -108,8 +102,6 @@ public class AuthUserController {
      * @param bo 用户写入参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PutMapping("/{id}")
     @Operation(summary = "修改用户", description = "根据用户ID和version修改认证用户资料，并通过乐观锁防止并发覆盖")
@@ -127,8 +119,6 @@ public class AuthUserController {
      * @param tenantId 租户ID
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除用户", description = "根据用户ID逻辑删除认证用户，不物理删除历史数据")

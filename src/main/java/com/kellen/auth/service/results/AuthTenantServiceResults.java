@@ -25,8 +25,6 @@ public class AuthTenantServiceResults {
      * @param recordDO 租户实体
      * @return 租户响应对象
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     public AuthTenantVO toVO(AuthTenant recordDO) {
         // 实体为空时返回空响应。
@@ -48,8 +46,6 @@ public class AuthTenantServiceResults {
      * @param recordsDO 租户实体列表
      * @return 租户响应列表
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     public List<AuthTenantVO> toListVO(List<AuthTenant> recordsDO) {
         // 列表为空时返回空集合。
@@ -67,8 +63,6 @@ public class AuthTenantServiceResults {
      * @param pageDO 租户实体分页
      * @return 租户响应分页
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     public Page<AuthTenantVO> toPageVO(Page<AuthTenant> pageDO) {
         // 分页为空时返回空分页。

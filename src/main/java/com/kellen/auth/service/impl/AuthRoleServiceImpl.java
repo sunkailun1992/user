@@ -203,8 +203,6 @@ public class AuthRoleServiceImpl implements AuthRoleService {
      * @param query 角色查询参数
      * @return 查询包装器
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     private QueryWrapper<AuthRole> buildQueryWrapper(AuthRoleQuery query) {
         // 将查询参数转换为实体，用于 QueryWrapper 自动拼接同名字段等值条件。

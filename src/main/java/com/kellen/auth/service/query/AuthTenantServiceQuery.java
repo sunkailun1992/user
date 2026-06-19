@@ -48,8 +48,6 @@ public class AuthTenantServiceQuery {
      * @param queryWrapper    查询包装器
      * @return 查询包装器
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     public QueryWrapper<AuthTenant> query(AuthTenantQuery authTenantQuery, QueryWrapper<AuthTenant> queryWrapper) {
         // 查询参数为空时只返回已有包装器。

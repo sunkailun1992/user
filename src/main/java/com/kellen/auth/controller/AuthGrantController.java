@@ -56,8 +56,6 @@ public class AuthGrantController {
      * @param bo 用户角色授权参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PostMapping("/users/{userId}/roles")
     @Operation(summary = "绑定用户角色", description = "为用户追加绑定指定角色关系")
@@ -75,8 +73,6 @@ public class AuthGrantController {
      * @param userId   用户ID
      * @return 角色ID列表
      * @author sunkailun
-     * @DateTime 2026/05/29
-     * @email 376253703@qq.com
      */
     @GetMapping("/users/{userId}/roles")
     @Operation(summary = "查询用户角色", description = "查询用户已绑定的角色ID列表，用于用户授权回显")
@@ -91,8 +87,6 @@ public class AuthGrantController {
      * @param bo 用户角色同步授权参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/29
-     * @email 376253703@qq.com
      */
     @PutMapping("/users/{userId}/roles")
     @Operation(summary = "同步用户角色", description = "按完整角色ID列表覆盖同步用户角色关系")
@@ -109,8 +103,6 @@ public class AuthGrantController {
      * @param bo 角色资源授权参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PostMapping("/roles/{roleId}/resources")
     @Operation(summary = "绑定角色资源", description = "为角色追加绑定指定权限资源关系")
@@ -128,8 +120,6 @@ public class AuthGrantController {
      * @param roleId   角色ID
      * @return 资源ID列表
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @GetMapping("/roles/{roleId}/resources")
     @Operation(summary = "查询角色资源", description = "查询角色已绑定的权限资源ID列表，用于授权树回显")
@@ -144,8 +134,6 @@ public class AuthGrantController {
      * @param bo 角色资源同步授权参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @PutMapping("/roles/{roleId}/resources")
     @Operation(summary = "同步角色资源", description = "按完整资源ID列表覆盖同步角色权限资源关系")
@@ -163,8 +151,6 @@ public class AuthGrantController {
      * @param roleId   角色ID
      * @return 部门ID列表
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @GetMapping("/roles/{roleId}/data-scope-depts")
     @Operation(summary = "查询角色数据范围部门", description = "查询角色自定义数据范围下已绑定的部门ID列表")
@@ -179,8 +165,6 @@ public class AuthGrantController {
      * @param bo 角色数据范围同步参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @PutMapping("/roles/{roleId}/data-scope-depts")
     @Operation(summary = "同步角色数据范围部门", description = "按完整部门ID列表覆盖同步角色自定义数据范围")

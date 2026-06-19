@@ -81,8 +81,6 @@ class AuthTenantControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldReturnTenantOptionsWhenRequestIsValid() throws Exception {
@@ -109,8 +107,6 @@ class AuthTenantControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -140,8 +136,6 @@ class AuthTenantControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldSaveTenantWhenRequestIsValid() throws Exception {
@@ -169,8 +163,6 @@ class AuthTenantControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldForbidTenantOptionsWhenUserHasNoManageAuthority() throws Exception {

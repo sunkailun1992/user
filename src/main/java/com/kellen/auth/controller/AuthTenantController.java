@@ -57,8 +57,6 @@ public class AuthTenantController {
      * @param query 租户查询参数
      * @return 租户选项列表
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @GetMapping("/options")
     @Operation(summary = "查询租户选项", description = "按查询条件返回租户轻量选项列表，用于登录页选择和管理端选择器展示")
@@ -73,8 +71,6 @@ public class AuthTenantController {
      * @param query 租户查询参数
      * @return 租户分页
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询租户", description = "按查询条件分页返回租户主数据，用于租户管理列表")
@@ -91,8 +87,6 @@ public class AuthTenantController {
      * @param bo 租户写入参数
      * @return 租户ID
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PostMapping
     @Operation(summary = "新增租户", description = "创建租户主数据并返回新租户ID")
@@ -107,8 +101,6 @@ public class AuthTenantController {
      * @param bo 租户写入参数
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @PutMapping("/{id}")
     @Operation(summary = "修改租户", description = "根据租户ID和version修改租户资料，并通过乐观锁防止并发覆盖")
@@ -125,8 +117,6 @@ public class AuthTenantController {
      * @param id 租户主键
      * @return 是否成功
      * @author sunkailun
-     * @DateTime 2026/05/26
-     * @email 376253703@qq.com
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除租户", description = "根据租户ID逻辑删除租户，不物理删除历史数据")

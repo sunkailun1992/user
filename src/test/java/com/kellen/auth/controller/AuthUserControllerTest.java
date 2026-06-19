@@ -81,8 +81,6 @@ class AuthUserControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldReturnUserOptionsWhenRequestIsValid() throws Exception {
@@ -111,8 +109,6 @@ class AuthUserControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -143,8 +139,6 @@ class AuthUserControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldSaveUserWhenRequestIsValid() throws Exception {
@@ -174,8 +168,6 @@ class AuthUserControllerTest {
      *
      * @throws Exception MockMvc 请求执行异常
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     @Test
     void shouldForbidUserOptionsWhenUserHasNoManageAuthority() throws Exception {

@@ -46,8 +46,6 @@ public class AuthUserServiceResults {
      * @param recordDO 用户实体
      * @return 用户响应对象
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     public AuthUserVO toVO(AuthUser recordDO) {
         // 单条转换时复用带租户集合的转换方法，保持对外方法语义不变。
@@ -61,8 +59,6 @@ public class AuthUserServiceResults {
      * @param tenantIds 用户关联租户ID集合
      * @return 用户响应对象
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     private AuthUserVO toVO(AuthUser recordDO, List<String> tenantIds) {
         // 实体为空时返回空响应。
@@ -88,8 +84,6 @@ public class AuthUserServiceResults {
      * @param userId 用户ID
      * @return 租户ID集合
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     private List<String> listTenantIds(String userId) {
         // 用户ID为空时直接返回空集合，避免 List.of 空元素触发异常。
@@ -107,8 +101,6 @@ public class AuthUserServiceResults {
      * @param userIds 用户ID集合
      * @return 用户ID和租户ID集合映射
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     private Map<String, List<String>> listTenantIdsMap(List<String> userIds) {
         // 用户ID集合为空时直接返回空映射，避免构造无意义 SQL。
@@ -136,8 +128,6 @@ public class AuthUserServiceResults {
      * @param recordsDO 用户实体列表
      * @return 用户响应列表
      * @author sunkailun
-     * @DateTime 2026/06/08
-     * @email 376253703@qq.com
      */
     public List<AuthUserVO> toListVO(List<AuthUser> recordsDO) {
         // 列表为空时返回空集合。

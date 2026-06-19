@@ -26,8 +26,6 @@ public class CorsConfig {
      * @param corsProperties 跨域配置属性
      * @return CORS 过滤器注册对象
      * @author sunkailun
-     * @DateTime 2026/05/27
-     * @email 376253703@qq.com
      */
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilterRegistrationBean(CorsProperties corsProperties) {
