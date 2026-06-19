@@ -47,6 +47,7 @@
 
 - 子智能体可以并行分析 Controller、Service、Mapper、DDL、admin-web 调用、gateway 路由、message API 契约和 utils 公共能力。
 - 不允许多个 worker 同时修改同一认证链路、权限模型、数据范围逻辑、DDL 脚本或 `utils` 公共 API。
+- 用户服务全新业务库初始化必须先执行 `db/common-infra-schema.sql` 再执行 `db/auth-schema.sql`；所有接入 MyBatis-Plus DDL 与 Seata AT 的业务库都必须具备 `ddl_history` 和 `undo_log`。
 - 最终认证边界、权限模型、租户隔离和测试结论必须由主智能体统一判断。
 
 ## 验证命令

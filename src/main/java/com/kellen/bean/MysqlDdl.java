@@ -66,6 +66,7 @@ public class MysqlDdl implements IDdl {
     public List<String> getSqlFiles() {
         // 当前本地清库重建只执行统一初始化脚本，后续已发布环境仍按AI规范新增增量脚本。
         return List.of(
+                "db/common-infra-schema.sql",
                 "db/auth-schema.sql"
         );
     }

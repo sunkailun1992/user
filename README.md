@@ -5,9 +5,12 @@
 ## 技术基线
 
 - Java 17
-- Spring Boot 3.2.4
-- Spring Cloud 2023.0.1
-- Spring Cloud Alibaba 2023.0.1.0
+- Spring Boot 4.0.4
+- Spring Cloud 2025.1.1
+- Spring Cloud Alibaba 2025.1.0.0
+- Nacos Client 3.2.2
+- Seata Server 2.7.0
+- Seata Client 2.6.0
 - MyBatis-Plus
 - 公共能力依赖 `com:utils`
 
@@ -49,7 +52,7 @@
 
 ## 基础设施地址
 
-除 `bootstrap.yml` 中连接 Nacos 自身的入口地址外，MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana 等基础设施地址统一放在 Nacos `reuse-configuration.yaml`。
+除 `application.yml` 中连接 Nacos 自身的启动入口外，MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana 等基础设施地址统一放在 Nacos `reuse-configuration.yaml`。
 
 蒲公英、Tailscale、节点小宝等组网地址变化时，优先只修改 `custom.infra-host` 和 `custom.local-service-host`：
 
@@ -81,7 +84,7 @@ xxl:
       ip: ${custom.local-service-host}
 ```
 
-本地 `bootstrap.yml` 的 `custom.nacos-ip` 是读取远程配置前必须先使用的启动入口，不能依赖 `reuse-configuration.yaml`。
+本地 `application.yml` 的 `custom.nacos-ip` 是读取远程配置前必须先使用的启动入口，不能依赖 `reuse-configuration.yaml`。
 
 ## 前端跨域
 
@@ -106,25 +109,13 @@ app:
 
 ## 接口文档
 
-Knife4j 文档地址：
-
-```text
-http://127.0.0.1:7500/doc.html
-```
-
 OpenAPI 原始文档地址：
 
 ```text
 http://127.0.0.1:7500/v3/api-docs
 ```
 
-当前 Nacos `knife4j.yaml` 使用 Springdoc 显式分组，只扫描 `com.kellen` 包。Knife4j Basic 认证开启，默认账号密码：
-
-```text
-admin / 123456
-```
-
-Knife4j Basic 认证只保护文档页面，不代表已经登录业务系统。调试需要鉴权的接口时，先调用 `POST /auth/sessions` 获取登录响应中的 `accessToken`，再点击 Knife4j 左侧 `Authorize`，将 JWT 写入 `Authorization`。当前 OpenAPI 已声明 Bearer JWT 安全方案，页面会把该值带到后续请求头中。
+第三方文档 UI 已移除，服务只保留标准 OpenAPI3 `/v3/api-docs`。调试需要鉴权的接口时，先调用 `POST /auth/sessions` 获取登录响应中的 `accessToken`，再把 JWT 写入 `Authorization: Bearer <accessToken>` 请求头。当前 OpenAPI 已声明 Bearer JWT 安全方案。
 
 登录示例：
 
@@ -145,7 +136,7 @@ Controller 必须使用 OpenAPI3 注解：
 @Operation(summary = "分页查询用户", description = "按查询条件分页返回当前租户下的用户数据，用于用户管理列表")
 ```
 
-这样 Knife4j 页面会展示业务名称，避免出现 `auth-user-controller`、`list_1`、`save_1` 等默认名称。
+这样 OpenAPI 文档会展示业务名称，避免出现 `auth-user-controller`、`list_1`、`save_1` 等默认名称。
 
 ## 管理接口
 
@@ -463,7 +454,7 @@ Data ID: logging.yml
 Group: DEFAULT_GROUP
 ```
 
-当前服务通过 `bootstrap.yml` 的 `extension-configs` 加载该配置。后续微服务统一引入同一个 `logging.yml`，保证日志目录、日志格式和滚动策略一致。
+当前服务通过 `application.yml` 的 `spring.config.import` 加载该配置。后续微服务统一引入同一个 `logging.yml`，保证日志目录、日志格式和滚动策略一致。
 
 推荐默认日志目录：
 

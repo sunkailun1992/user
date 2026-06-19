@@ -1,0 +1,10 @@
+# 测试环境关闭外部配置加载，避免请求层测试依赖真实 Nacos。
+spring:
+  cloud:
+    nacos:
+      config:
+        enabled: false
+        import-check:
+          enabled: false
+      discovery:
+        enabled: false
