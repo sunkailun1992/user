@@ -20,12 +20,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -60,8 +60,7 @@ class AuthTenantControllerTest {
     /**
      * JSON 序列化工具。
      */
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 租户业务服务 Mock。
@@ -86,7 +85,6 @@ class AuthTenantControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldReturnTenantOptionsWhenRequestIsValid() throws Exception {
         AuthTenantVO tenantVO = new AuthTenantVO(); // 创建租户响应对象，模拟 Service 层返回。
         tenantVO.setId("100"); // 设置租户ID，验证响应数据会透传给前端。
@@ -94,7 +92,8 @@ class AuthTenantControllerTest {
         when(authTenantService.list(any(AuthTenantQuery.class))).thenReturn(List.of(tenantVO)); // Mock 租户选项查询结果。
 
         mockMvc.perform(get("/auth/manage/tenants/options")
-                        .param("query", "演示"))
+                        .param("query", "演示")
+                        .with(authority("user:auth:manage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].id").value("100"))
@@ -114,7 +113,6 @@ class AuthTenantControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     @SuppressWarnings("unchecked")
     void shouldReturnTenantPageWhenRequestIsValid() throws Exception {
         Page<AuthTenantVO> responsePage = new Page<>(1, 10, 1); // 创建租户分页响应对象。
@@ -125,7 +123,8 @@ class AuthTenantControllerTest {
 
         mockMvc.perform(get("/auth/manage/tenants")
                         .param("current", "1")
-                        .param("size", "10"))
+                        .param("size", "10")
+                        .with(authority("user:auth:manage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.records[0].id").value("100"));
@@ -145,7 +144,6 @@ class AuthTenantControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldSaveTenantWhenRequestIsValid() throws Exception {
         when(authTenantService.save(any(AuthTenantBO.class))).thenReturn("100"); // Mock 新增租户成功返回租户ID。
         AuthTenantBO request = new AuthTenantBO(); // 创建新增租户请求体。
@@ -154,6 +152,7 @@ class AuthTenantControllerTest {
 
         mockMvc.perform(post("/auth/manage/tenants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:manage"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -174,9 +173,9 @@ class AuthTenantControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:resources")
     void shouldForbidTenantOptionsWhenUserHasNoManageAuthority() throws Exception {
-        mockMvc.perform(get("/auth/manage/tenants/options"))
+        mockMvc.perform(get("/auth/manage/tenants/options")
+                        .with(authority("user:auth:resources")))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(authTenantService); // 权限不足时不进入租户业务服务。

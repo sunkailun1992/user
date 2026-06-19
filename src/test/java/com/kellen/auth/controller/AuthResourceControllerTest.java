@@ -22,10 +22,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -60,8 +60,7 @@ class AuthResourceControllerTest {
     /**
      * JSON 序列化工具。
      */
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 权限资源业务服务 Mock。
@@ -87,7 +86,6 @@ class AuthResourceControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldReturnSuccessWhenSaveResourceRequestIsValid() throws Exception {
         // Mock Service 新增成功后的资源ID，避免测试依赖真实数据库。
         when(authResourceService.save(any(AuthResourceBO.class))).thenReturn("resource-1");
@@ -109,6 +107,7 @@ class AuthResourceControllerTest {
         // 发起 HTTP 新增请求，并验证统一响应结构和业务数据。
         mockMvc.perform(post("/auth/manage/resources")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:manage"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -137,7 +136,6 @@ class AuthResourceControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldReturnParameterErrorWhenSaveResourceRequestIsInvalid() throws Exception {
         // 创建缺少 tenantId、code、name、resourceCategory 的非法请求体。
         AuthResourceBO request = new AuthResourceBO();
@@ -145,6 +143,7 @@ class AuthResourceControllerTest {
         // 发起 HTTP 新增请求，并验证全局异常处理器会返回统一参数错误响应。
         mockMvc.perform(post("/auth/manage/resources")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:manage"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
@@ -165,7 +164,6 @@ class AuthResourceControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:resources")
     void shouldForbidSaveResourceWhenUserHasNoManageAuthority() throws Exception {
         // 创建合法请求体，用于确认本用例失败原因来自权限而不是参数校验。
         AuthResourceBO request = new AuthResourceBO();
@@ -181,6 +179,7 @@ class AuthResourceControllerTest {
         // 发起 HTTP 新增请求，并验证类级 @PreAuthorize 会拦截无管理权限用户。
         mockMvc.perform(post("/auth/manage/resources")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:resources"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
         // 验证权限不足时不会进入业务服务。
@@ -197,7 +196,6 @@ class AuthResourceControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     @SuppressWarnings("unchecked")
     void shouldReturnPageWhenPageResourceRequestIsValid() throws Exception {
         // 创建分页响应对象，模拟业务层已完成查询和 VO 转换。
@@ -225,7 +223,8 @@ class AuthResourceControllerTest {
         mockMvc.perform(get("/auth/manage/resources")
                         .param("tenantId", request.getTenantId())
                         .param("current", String.valueOf(request.getCurrent()))
-                        .param("size", String.valueOf(request.getSize())))
+                        .param("size", String.valueOf(request.getSize()))
+                        .with(authority("user:auth:manage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.current").value(1))

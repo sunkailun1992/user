@@ -20,12 +20,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -60,8 +60,7 @@ class AuthRoleControllerTest {
     /**
      * JSON 序列化工具。
      */
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 角色业务服务 Mock。
@@ -86,7 +85,6 @@ class AuthRoleControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldReturnRoleOptionsWhenRequestIsValid() throws Exception {
         AuthRoleVO roleVO = new AuthRoleVO(); // 创建角色响应对象，模拟 Service 层返回。
         roleVO.setId("role-1"); // 设置角色ID，验证响应数据会透传给前端。
@@ -95,7 +93,8 @@ class AuthRoleControllerTest {
 
         mockMvc.perform(get("/auth/manage/roles/options")
                         .param("tenantId", "100")
-                        .param("query", "管理员"))
+                        .param("query", "管理员")
+                        .with(authority("user:auth:manage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].id").value("role-1"))
@@ -116,7 +115,6 @@ class AuthRoleControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     @SuppressWarnings("unchecked")
     void shouldReturnRolePageWhenRequestIsValid() throws Exception {
         Page<AuthRoleVO> responsePage = new Page<>(1, 10, 1); // 创建角色分页响应对象。
@@ -128,7 +126,8 @@ class AuthRoleControllerTest {
         mockMvc.perform(get("/auth/manage/roles")
                         .param("tenantId", "100")
                         .param("current", "1")
-                        .param("size", "10"))
+                        .param("size", "10")
+                        .with(authority("user:auth:manage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.records[0].id").value("role-1"));
@@ -148,7 +147,6 @@ class AuthRoleControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldSaveRoleWhenRequestIsValid() throws Exception {
         when(authRoleService.save(any(AuthRoleBO.class))).thenReturn("role-1"); // Mock 新增角色成功返回角色ID。
         AuthRoleBO request = new AuthRoleBO(); // 创建新增角色请求体。
@@ -158,6 +156,7 @@ class AuthRoleControllerTest {
 
         mockMvc.perform(post("/auth/manage/roles")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:manage"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -178,9 +177,10 @@ class AuthRoleControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:resources")
     void shouldForbidRoleOptionsWhenUserHasNoManageAuthority() throws Exception {
-        mockMvc.perform(get("/auth/manage/roles/options").param("tenantId", "100"))
+        mockMvc.perform(get("/auth/manage/roles/options")
+                        .param("tenantId", "100")
+                        .with(authority("user:auth:resources")))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(authRoleService); // 权限不足时不进入角色业务服务。

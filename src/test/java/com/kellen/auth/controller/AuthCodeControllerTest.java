@@ -16,10 +16,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -57,8 +57,7 @@ class AuthCodeControllerTest {
     /**
      * JSON 序列化工具。
      */
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 请求层测试最小启动配置。
@@ -77,7 +76,6 @@ class AuthCodeControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldGenerateCodeWhenUserHasManageAuthority() throws Exception {
         when(authCodeGenerateService.generate(any(AuthCodeGenerateQuery.class))).thenReturn("role_admin_20260527162000_0001"); // Mock 后端统一生成结果。
         AuthCodeGenerateQuery request = new AuthCodeGenerateQuery(); // 创建编码生成请求对象。
@@ -87,6 +85,7 @@ class AuthCodeControllerTest {
 
         mockMvc.perform(post("/auth/manage/codes")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:manage"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -107,13 +106,13 @@ class AuthCodeControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:resources")
     void shouldForbidGenerateCodeWhenUserHasNoManageAuthority() throws Exception {
         AuthCodeGenerateQuery request = new AuthCodeGenerateQuery(); // 创建编码生成请求对象。
         request.setTarget("ROLE"); // 设置编码目标。
 
         mockMvc.perform(post("/auth/manage/codes")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:resources"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
 

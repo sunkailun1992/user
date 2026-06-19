@@ -16,12 +16,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -54,8 +54,7 @@ class AuthGrantControllerTest {
     /**
      * JSON 序列化工具。
      */
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 授权关系业务服务 Mock。
@@ -77,7 +76,6 @@ class AuthGrantControllerTest {
      * @throws Exception MockMvc 请求执行异常
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldReturnRoleResourceIdsWhenRequestIsValid() throws Exception {
         // Mock 角色已经绑定两个资源，用于验证前端编辑弹窗可回显历史勾选。
         when(authGrantService.listRoleResourceIds("100", "role-1")).thenReturn(List.of("resource-1", "resource-2"));
@@ -85,6 +83,7 @@ class AuthGrantControllerTest {
         // 发起角色资源查询请求，并验证统一响应和资源ID列表。
         mockMvc.perform(get("/auth/manage/roles/role-1/resources")
                         .param("tenantId", "100")
+                        .with(authority("user:auth:manage"))
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -100,7 +99,6 @@ class AuthGrantControllerTest {
      * @throws Exception MockMvc 请求执行异常
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldSyncRoleResourcesWhenRequestIsValid() throws Exception {
         // Mock 同步成功，避免请求层测试依赖真实数据库。
         when(authGrantService.syncRoleResources(any(AuthRoleResourceSyncBO.class))).thenReturn(true);
@@ -116,6 +114,7 @@ class AuthGrantControllerTest {
         // 发起角色资源同步请求，并验证统一响应。
         mockMvc.perform(put("/auth/manage/roles/role-1/resources")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:manage"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -134,11 +133,11 @@ class AuthGrantControllerTest {
      * @throws Exception MockMvc 请求执行异常
      */
     @Test
-    @WithMockUser(authorities = "user:auth:resources")
     void shouldForbidRoleResourceRequestWhenUserHasNoManageAuthority() throws Exception {
         // 发起无管理权限的角色资源查询请求，并验证类级权限拦截。
         mockMvc.perform(get("/auth/manage/roles/role-1/resources")
                         .param("tenantId", "100")
+                        .with(authority("user:auth:resources"))
                 )
                 .andExpect(status().isForbidden());
         // 权限不足时不进入业务服务。

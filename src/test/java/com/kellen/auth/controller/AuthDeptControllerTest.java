@@ -20,12 +20,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -60,8 +60,7 @@ class AuthDeptControllerTest {
     /**
      * JSON 序列化工具。
      */
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 部门业务服务 Mock。
@@ -86,7 +85,6 @@ class AuthDeptControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldReturnDeptOptionsWhenRequestIsValid() throws Exception {
         AuthDeptVO deptVO = new AuthDeptVO(); // 创建部门响应对象，模拟 Service 层返回。
         deptVO.setId("dept-1"); // 设置部门ID，验证响应数据会透传给前端。
@@ -95,7 +93,8 @@ class AuthDeptControllerTest {
 
         mockMvc.perform(get("/auth/manage/depts/options")
                         .param("tenantId", "100")
-                        .param("query", "研发"))
+                        .param("query", "研发")
+                        .with(authority("user:auth:manage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].id").value("dept-1"))
@@ -116,7 +115,6 @@ class AuthDeptControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     @SuppressWarnings("unchecked")
     void shouldReturnDeptPageWhenRequestIsValid() throws Exception {
         Page<AuthDeptVO> responsePage = new Page<>(1, 10, 1); // 创建部门分页响应对象。
@@ -128,7 +126,8 @@ class AuthDeptControllerTest {
         mockMvc.perform(get("/auth/manage/depts")
                         .param("tenantId", "100")
                         .param("current", "1")
-                        .param("size", "10"))
+                        .param("size", "10")
+                        .with(authority("user:auth:manage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.records[0].id").value("dept-1"));
@@ -148,7 +147,6 @@ class AuthDeptControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:manage")
     void shouldSaveDeptWhenRequestIsValid() throws Exception {
         when(authDeptService.save(any(AuthDeptBO.class))).thenReturn("dept-1"); // Mock 新增部门成功返回部门ID。
         AuthDeptBO request = new AuthDeptBO(); // 创建新增部门请求体。
@@ -158,6 +156,7 @@ class AuthDeptControllerTest {
 
         mockMvc.perform(post("/auth/manage/depts")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(authority("user:auth:manage"))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -178,9 +177,10 @@ class AuthDeptControllerTest {
      * @email 376253703@qq.com
      */
     @Test
-    @WithMockUser(authorities = "user:auth:resources")
     void shouldForbidDeptOptionsWhenUserHasNoManageAuthority() throws Exception {
-        mockMvc.perform(get("/auth/manage/depts/options").param("tenantId", "100"))
+        mockMvc.perform(get("/auth/manage/depts/options")
+                        .param("tenantId", "100")
+                        .with(authority("user:auth:resources")))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(authDeptService); // 权限不足时不进入部门业务服务。
