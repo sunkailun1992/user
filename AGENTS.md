@@ -34,6 +34,7 @@
 - 认证、租户、用户上下文必须复用 `../utils` 当前公共能力，不恢复旧 token 用户对象或旧响应结构。
 - 与 `message` 等业务模块互调时走 API 契约，不直接复制对方业务代码。
 - `gateway` 只转发请求，不做业务级鉴权；`admin-web` 只展示和调用接口，不能替代后端权限校验。
+- 新增本服务 OpenAPI 入口、调整服务前缀，或新增同级 Java 微服务需要接入网关时，必须同步检查 `../gateway` 的 Nacos `gateway-spring.yaml`；需要聚合到 Swagger UI 的服务要补业务路由和 `springdoc.swagger-ui.urls`，并验证对应网关文档路径与 `/swagger-ui/index.html`。
 - 权限资源、角色绑定、用户状态、租户切换和数据范围变更必须可审计、可回滚、可测试。
 - 不允许在 `user` 根目录嵌套 `utils`、`message`、`gateway`、`admin-web`、`ai` 等项目副本；需要改同级项目时切换到真实同级仓库。
 
