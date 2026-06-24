@@ -40,10 +40,12 @@ spring:
       - "optional:nacos:reuse-configuration.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # security-auth.yaml：统一认证开关、JWT、网关透传头和白名单配置。
       - "optional:nacos:security-auth.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
+      # swagger.yaml：Fleet 统一 Swagger/OpenAPI 开关（显示名默认取服务名，user.yaml 可覆盖）。
+      - "optional:nacos:swagger.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # user.yaml：user 服务业务配置，例如鉴权、租户、初始化等非 Spring 体系参数。
       - "optional:nacos:user.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # user-spring.yaml：user 服务端口、数据源、线程池等 Spring 体系配置。
-      - "optional:nacos:user-spring.yaml?group=test&refreshEnabled=true"
+      - "optional:nacos:user-spring.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # redis.yaml：Redis 客户端配置，供缓存、令牌或分布式能力使用。
       - "optional:nacos:redis.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # seata.yaml：分布式事务客户端配置，连接 Seata Server 2.7.0。
@@ -56,8 +58,6 @@ spring:
       - "optional:nacos:admin.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # mybatis-plus.yaml：MyBatis-Plus、分页、DDL 等公共 ORM 配置。
       - "optional:nacos:mybatis-plus.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
-      # feign.yaml：OpenFeign 超时、日志和调用策略配置。
-      - "optional:nacos:feign.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # rabbitmq.yaml：RabbitMQ 标准 spring.rabbitmq.* 连接和监听重试配置。
       - "optional:nacos:rabbitmq.yaml?group=DEFAULT_GROUP&refreshEnabled=true"
       # elasticsearch.yaml：Elasticsearch 客户端和日志索引配置。

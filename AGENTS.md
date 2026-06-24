@@ -25,6 +25,7 @@
 8. `docs/ai-coding/AI_ENGINEERING_GUARDRAILS.md`：确认风险分级、Definition of Done 和交付门禁。
 9. `docs/ai-coding/SECURITY_CODING_SPEC.md`：涉及认证、权限、数据隔离、敏感字段、SQL、上传下载或测试安全时必须阅读。
 10. `docs/ai-coding/UTILS_PUBLIC_SPEC.md`：涉及公共规范、错误码、数据库、乐观锁或 `utils` 能力时阅读。
+11. `docs/ai-coding/NACOS_CONFIG_SPEC.md`：修改 Nacos 配置中心、共享 dataId 或 `application.yml` import 前必读。
 
 ## 项目边界
 
@@ -67,6 +68,6 @@ bash scripts/check-secrets.sh
 - 禁止信任前端传入的当前用户、租户、角色、权限、数据范围和用户状态字段。
 - 禁止在普通接口返回密码、token、密钥、完整手机号、完整邮箱、身份证或内部异常堆栈。
 - 禁止写死默认租户、默认用户、测试密码、Nacos 地址、数据库连接和本机路径。
-- 禁止 AI 自主修改已有密钥、数据库连接、Nacos 地址、默认账号或生产配置值；发现疑似密钥只能告警，由项目负责人决定是否替换。
+- 禁止 AI 触碰真实密钥/凭证、数据库密码或默认账号口令（疑似密钥只能告警，由项目负责人处理）；配置中心结构性调整（dataId 拆分/合并、import 顺序、`${}` 引用、Nacos 接入地址/namespace/group）允许 AI 自主完成，但必须保值不改值，不得擅自变更生产业务配置的实际取值。
 - 禁止为了前端页面可用而绕过后端鉴权、授权、租户隔离、数据权限或乐观锁。
 - 禁止在 `user` 仓库内复制其它同级项目源码；公共能力缺失时应评估是否回到真实 `../utils` 实现。
