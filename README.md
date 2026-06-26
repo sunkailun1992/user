@@ -379,10 +379,13 @@ src/main/java/com/kellen/bean/MysqlDdl.java
 SQL 脚本：
 
 ```text
+../utils/src/main/resources/db/common-infra-schema.sql
 src/main/resources/db/auth-schema.sql
 ```
 
-当前为清库重建准备，`MysqlDdl#getSqlFiles()` 只执行 `db/auth-schema.sql`。脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
+全新或空业务库首次启动前，必须先在目标业务库手动执行同级 `../utils/src/main/resources/db/common-infra-schema.sql`，先建 `ddl_history` 和 Seata AT `undo_log`。Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`，不能依赖应用首次启动自动创建该表。
+
+当前 `MysqlDdl#getSqlFiles()` 按顺序声明 `db/common-infra-schema.sql` 和 `db/auth-schema.sql`。业务脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
 
 默认数据包含：
 
