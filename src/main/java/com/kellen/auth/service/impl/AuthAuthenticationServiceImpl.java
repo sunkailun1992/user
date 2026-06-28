@@ -188,66 +188,42 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
                 // 禁用账号不允许登录。
                 throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
             }
-            // 查询用户资源。
-            List<AuthResource> resources = authGrantService.findResourcesByUserId(user.getId());
-            // 提取后端权限码。
-            List<String> permissions = authGrantService.toPermissionCodes(resources);
-            // 解析当前用户角色合并后的数据范围。
-            DataScopeSnapshot dataScopeSnapshot = resolveDataScope(user);
-            // 创建JWT声明。
-            Map<String, Object> claims = new HashMap<>();
-            // 写入用户ID。
-            claims.put("userId", user.getId());
-            // 写入用户名。
-            claims.put("username", user.getUsername());
-            // 写入租户ID。
-            claims.put("tenantId", tenantId);
-            // 写入部门ID。
-            claims.put("deptId", user.getDeptId());
-            // 写入数据权限范围。
-            claims.put("dataScope", dataScopeSnapshot.dataScope());
-            // 写入数据权限部门ID集合。
-            claims.put("dataScopeDeptIds", dataScopeSnapshot.deptIds());
-            // 写入管理员分类。
-            claims.put("adminType", resolveAdminType(user).getValue());
-            // 写入权限码。
-            claims.put("permissions", permissions);
-            // 签发JWT。
-            String token = JwtUtils.createJwt(UUID.randomUUID().toString(), user.getId(), claims);
-            // 创建登录响应。
-            AuthLoginVO vo = new AuthLoginVO();
-            // 设置令牌。
-            vo.setToken(token);
-            // 设置令牌类型。
-            vo.setTokenType("Bearer");
-            // 设置用户ID。
-            vo.setUserId(user.getId());
-            // 设置用户名。
-            vo.setUsername(user.getUsername());
-            // 设置昵称。
-            vo.setNickname(user.getNickname());
-            // 设置租户ID。
-            vo.setTenantId(tenantId);
-            // 设置部门ID。
-            vo.setDeptId(user.getDeptId());
-            // 设置数据权限范围。
-            vo.setDataScope(dataScopeSnapshot.dataScope());
-            // 设置数据权限部门ID集合。
-            vo.setDataScopeDeptIds(dataScopeSnapshot.deptIds());
-            // 设置管理员分类。
-            vo.setAdminType(resolveAdminType(user).getValue());
-            // 设置当前用户可切换租户。
-            vo.setAvailableTenants(findAvailableTenants(user));
-            // 设置权限码。
-            vo.setPermissions(permissions);
-            // 设置前端资源。
-            vo.setFrontendResources(authGrantService.toResourceViews(resources, FRONTEND_RESOURCE));
-            // 设置后端资源。
-            vo.setBackendResources(authGrantService.toResourceViews(resources, BACKEND_RESOURCE));
-            // 返回登录响应。
-            return vo;
+            // 复用统一会话签发逻辑。
+            return buildLoginResponse(user, tenantId, "LOCAL", null);
         } finally {
             // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
+    }
+
+    /**
+     * 基于已完成外部身份校验的本地用户创建会话。
+     *
+     * @param tenantId      本地租户 ID
+     * @param userId        本地用户 ID
+     * @param loginProvider 登录来源
+     * @param subjectType   主体类型
+     * @return 登录响应
+     */
+    @Override
+    public AuthLoginVO createSessionForUser(String tenantId, String userId, String loginProvider, String subjectType) {
+        if (StringUtils.isAnyBlank(tenantId, userId)) {
+            throw new UserException(ReturnCode.用户请求参数错误, "本地租户和用户不能为空");
+        }
+        try {
+            TenantContextHolder.setTenantId(tenantId);
+            AuthUser user = findCurrentUser(userId);
+            if (user == null) {
+                throw new UserException(ReturnCode.用户身份校验失败, "本地用户不存在");
+            }
+            if (AuthStateEnum.禁用 == user.getState()) {
+                throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
+            }
+            if (!canAccessTenant(user, tenantId)) {
+                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+            }
+            return buildLoginResponse(user, tenantId, loginProvider, subjectType);
+        } finally {
             TenantContextHolder.clear();
         }
     }
@@ -361,6 +337,54 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 清理数据权限忽略标记。
             DataPermissionContextHolder.clear();
         }
+    }
+
+    /**
+     * 组装统一登录响应并签发 JWT。
+     *
+     * @param user          本地用户
+     * @param tenantId      登录租户 ID
+     * @param loginProvider 登录来源
+     * @param subjectType   主体类型
+     * @return 登录响应
+     */
+    private AuthLoginVO buildLoginResponse(AuthUser user, String tenantId, String loginProvider, String subjectType) {
+        List<AuthResource> resources = authGrantService.findResourcesByUserId(user.getId());
+        List<String> permissions = authGrantService.toPermissionCodes(resources);
+        DataScopeSnapshot dataScopeSnapshot = resolveDataScope(user);
+        AuthAdminTypeEnum adminType = resolveAdminType(user);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("username", user.getUsername());
+        claims.put("tenantId", tenantId);
+        claims.put("deptId", user.getDeptId());
+        claims.put("dataScope", dataScopeSnapshot.dataScope());
+        claims.put("dataScopeDeptIds", dataScopeSnapshot.deptIds());
+        claims.put("adminType", adminType.getValue());
+        claims.put("permissions", permissions);
+        claims.put("loginProvider", StringUtils.defaultIfBlank(loginProvider, "LOCAL"));
+        if (StringUtils.isNotBlank(subjectType)) {
+            claims.put("subjectType", subjectType);
+        }
+        String token = JwtUtils.createJwt(UUID.randomUUID().toString(), user.getId(), claims);
+        AuthLoginVO vo = new AuthLoginVO();
+        vo.setToken(token);
+        vo.setTokenType("Bearer");
+        vo.setUserId(user.getId());
+        vo.setUsername(user.getUsername());
+        vo.setNickname(user.getNickname());
+        vo.setTenantId(tenantId);
+        vo.setDeptId(user.getDeptId());
+        vo.setDataScope(dataScopeSnapshot.dataScope());
+        vo.setDataScopeDeptIds(dataScopeSnapshot.deptIds());
+        vo.setAdminType(adminType.getValue());
+        vo.setAvailableTenants(findAvailableTenants(user));
+        vo.setPermissions(permissions);
+        vo.setFrontendResources(authGrantService.toResourceViews(resources, FRONTEND_RESOURCE));
+        vo.setBackendResources(authGrantService.toResourceViews(resources, BACKEND_RESOURCE));
+        vo.setLoginProvider(StringUtils.defaultIfBlank(loginProvider, "LOCAL"));
+        vo.setSubjectType(subjectType);
+        return vo;
     }
 
     /**

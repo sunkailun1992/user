@@ -25,6 +25,17 @@ public interface AuthAuthenticationService {
     AuthLoginVO login(LoginRequest request);
 
     /**
+     * 基于已完成外部身份校验的本地用户创建会话。
+     *
+     * @param tenantId      本地租户 ID
+     * @param userId        本地用户 ID
+     * @param loginProvider 登录来源
+     * @param subjectType   主体类型
+     * @return 登录响应
+     */
+    AuthLoginVO createSessionForUser(String tenantId, String userId, String loginProvider, String subjectType);
+
+    /**
      * 查询当前登录用户资源。
      *
      * @return 当前登录用户资源

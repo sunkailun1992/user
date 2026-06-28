@@ -1,12 +1,15 @@
 package com.kellen.auth.controller;
 
 import com.kellen.auth.dto.LoginRequest;
+import com.kellen.auth.dto.OpenApiSignatureVerifyRequest;
+import com.kellen.auth.dto.ThirdPartySessionRequest;
 import com.kellen.auth.entity.query.AuthTenantQuery;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
 import com.kellen.auth.entity.vo.AuthTenantVO;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthTenantService;
+import com.kellen.auth.service.AuthThirdPartyAuthenticationService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,16 +48,25 @@ public class AuthController {
     private final AuthTenantService authTenantService;
 
     /**
+     * 三方认证业务服务。
+     */
+    private final AuthThirdPartyAuthenticationService authThirdPartyAuthenticationService;
+
+    /**
      * 构造认证授权请求层。
      *
      * @param authAuthenticationService 认证登录业务服务
      * @param authTenantService         租户业务服务
      */
-    public AuthController(AuthAuthenticationService authAuthenticationService, AuthTenantService authTenantService) {
+    public AuthController(AuthAuthenticationService authAuthenticationService,
+                          AuthTenantService authTenantService,
+                          AuthThirdPartyAuthenticationService authThirdPartyAuthenticationService) {
         // 注入认证登录业务服务。
         this.authAuthenticationService = authAuthenticationService;
         // 注入租户业务服务，用于登录前公开查询租户下拉数据。
         this.authTenantService = authTenantService;
+        // 注入三方认证业务服务，用于外部系统签名换取统一会话。
+        this.authThirdPartyAuthenticationService = authThirdPartyAuthenticationService;
     }
 
     /**
@@ -87,6 +99,34 @@ public class AuthController {
     public ApiResponse<AuthLoginVO> login(@RequestBody LoginRequest request) {
         // 调用业务服务完成租户解析、密码校验、JWT签发和资源组装。
         return ApiResponse.success(authAuthenticationService.login(request)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 三方认证登录。
+     *
+     * @param request 三方认证请求参数
+     * @return 登录结果
+     * @author sunkailun
+     */
+    @PostMapping("/third-party/sessions")
+    @Operation(summary = "创建三方登录会话", description = "校验三方客户端签名和外部身份映射后，签发统一JWT")
+    public ApiResponse<AuthLoginVO> thirdPartyLogin(@RequestBody ThirdPartySessionRequest request) {
+        // 三方登录只接受已配置客户端签名和外部身份映射，不信任前端直接传入的本地用户信息。
+        return ApiResponse.success(authThirdPartyAuthenticationService.createSession(request));
+    }
+
+    /**
+     * 开放接口签名校验。
+     *
+     * @param request 开放接口签名校验请求
+     * @return 校验结果
+     * @author sunkailun
+     */
+    @PostMapping("/open/signatures/verify")
+    @Operation(summary = "校验开放接口签名", description = "统一校验三方系统调用业务服务时携带的HMAC签名")
+    public ApiResponse<Boolean> verifyOpenApiSignature(@RequestBody OpenApiSignatureVerifyRequest request) {
+        authThirdPartyAuthenticationService.verifyOpenApiSignature(request);
+        return ApiResponse.success(Boolean.TRUE);
     }
 
     /**

@@ -100,4 +100,16 @@ public class AuthLoginVO implements Serializable {
      */
     @Schema(description = "后端资源")
     private List<AuthResourceVO> backendResources;
+
+    /**
+     * 登录来源。
+     */
+    @Schema(description = "登录来源")
+    private String loginProvider;
+
+    /**
+     * 三方主体类型。
+     */
+    @Schema(description = "三方主体类型")
+    private String subjectType;
 }

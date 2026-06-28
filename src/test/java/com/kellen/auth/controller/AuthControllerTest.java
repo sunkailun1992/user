@@ -1,8 +1,10 @@
 package com.kellen.auth.controller;
 
+import com.kellen.auth.dto.OpenApiSignatureVerifyRequest;
 import com.kellen.auth.entity.vo.AuthTenantVO;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthTenantService;
+import com.kellen.auth.service.AuthThirdPartyAuthenticationService;
 import com.kellen.bean.GlobalExceptionHandler;
 import com.kellen.security.config.SecurityAuthConfig;
 import com.kellen.security.config.TenantProperties;
@@ -17,6 +19,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -63,6 +67,12 @@ class AuthControllerTest {
     private AuthTenantService authTenantService;
 
     /**
+     * 三方认证业务服务。
+     */
+    @MockitoBean
+    private AuthThirdPartyAuthenticationService authThirdPartyAuthenticationService;
+
+    /**
      * 请求层测试最小启动配置。
      */
     @SpringBootConfiguration
@@ -95,5 +105,37 @@ class AuthControllerTest {
         ArgumentCaptor<com.kellen.auth.entity.query.AuthTenantQuery> captor = ArgumentCaptor.forClass(com.kellen.auth.entity.query.AuthTenantQuery.class); // 捕获Controller传给Service的查询对象。
         verify(authTenantService).list(captor.capture()); // 验证Controller复用租户服务查询。
         assertThat(captor.getValue().getAssignment()).isTrue(); // 验证Controller要求结果增强，方便前端展示。
+    }
+
+    /**
+     * 开放接口签名校验应委托 user 认证服务。
+     *
+     * @throws Exception MockMvc请求异常
+     * @author sunkailun
+     */
+    @Test
+    @DisplayName("POST /auth/open/signatures/verify delegates signature verification")
+    void openApiSignatureVerifyShouldDelegateToService() throws Exception {
+        mockMvc.perform(post("/auth/open/signatures/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "providerCode": "partner-system",
+                                  "clientId": "partner-client",
+                                  "timestamp": "1782460000000",
+                                  "nonce": "nonce-1",
+                                  "signature": "signature",
+                                  "body": "{}"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(true));
+
+        ArgumentCaptor<OpenApiSignatureVerifyRequest> captor = ArgumentCaptor.forClass(OpenApiSignatureVerifyRequest.class);
+        verify(authThirdPartyAuthenticationService).verifyOpenApiSignature(captor.capture());
+        assertThat(captor.getValue().getProviderCode()).isEqualTo("partner-system");
+        assertThat(captor.getValue().getClientId()).isEqualTo("partner-client");
+        assertThat(captor.getValue().getBody()).isEqualTo("{}");
     }
 }
