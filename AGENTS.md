@@ -36,6 +36,7 @@
 
 - `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
 - 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
+- 新增业务表必须按 `docs/ai-coding/PROJECT_CODING_SPEC.md` 补齐公共治理字段；`version` 只做乐观锁，业务版本使用 `*_version` 命名。
 - 认证、租户、用户上下文必须复用 `../utils` 当前公共能力，不恢复旧 token 用户对象或旧响应结构。
 - 与 `message` 等业务模块互调时走 `../rpc-api` 中的 RPC 契约，不直接复制对方业务代码、接口或 DTO。
 - `gateway` 只转发请求，不做业务级鉴权；`admin-web` 只展示和调用接口，不能替代后端权限校验。
