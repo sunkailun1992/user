@@ -1,6 +1,9 @@
 package com.kellen.auth.controller;
 
 import com.kellen.auth.dto.OpenApiSignatureVerifyRequest;
+import com.kellen.auth.dto.LogoutSessionRequest;
+import com.kellen.auth.dto.RefreshSessionRequest;
+import com.kellen.auth.entity.vo.AuthLoginVO;
 import com.kellen.auth.entity.vo.AuthTenantVO;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthTenantService;
@@ -20,6 +23,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +31,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -137,5 +142,63 @@ class AuthControllerTest {
         assertThat(captor.getValue().getProviderCode()).isEqualTo("partner-system");
         assertThat(captor.getValue().getClientId()).isEqualTo("partner-client");
         assertThat(captor.getValue().getBody()).isEqualTo("{}");
+    }
+
+    /**
+     * refresh token 应换取新的登录会话。
+     *
+     * @throws Exception MockMvc请求异常
+     */
+    @Test
+    @DisplayName("POST /auth/sessions/refresh delegates refresh session")
+    void refreshSessionShouldDelegateToService() throws Exception {
+        AuthLoginVO login = new AuthLoginVO();
+        login.setToken("access-token");
+        login.setRefreshToken("refresh-token-new");
+        login.setExpiresIn(86_400L);
+        login.setRefreshExpiresIn(2_592_000L);
+        when(authAuthenticationService.refreshSession(any())).thenReturn(login);
+
+        mockMvc.perform(post("/auth/sessions/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "refresh-token-old"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.token").value("access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token-new"))
+                .andExpect(jsonPath("$.data.expiresIn").value(86_400));
+
+        ArgumentCaptor<RefreshSessionRequest> captor = ArgumentCaptor.forClass(RefreshSessionRequest.class);
+        verify(authAuthenticationService).refreshSession(captor.capture());
+        assertThat(captor.getValue().getRefreshToken()).isEqualTo("refresh-token-old");
+    }
+
+    /**
+     * 退出登录应透传当前 access token 和可选 refresh token。
+     *
+     * @throws Exception MockMvc请求异常
+     */
+    @Test
+    @WithMockUser
+    @DisplayName("POST /auth/sessions/logout delegates logout session")
+    void logoutShouldDelegateToService() throws Exception {
+        mockMvc.perform(post("/auth/sessions/logout")
+                        .header("Authorization", "Bearer access-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "refresh-token"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        ArgumentCaptor<LogoutSessionRequest> captor = ArgumentCaptor.forClass(LogoutSessionRequest.class);
+        verify(authAuthenticationService).logout(eq("Bearer access-token"), captor.capture());
+        assertThat(captor.getValue().getRefreshToken()).isEqualTo("refresh-token");
     }
 }

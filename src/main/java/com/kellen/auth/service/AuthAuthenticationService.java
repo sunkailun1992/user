@@ -1,6 +1,8 @@
 package com.kellen.auth.service;
 
 import com.kellen.auth.dto.LoginRequest;
+import com.kellen.auth.dto.LogoutSessionRequest;
+import com.kellen.auth.dto.RefreshSessionRequest;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
 import com.kellen.auth.entity.vo.AuthTenantVO;
@@ -23,6 +25,22 @@ public interface AuthAuthenticationService {
      * @return 登录响应
      */
     AuthLoginVO login(LoginRequest request);
+
+    /**
+     * 刷新登录会话。
+     *
+     * @param request 刷新请求
+     * @return 登录响应
+     */
+    AuthLoginVO refreshSession(RefreshSessionRequest request);
+
+    /**
+     * 退出当前登录会话。
+     *
+     * @param authorization Authorization请求头
+     * @param request       退出请求
+     */
+    void logout(String authorization, LogoutSessionRequest request);
 
     /**
      * 基于已完成外部身份校验的本地用户创建会话。

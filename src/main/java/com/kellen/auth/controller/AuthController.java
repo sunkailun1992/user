@@ -1,7 +1,9 @@
 package com.kellen.auth.controller;
 
 import com.kellen.auth.dto.LoginRequest;
+import com.kellen.auth.dto.LogoutSessionRequest;
 import com.kellen.auth.dto.OpenApiSignatureVerifyRequest;
+import com.kellen.auth.dto.RefreshSessionRequest;
 import com.kellen.auth.dto.ThirdPartySessionRequest;
 import com.kellen.auth.entity.query.AuthTenantQuery;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -99,6 +102,34 @@ public class AuthController {
     public ApiResponse<AuthLoginVO> login(@RequestBody LoginRequest request) {
         // 调用业务服务完成租户解析、密码校验、JWT签发和资源组装。
         return ApiResponse.success(authAuthenticationService.login(request)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+    }
+
+    /**
+     * 刷新登录会话。
+     *
+     * @param request 刷新请求
+     * @return 登录结果
+     */
+    @PostMapping("/sessions/refresh")
+    @Operation(summary = "刷新登录会话", description = "校验refresh token后轮换签发新的JWT和refresh token")
+    public ApiResponse<AuthLoginVO> refreshSession(@RequestBody RefreshSessionRequest request) {
+        return ApiResponse.success(authAuthenticationService.refreshSession(request));
+    }
+
+    /**
+     * 退出当前登录会话。
+     *
+     * @param authorization Authorization请求头
+     * @param request       退出请求
+     * @return 退出结果
+     */
+    @PostMapping("/sessions/logout")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "退出当前登录会话", description = "撤销当前access token，并按需撤销refresh token")
+    public ApiResponse<Void> logout(@RequestHeader(name = "Authorization", required = false) String authorization,
+                                    @RequestBody(required = false) LogoutSessionRequest request) {
+        authAuthenticationService.logout(authorization, request);
+        return ApiResponse.success();
     }
 
     /**

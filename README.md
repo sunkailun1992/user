@@ -12,7 +12,7 @@
 - Seata Server 2.7.0
 - Seata Client 2.6.0
 - MyBatis-Plus
-- 公共能力依赖 `com:utils`
+- 公共能力依赖 `com.kellen:utils`
 
 ## 服务职责
 

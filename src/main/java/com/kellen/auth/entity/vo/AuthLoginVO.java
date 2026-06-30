@@ -24,6 +24,24 @@ public class AuthLoginVO implements Serializable {
     private String token;
 
     /**
+     * refresh token。
+     */
+    @Schema(description = "refresh token")
+    private String refreshToken;
+
+    /**
+     * access token有效秒数。
+     */
+    @Schema(description = "access token有效秒数")
+    private Long expiresIn;
+
+    /**
+     * refresh token有效秒数。
+     */
+    @Schema(description = "refresh token有效秒数")
+    private Long refreshExpiresIn;
+
+    /**
      * 令牌类型。
      */
     @Schema(description = "令牌类型")

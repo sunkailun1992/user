@@ -12,6 +12,7 @@ import com.kellen.auth.entity.query.AuthUserQuery;
 import com.kellen.auth.entity.vo.AuthUserVO;
 import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.mapper.AuthUserTenantMapper;
+import com.kellen.auth.service.AuthTokenLifecycleService;
 import com.kellen.auth.service.AuthUserService;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
 import com.kellen.auth.service.results.AuthUserServiceResults;
@@ -58,6 +59,11 @@ public class AuthUserServiceImpl implements AuthUserService {
     private final AuthUserServiceResults authUserServiceResults;
 
     /**
+     * token 生命周期服务。
+     */
+    private final AuthTokenLifecycleService authTokenLifecycleService;
+
+    /**
      * 密码编码器。
      */
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -69,11 +75,13 @@ public class AuthUserServiceImpl implements AuthUserService {
      * @param authUserServiceQuery   用户查询增强
      * @param authUserServiceResults 用户结果增强
      * @param authUserTenantMapper   用户租户关联Mapper
+     * @param authTokenLifecycleService token 生命周期服务
      */
     public AuthUserServiceImpl(AuthUserMapper authUserMapper,
                                AuthUserServiceQuery authUserServiceQuery,
                                AuthUserServiceResults authUserServiceResults,
-                               AuthUserTenantMapper authUserTenantMapper) {
+                               AuthUserTenantMapper authUserTenantMapper,
+                               AuthTokenLifecycleService authTokenLifecycleService) {
         // 保存用户Mapper。
         this.authUserMapper = authUserMapper;
         // 保存用户查询增强。
@@ -82,6 +90,8 @@ public class AuthUserServiceImpl implements AuthUserService {
         this.authUserServiceResults = authUserServiceResults;
         // 保存用户租户关联Mapper。
         this.authUserTenantMapper = authUserTenantMapper;
+        // 保存 token 生命周期服务。
+        this.authTokenLifecycleService = authTokenLifecycleService;
     }
 
     /**
@@ -191,7 +201,9 @@ public class AuthUserServiceImpl implements AuthUserService {
             // 租户条件由租户插件处理，更新实体不主动写 tenant_id。
             user.setTenantId(null);
             // 修改时空密码不覆盖原密码。
-            if (StringUtils.isBlank(bo.getPassword())) {
+            boolean passwordChanged = StringUtils.isNotBlank(bo.getPassword());
+            boolean userDisabled = AuthStateEnum.禁用 == bo.getState();
+            if (!passwordChanged) {
                 // 清理空密码字段。
                 user.setPassword(null);
             } else {
@@ -203,6 +215,9 @@ public class AuthUserServiceImpl implements AuthUserService {
             if (updated) {
                 // 同步用户可访问租户。
                 syncUserTenants(bo.getId(), bo);
+                if (passwordChanged || userDisabled) {
+                    authTokenLifecycleService.revokeUserTokens(bo.getId());
+                }
             }
             // 返回更新结果。
             return updated;
@@ -226,7 +241,11 @@ public class AuthUserServiceImpl implements AuthUserService {
             // 设置目标租户上下文，避免删除依赖请求头隐式租户。
             TenantContextHolder.setTenantId(tenantId);
             // 按ID逻辑删除用户。
-            return authUserMapper.deleteById(id) > 0;
+            boolean removed = authUserMapper.deleteById(id) > 0;
+            if (removed) {
+                authTokenLifecycleService.revokeUserTokens(id);
+            }
+            return removed;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();

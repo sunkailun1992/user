@@ -4,7 +4,7 @@
 
 ## 1. 总原则
 
-- 先识别当前语言、框架和模块边界；本项目默认按 Java 17、Spring Boot、MyBatis-Plus、Gradle 和 `com:utils` 生态落地。
+- 先识别当前语言、框架和模块边界；本项目默认按 Java 17、Spring Boot、MyBatis-Plus、Gradle 和 `com.kellen:utils` 生态落地。
 - 优先沿用当前分层：Controller、BO、Query、VO、Entity、Mapper、Service、ServiceQuery、ServiceResults。
 - 设计模式必须服务用户中心边界：认证、租户、角色权限、数据范围、乐观锁、编码生成、RESTful 接口和 API 契约。
 - 不允许为简单 CRUD 硬套 Factory、Manager、Abstract 层或过深继承。
@@ -63,7 +63,7 @@
 适用与 `message`、`gateway`、`admin-web` 或 `utils` 的 API/依赖边界。
 
 - 互调走 API 契约，不复制对方业务代码。
-- 公共能力通过 `com:utils` 依赖适配，不在 `user` 下嵌套其它项目副本。
+- 公共能力通过 `com.kellen:utils` 依赖适配，不在 `user` 下嵌套其它项目副本。
 
 ### Builder
 

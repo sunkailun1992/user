@@ -6,7 +6,7 @@
 
 - 项目名称：`user`
 - 项目类型：用户中心、认证、租户、角色、权限、数据范围后端
-- 技术栈：Java 17、Spring Boot、Gradle、MyBatis-Plus、Nacos、Dubbo、`com:utils`、`com:rpc-api`
+- 技术栈：Java 17、Spring Boot、Gradle、MyBatis-Plus、Nacos、Dubbo、`com.kellen:utils`、`com.kellen:rpc-api`
 - 项目关系：`user` 与 `message` 是同级独立业务模块，可通过 `../rpc-api` 中的 Dubbo 契约互相调用；两者底层统一依赖同级 `../utils` 公共工具项目
 - 同级协作：`../rpc-api` 提供跨服务 RPC 接口和 DTO 契约；`../utils` 提供统一响应、认证上下文、多租户、错误码和公共工具；`../message` 提供消息能力；`../gateway` 负责路由；`../admin-web` 负责后台页面
 - 核心风险：登录认证、JWT、租户隔离、角色权限、数据范围、用户状态、敏感字段、密码和 token 生命周期

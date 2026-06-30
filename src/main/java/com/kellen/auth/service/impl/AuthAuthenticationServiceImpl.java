@@ -2,6 +2,8 @@ package com.kellen.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kellen.auth.dto.LoginRequest;
+import com.kellen.auth.dto.LogoutSessionRequest;
+import com.kellen.auth.dto.RefreshSessionRequest;
 import com.kellen.auth.entity.AuthDept;
 import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.AuthRole;
@@ -26,6 +28,7 @@ import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.mapper.AuthUserTenantMapper;
 import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthGrantService;
+import com.kellen.auth.service.AuthTokenLifecycleService;
 import com.kellen.datapermission.DataPermissionContextHolder;
 import com.kellen.security.SecurityUser;
 import com.kellen.security.UserContextHolder;
@@ -42,7 +45,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -111,6 +113,11 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
     private final AuthGrantService authGrantService;
 
     /**
+     * token 生命周期服务。
+     */
+    private final AuthTokenLifecycleService authTokenLifecycleService;
+
+    /**
      * 密码编码器。
      */
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -126,6 +133,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
      * @param authDeptMapper           部门Mapper
      * @param authRoleDataScopeMapper  角色自定义数据范围Mapper
      * @param authGrantService         授权关系业务服务
+     * @param authTokenLifecycleService token 生命周期服务
      */
     public AuthAuthenticationServiceImpl(AuthTenantMapper authTenantMapper,
                                          AuthUserMapper authUserMapper,
@@ -134,7 +142,8 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
                                          AuthRoleMapper authRoleMapper,
                                          AuthDeptMapper authDeptMapper,
                                          AuthRoleDataScopeMapper authRoleDataScopeMapper,
-                                         AuthGrantService authGrantService) {
+                                         AuthGrantService authGrantService,
+                                         AuthTokenLifecycleService authTokenLifecycleService) {
         // 保存租户Mapper。
         this.authTenantMapper = authTenantMapper;
         // 保存用户Mapper。
@@ -151,6 +160,50 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         this.authRoleDataScopeMapper = authRoleDataScopeMapper;
         // 保存授权关系业务服务。
         this.authGrantService = authGrantService;
+        // 保存 token 生命周期服务。
+        this.authTokenLifecycleService = authTokenLifecycleService;
+    }
+
+    /**
+     * 刷新登录会话。
+     *
+     * @param request 刷新请求
+     * @return 登录响应
+     */
+    @Override
+    public AuthLoginVO refreshSession(RefreshSessionRequest request) {
+        AuthTokenLifecycleService.RefreshSession refreshSession = authTokenLifecycleService.consumeRefreshToken(request == null ? null : request.getRefreshToken());
+        try {
+            TenantContextHolder.setTenantId(refreshSession.tenantId());
+            AuthUser user = findCurrentUser(refreshSession.userId());
+            if (user == null) {
+                throw new UserException(ReturnCode.用户身份校验失败, "用户不存在");
+            }
+            if (AuthStateEnum.禁用 == user.getState()) {
+                authTokenLifecycleService.revokeUserTokens(user.getId());
+                throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
+            }
+            if (!canAccessTenant(user, refreshSession.tenantId())) {
+                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+            }
+            return buildLoginResponse(user, refreshSession.tenantId(), "REFRESH", null);
+        } finally {
+            TenantContextHolder.clear();
+        }
+    }
+
+    /**
+     * 退出当前登录会话。
+     *
+     * @param authorization Authorization请求头
+     * @param request       退出请求
+     */
+    @Override
+    public void logout(String authorization, LogoutSessionRequest request) {
+        authTokenLifecycleService.revokeAccessToken(authorization);
+        if (request != null) {
+            authTokenLifecycleService.revokeRefreshToken(request.getRefreshToken());
+        }
     }
 
     /**
@@ -366,9 +419,12 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         if (StringUtils.isNotBlank(subjectType)) {
             claims.put("subjectType", subjectType);
         }
-        String token = JwtUtils.createJwt(UUID.randomUUID().toString(), user.getId(), claims);
+        AuthTokenLifecycleService.TokenPair tokenPair = authTokenLifecycleService.issueTokens(user.getId(), tenantId, loginProvider, subjectType, claims);
         AuthLoginVO vo = new AuthLoginVO();
-        vo.setToken(token);
+        vo.setToken(tokenPair.accessToken());
+        vo.setRefreshToken(tokenPair.refreshToken());
+        vo.setExpiresIn(tokenPair.expiresIn());
+        vo.setRefreshExpiresIn(tokenPair.refreshExpiresIn());
         vo.setTokenType("Bearer");
         vo.setUserId(user.getId());
         vo.setUsername(user.getUsername());
