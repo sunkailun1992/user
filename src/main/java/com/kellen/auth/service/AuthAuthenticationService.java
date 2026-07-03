@@ -2,6 +2,7 @@ package com.kellen.auth.service;
 
 import com.kellen.auth.dto.LoginRequest;
 import com.kellen.auth.dto.LogoutSessionRequest;
+import com.kellen.auth.dto.OAuthAuthorizeUser;
 import com.kellen.auth.dto.RefreshSessionRequest;
 import com.kellen.auth.entity.vo.AuthCurrentResourceVO;
 import com.kellen.auth.entity.vo.AuthLoginVO;
@@ -25,6 +26,14 @@ public interface AuthAuthenticationService {
      * @return 登录响应
      */
     AuthLoginVO login(LoginRequest request);
+
+    /**
+     * OAuth 授权码流程校验资源所有者。
+     *
+     * @param request 登录请求
+     * @return 授权用户快照
+     */
+    OAuthAuthorizeUser authenticateForOAuth(LoginRequest request);
 
     /**
      * 刷新登录会话。

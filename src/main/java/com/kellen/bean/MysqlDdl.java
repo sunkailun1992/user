@@ -60,7 +60,8 @@ public class MysqlDdl implements IDdl {
         return List.of(
                 "db/common-infra-schema.sql",
                 "db/auth-schema.sql",
-                "db/auth-external-identity-schema.sql"
+                "db/auth-external-identity-schema.sql",
+                "db/auth-oauth-client-schema.sql"
         );
     }
 }

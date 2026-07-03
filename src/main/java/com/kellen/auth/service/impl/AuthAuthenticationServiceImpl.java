@@ -3,6 +3,7 @@ package com.kellen.auth.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kellen.auth.dto.LoginRequest;
 import com.kellen.auth.dto.LogoutSessionRequest;
+import com.kellen.auth.dto.OAuthAuthorizeUser;
 import com.kellen.auth.dto.RefreshSessionRequest;
 import com.kellen.auth.entity.AuthDept;
 import com.kellen.auth.entity.AuthResource;
@@ -245,6 +246,39 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             return buildLoginResponse(user, tenantId, "LOCAL", null);
         } finally {
             // 清理租户上下文。
+            TenantContextHolder.clear();
+        }
+    }
+
+    /**
+     * OAuth 授权码流程校验资源所有者。
+     *
+     * @param request 登录请求参数
+     * @return 授权用户快照
+     */
+    @Override
+    public OAuthAuthorizeUser authenticateForOAuth(LoginRequest request) {
+        if (StringUtils.isBlank(request.getUsername())) {
+            throw new UserException(ReturnCode.请求必填参数为空, "用户名不能为空");
+        }
+        if (StringUtils.isBlank(request.getPassword())) {
+            throw new UserException(ReturnCode.请求必填参数为空, "密码不能为空");
+        }
+        String tenantId = resolveTenantId(request);
+        try {
+            TenantContextHolder.setTenantId(tenantId);
+            AuthUser user = findLoginUser(request.getUsername(), request.getPassword(), tenantId);
+            if (user == null) {
+                throw new UserException(ReturnCode.用户密码错误, "用户名或密码错误");
+            }
+            if (AuthStateEnum.禁用 == user.getState()) {
+                throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
+            }
+            if (!canAccessTenant(user, tenantId)) {
+                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+            }
+            return new OAuthAuthorizeUser(user.getId(), user.getUsername(), tenantId);
+        } finally {
             TenantContextHolder.clear();
         }
     }

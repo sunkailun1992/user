@@ -39,16 +39,63 @@
 | --- | --- | --- |
 | `GET` | `/auth/tenants` | 登录前公开查询租户列表，用于前端租户下拉选择 |
 | `POST` | `/auth/sessions` | 创建登录会话 |
+| `POST` | `/auth/third-party/sessions` | 企业内部三方 HMAC 签名换统一 JWT，保留给 TduckX 等私有集成 |
+| `POST` | `/oauth2/token` | OAuth2 client_credentials 换短期 access token，供 MCP 等机器到机器接入 |
+| `GET` | `/.well-known/oauth-authorization-server` | OAuth 授权服务器发现 |
 | `GET` | `/auth/current/resources` | 查询当前用户权限资源 |
 
-`GET /auth/tenants` 和 `POST /auth/sessions` 不加 `@PreAuthorize`。
+`GET /auth/tenants`、`POST /auth/sessions`、`POST /auth/third-party/sessions`、`POST /oauth2/token` 和 `/.well-known/**` 不加 `@PreAuthorize`。
+
+授权服务器 metadata 的 `token_endpoint` 应通过 `oauth.authorization-server.external-base-url` 指向外部可访问的 gateway / auth 地址，本地可用 `${OAUTH_AUTHORIZATION_SERVER_EXTERNAL_BASE_URL:http://localhost:7100}`。
 
 如果 `security.auth.enabled=true`，需要在 Nacos `security.auth.permit-urls` 中放行：
 
 ```text
 /auth/tenants
 /auth/sessions
+/auth/third-party/sessions
+/oauth2/token
+/.well-known/**
 ```
+
+## OAuth2 机器到机器接入
+
+新外部系统和 MCP 客户端优先走 OAuth2 `client_credentials`，不要长期配置一次性 `Bearer JWT`。
+
+调用方式：
+
+```bash
+curl -X POST 'http://<gateway-or-user>/oauth2/token' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -u '<client_id>:<client_secret>' \
+  -d 'grant_type=client_credentials' \
+  -d 'scope=mcp.tools.read mcp.tools.call' \
+  -d 'resource=mcp'
+```
+
+返回字段按 OAuth 标准使用蛇形命名：
+
+```json
+{
+  "access_token": "<短期JWT>",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "scope": "mcp.tools.read mcp.tools.call"
+}
+```
+
+OAuth client 存在 `auth_oauth_client` 表：
+
+| 字段 | 说明 |
+| --- | --- |
+| `client_id` | 外部系统长期配置的客户端 ID |
+| `client_secret` | 客户端密钥，建议保存 BCrypt 哈希；兼容历史明文仅用于迁移 |
+| `grant_types` | 当前支持 `client_credentials` |
+| `scopes` | 允许的 scope，例如 `mcp.tools.read mcp.tools.call` |
+| `audiences` | 允许的 resource/audience，例如 `mcp` |
+| `access_token_ttl_seconds` | access token 有效秒数，服务端上限 30 天 |
+
+`/auth/third-party/sessions` 仍保留给 TduckX 等企业内部私有 HMAC 集成；未来如果统一认证治理，再双轨迁移到 OAuth，不要直接删除旧接口。
 
 ## 基础设施地址
 
@@ -115,7 +162,7 @@ OpenAPI 原始文档地址：
 http://127.0.0.1:7500/v3/api-docs
 ```
 
-第三方文档 UI 已移除，服务只保留标准 OpenAPI3 `/v3/api-docs`。调试需要鉴权的接口时，先调用 `POST /auth/sessions` 获取登录响应中的 `accessToken`，再把 JWT 写入 `Authorization: Bearer <accessToken>` 请求头。当前 OpenAPI 已声明 Bearer JWT 安全方案。
+第三方文档 UI 已移除，服务只保留标准 OpenAPI3 `/v3/api-docs`。调试需要鉴权的用户接口时，先调用 `POST /auth/sessions` 获取登录响应中的 `token`，再把 JWT 写入 `Authorization: Bearer <token>` 请求头。当前 OpenAPI 已声明 Bearer JWT 安全方案。调试 MCP 等机器到机器接口时，优先通过 `POST /oauth2/token` 换短期 access token。
 
 登录示例：
 
@@ -381,11 +428,13 @@ SQL 脚本：
 ```text
 ../utils/src/main/resources/db/common-infra-schema.sql
 src/main/resources/db/auth-schema.sql
+src/main/resources/db/auth-external-identity-schema.sql
+src/main/resources/db/auth-oauth-client-schema.sql
 ```
 
 全新或空业务库首次启动前，必须先在目标业务库手动执行同级 `../utils/src/main/resources/db/common-infra-schema.sql`，先建 `ddl_history` 和 Seata AT `undo_log`。Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`，不能依赖应用首次启动自动创建该表。
 
-当前 `MysqlDdl#getSqlFiles()` 按顺序声明 `db/common-infra-schema.sql` 和 `db/auth-schema.sql`。业务脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
+当前 `MysqlDdl#getSqlFiles()` 按顺序声明 `db/common-infra-schema.sql`、`db/auth-schema.sql`、`db/auth-external-identity-schema.sql` 和 `db/auth-oauth-client-schema.sql`。业务脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
 
 默认数据包含：
 
