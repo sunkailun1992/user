@@ -13,6 +13,7 @@
 - Seata Client 2.6.0
 - MyBatis-Plus
 - 公共能力依赖 `com.kellen:utils`
+- 跨服务契约依赖 `com:rpc-api:1.0.6`
 
 ## 服务职责
 
