@@ -267,6 +267,11 @@ user:auth:resources
 user:auth:manage
 user:auth:code-generate
 user:auth:resource-tree
+api:rag
+rag:document:manage
+rag:retrieval:use
+rag:graph:view
+rag:graph:manage
 ```
 
 当前服务内置前端资源码：
@@ -278,6 +283,9 @@ menu:role
 menu:resource
 menu:role:bind-resource
 menu:resource:tree
+menu:rag
+menu:rag:document
+menu:rag:graph
 ```
 
 资源分类：
@@ -287,7 +295,7 @@ menu:resource:tree
 | `FRONTEND` | 前端菜单、页面、按钮 |
 | `BACKEND` | 后端接口权限 |
 
-登录返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。
+登录返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。RAG 增量脚本按每个现有租户创建稳定资源，并只让原本已拥有 `user:auth:manage` 的角色继承 RAG 权限；不依赖环境中的用户、角色或资源主键。
 
 ## 数据权限
 
@@ -430,11 +438,13 @@ SQL 脚本：
 src/main/resources/db/auth-schema.sql
 src/main/resources/db/auth-external-identity-schema.sql
 src/main/resources/db/auth-oauth-client-schema.sql
+src/main/resources/db/auth-rag-resource-schema.sql
+src/main/resources/db/auth-rag-graph-resource-schema.sql
 ```
 
 全新或空业务库首次启动前，必须先在目标业务库手动执行同级 `../utils/src/main/resources/db/common-infra-schema.sql`，先建 `ddl_history` 和 Seata AT `undo_log`。Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`，不能依赖应用首次启动自动创建该表。
 
-当前 `MysqlDdl#getSqlFiles()` 按顺序声明 `db/common-infra-schema.sql`、`db/auth-schema.sql`、`db/auth-external-identity-schema.sql` 和 `db/auth-oauth-client-schema.sql`。业务脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
+当前 `MysqlDdl#getSqlFiles()` 在既有认证脚本后追加 `db/auth-rag-resource-schema.sql` 与 `db/auth-rag-graph-resource-schema.sql`。业务脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
 
 默认数据包含：
 

@@ -61,7 +61,9 @@ public class MysqlDdl implements IDdl {
                 "db/common-infra-schema.sql",
                 "db/auth-schema.sql",
                 "db/auth-external-identity-schema.sql",
-                "db/auth-oauth-client-schema.sql"
+                "db/auth-oauth-client-schema.sql",
+                "db/auth-rag-resource-schema.sql",
+                "db/auth-rag-graph-resource-schema.sql"
         );
     }
 }
