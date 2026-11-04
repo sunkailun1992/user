@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.5.1`、`com:rpc-api:1.0.7`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:1.5.2`、`com:rpc-api:1.0.7`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -555,7 +555,7 @@ docs/ai-coding
 
 ## 验证命令
 
-公共依赖固定为 `com:utils:1.5.1`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。普通登录和业务权限不使用该管理令牌。
+公共依赖固定为 `com:utils:1.5.2`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。普通登录和业务权限不使用该管理令牌。
 
 个人新数据库的 `auth-oauth-client-schema.sql` 只创建通用 OAuth 表结构，不预置外部客户端、固定 secret 或正式回调域名。当前 admin-web 使用 `/auth/sessions`，无需 OAuth 客户端 seed；后续接入 OAuth 前端时，显式注册本地 public / none 客户端和实际 callback，并使用 PKCE。此脚本不会删除既有数据库中的客户端。
 
