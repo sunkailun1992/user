@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.5.2`、`com:rpc-api:1.0.7`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:1.5.3`、`com:rpc-api:1.0.7`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -122,8 +122,6 @@ custom:
   infra-elasticsearch-addr: ${custom.infra-host}:9200
   infra-elasticsearch-uri: http://${custom.infra-host}:9200
   infra-kibana-url: http://${custom.infra-host}:5601
-  admin-server-url: <ADMIN_SERVER_URL>
-  zipkin-base-url: <ZIPKIN_BASE_URL>
   local-service-host: <LOCAL_SERVICE_HOST>
 ```
 
@@ -555,7 +553,7 @@ docs/ai-coding
 
 ## 验证命令
 
-公共依赖固定为 `com:utils:1.5.2`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。普通登录和业务权限不使用该管理令牌。
+公共依赖固定为 `com:utils:1.5.3`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。普通登录和业务权限不使用该管理令牌。
 
 个人新数据库的 `auth-oauth-client-schema.sql` 只创建通用 OAuth 表结构，不预置外部客户端、固定 secret 或正式回调域名。当前 admin-web 使用 `/auth/sessions`，无需 OAuth 客户端 seed；后续接入 OAuth 前端时，显式注册本地 public / none 客户端和实际 callback，并使用 PKCE。此脚本不会删除既有数据库中的客户端。
 
@@ -565,3 +563,9 @@ docs/ai-coding
 ./gradlew clean compileJava test
 bash scripts/check-secrets.sh
 ```
+
+## 本批可观测性接入
+
+公共能力精确消费 `com:utils:1.5.3`（本批仅 Maven Local 验证，未发布远端）。九服务共享 `actuator.yaml` 暴露 health/info/prometheus；除 health 外仍要求 `actuatorReq` 运维令牌，空值或错误值失败关闭。`logging.yml` 使用 ECS 固定字段白名单，未知 MDC、原始消息、正文和异常不进入采集结果；OTel agent 标准 `trace_id/span_id` 与业务会话 ID 分开。应用指标带固定 application/environment 标签，禁止动态业务 ID。
+
+Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 OTel agent 由统一启动入口负责，不通过全局 JAVA_TOOL_OPTIONS 注入 Gradle 或测试。部署时 Java 指标只由 Micrometer Prometheus 提供，OTEL_METRICS_EXPORTER 与 OTEL_LOGS_EXPORTER 均为 none；监控组件、配置发布和实际采集仍须独立验证。回滚须恢复匹配的制品与配置，先恢复旧 dataId 再回退旧消费者，不能用已删除的配置项假装完成回滚。

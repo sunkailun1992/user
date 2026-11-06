@@ -49,7 +49,7 @@
 
 ## 项目边界
 
-- 个人公共库固定使用 `com:utils:1.5.1` 与 `com:rpc-api:1.0.7`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
+- 个人公共库固定使用 `com:utils:1.5.3` 与 `com:rpc-api:1.0.7`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
 
 - `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
 - 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
