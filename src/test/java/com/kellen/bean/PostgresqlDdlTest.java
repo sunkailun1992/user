@@ -12,11 +12,11 @@ import static org.mockito.Mockito.mock;
 /**
  * 用户中心 DDL 脚本注册顺序测试。
  */
-class MysqlDdlTest {
+class PostgresqlDdlTest {
 
     @Test
     void personalBootstrapNeverRecreatesDemoAccountsPasswordsOrTheirDepartmentRelations() throws Exception {
-        var ddl = new MysqlDdl(mock(DataSource.class));
+        var ddl = new PostgresqlDdl(mock(DataSource.class));
         for (String resource : ddl.getSqlFiles()) {
             String sql = new ClassPathResource(resource).getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
             assertThat(sql).as(resource)
@@ -42,19 +42,18 @@ class MysqlDdlTest {
     }
 
     @Test
-    void shouldRegisterRagPermissionMigrationAfterExistingAuthScripts() {
-        MysqlDdl mysqlDdl = new MysqlDdl(mock(DataSource.class));
+    void shouldRegisterOnlyPostgresqlStructureThenConflictSafeBootstrap() {
+        PostgresqlDdl postgresqlDdl = new PostgresqlDdl(mock(DataSource.class));
 
-        List<String> sqlFiles = mysqlDdl.getSqlFiles();
+        List<String> sqlFiles = postgresqlDdl.getSqlFiles();
 
-        assertThat(sqlFiles).containsSubsequence(
-                "db/auth-schema.sql",
-                "db/auth-external-identity-schema.sql",
-                "db/auth-oauth-client-schema.sql",
-                "db/auth-rag-resource-schema.sql",
-                "db/auth-rag-graph-resource-schema.sql"
+        assertThat(sqlFiles).containsExactly(
+                "db/postgresql/common-infra-schema.sql",
+                "db/postgresql/user-schema.sql",
+                "db/postgresql/user-bootstrap.sql"
         );
         assertThat(sqlFiles).doesNotHaveDuplicates();
+        assertThat(sqlFiles).allMatch(path -> path.startsWith("db/postgresql/"));
     }
 
     @Test

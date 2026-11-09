@@ -24,7 +24,7 @@ public interface AuthRoleResourceMapper extends BaseMapper<AuthRoleResource> {
      * @param roleId   角色ID
      * @return 资源ID列表
      */
-    @Select("SELECT resource_id FROM auth_role_resource WHERE tenant_id = #{tenantId} AND role_id = #{roleId} AND is_delete = b'0'")
+    @Select("SELECT resource_id FROM auth_role_resource WHERE tenant_id = #{tenantId} AND role_id = #{roleId} AND is_delete = false")
     List<String> selectResourceIdsByRoleId(@Param("tenantId") String tenantId, @Param("roleId") String roleId);
 
     /**

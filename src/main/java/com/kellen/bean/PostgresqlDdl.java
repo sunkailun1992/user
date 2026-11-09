@@ -8,15 +8,15 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * MyBatis-Plus自动维护DDL。
+ * MyBatis-Plus 自动维护 PostgreSQL DDL。
  * <p>
  * 项目数据库结构由SQL脚本统一维护，不在Controller或Service中拼接CREATE TABLE。
  *
  * @author sunkailun
- * @className MysqlDdl
+ * @className PostgresqlDdl
  */
 @Component
-public class MysqlDdl implements IDdl {
+public class PostgresqlDdl implements IDdl {
 
     /**
      * 当前项目数据源。
@@ -30,7 +30,7 @@ public class MysqlDdl implements IDdl {
      * @return void
      * @author sunkailun
      */
-    public MysqlDdl(DataSource dataSource) {
+    public PostgresqlDdl(DataSource dataSource) {
         // 保存当前项目数据源，交给MyBatis-Plus DDL运行器执行脚本。
         this.dataSource = dataSource;
     }
@@ -56,14 +56,10 @@ public class MysqlDdl implements IDdl {
      */
     @Override
     public List<String> getSqlFiles() {
-        // 当前本地清库重建只执行统一初始化脚本，后续已发布环境仍按AI规范新增增量脚本。
         return List.of(
-                "db/common-infra-schema.sql",
-                "db/auth-schema.sql",
-                "db/auth-external-identity-schema.sql",
-                "db/auth-oauth-client-schema.sql",
-                "db/auth-rag-resource-schema.sql",
-                "db/auth-rag-graph-resource-schema.sql"
+                "db/postgresql/common-infra-schema.sql",
+                "db/postgresql/user-schema.sql",
+                "db/postgresql/user-bootstrap.sql"
         );
     }
 }

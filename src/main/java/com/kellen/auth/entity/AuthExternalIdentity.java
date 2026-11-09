@@ -1,6 +1,8 @@
 package com.kellen.auth.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.kellen.auth.typehandler.PostgresqlJsonStringTypeHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,7 +12,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("auth_external_identity")
+@TableName(value = "auth_external_identity", autoResultMap = true)
 @Schema(description = "外部身份与本地用户映射")
 public class AuthExternalIdentity extends AuthEntity {
 
@@ -39,5 +41,6 @@ public class AuthExternalIdentity extends AuthEntity {
     private String displayName;
 
     @Schema(description = "三方扩展元数据JSON")
+    @TableField(typeHandler = PostgresqlJsonStringTypeHandler.class)
     private String metadataJson;
 }

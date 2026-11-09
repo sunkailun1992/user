@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.5.5`、`com:rpc-api:1.0.7`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:1.6.0`、`com:rpc-api:1.0.7`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -106,7 +106,7 @@ OAuth client 存在 `auth_oauth_client` 表：
 
 ## 基础设施地址
 
-除 `application.yml` 中连接 Nacos 自身的启动入口外，MySQL、Redis、RabbitMQ、Seata、XXL-JOB、Elasticsearch、Kibana 等基础设施地址统一放在 Nacos `reuse-configuration.yaml`。
+除 `application.yml` 中连接 Nacos 自身的启动入口外，PostgreSQL、Redis、RabbitMQ、Seata、Elasticsearch、Kibana 等基础设施地址统一放在 Nacos `reuse-configuration.yaml`。
 
 蒲公英、Tailscale、节点小宝等组网地址变化时，优先只修改 `custom.infra-host` 和 `custom.local-service-host`：
 
@@ -114,11 +114,10 @@ OAuth client 存在 `auth_oauth_client` 表：
 custom:
   infra-host: <INFRA_HOST>
   infra-nacos-addr: ${custom.infra-host}:8848
-  infra-mysql-addr: ${custom.infra-host}:3306
+  infra-postgresql-addr: ${custom.infra-host}:<POSTGRESQL_PORT>
   infra-redis-addr: ${custom.infra-host}:6379
   infra-rabbitmq-addr: ${custom.infra-host}:5672
   infra-seata-addr: ${custom.infra-host}:8091
-  infra-xxl-job-admin: http://${custom.infra-host}:19090/xxl-job-admin
   infra-elasticsearch-addr: ${custom.infra-host}:9200
   infra-elasticsearch-uri: http://${custom.infra-host}:9200
   infra-kibana-url: http://${custom.infra-host}:5601
@@ -127,14 +126,7 @@ custom:
 
 其他 Nacos 配置只引用公共变量，不直接写裸 IP：
 
-```yaml
-xxl:
-  job:
-    admin:
-      addresses: ${custom.infra-xxl-job-admin}
-    executor:
-      ip: ${custom.local-service-host}
-```
+中间件地址只由最终发布的个人 Nacos 配置契约提供，不恢复已退役执行器的回调配置。
 
 各 `application-*.yml` 的 `custom.nacos-ip` 是读取远程配置前必须先使用的启动入口，不能依赖 `reuse-configuration.yaml`。
 
@@ -436,28 +428,29 @@ return ApiResponse.fail(returnCode, "稳定错误提示");
 
 ## DDL 和默认数据
 
+PostgreSQL 使用 `postgresql.*` / `postgresql-gray.*` 连接键与 `org.postgresql.Driver`，不回退到旧 MySQL 键。字符字段使用 ICU `fleet_general_ci` 保留常用大小写、重音不敏感的等值、唯一键和 `LIKE` 查询；这不等于完整复刻 MySQL Unicode 权重或尾空格规则，迁移前必须检查唯一键碰撞和尾空格。PG 18 的 nondeterministic collation 支持 `LIKE`，不要将现有查询改成不支持该排序规则的 `ILIKE` 或正则匹配。
+
+真实 PG 结构回归通过受控进程环境提供 `FLEET_PG_TEST_URL`、`FLEET_PG_TEST_USERNAME`、`FLEET_PG_TEST_PASSWORD`；只允许 `fleet_pg_test_` 前缀的独立测试库，测试只创建并清理随机 schema。未提供时明确跳过，H2 回归不能代替 PostgreSQL 验收。凭据不得写进命令文本、仓库或测试报告。
+
 表结构和默认基础数据由 MyBatis-Plus 自动 DDL 维护。
 
 DDL 入口：
 
 ```text
-src/main/java/com/kellen/bean/MysqlDdl.java
+src/main/java/com/kellen/bean/PostgresqlDdl.java
 ```
 
-SQL 脚本：
+SQL 脚本按公共基础表、认证业务结构、缺失默认权限补齐排序：
 
 ```text
-../utils/src/main/resources/db/common-infra-schema.sql
-src/main/resources/db/auth-schema.sql
-src/main/resources/db/auth-external-identity-schema.sql
-src/main/resources/db/auth-oauth-client-schema.sql
-src/main/resources/db/auth-rag-resource-schema.sql
-src/main/resources/db/auth-rag-graph-resource-schema.sql
+../utils/src/main/resources/db/postgresql/common-infra-schema.sql
+src/main/resources/db/postgresql/user-schema.sql
+src/main/resources/db/postgresql/user-bootstrap.sql
 ```
 
-全新或空业务库首次启动前，必须先在目标业务库手动执行同级 `../utils/src/main/resources/db/common-infra-schema.sql`，先建 `ddl_history` 和 Seata AT `undo_log`。Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`，不能依赖应用首次启动自动创建该表。
+全新或空业务库首次启动前，必须先手动执行公共基础表和业务结构；Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`。迁移现有数据时先仅建结构、迁入原有全部行，再启动应用；不要在迁移前执行 bootstrap 或复制旧 MySQL `ddl_history` 为新 PostgreSQL 任务完成证据。
 
-当前 `MysqlDdl#getSqlFiles()` 在既有认证脚本后追加 `db/auth-rag-resource-schema.sql` 与 `db/auth-rag-graph-resource-schema.sql`。业务脚本由 MyBatis-Plus 执行并写入 `ddl_history`；正式环境后续变更仍必须先查当前数据库 `ddl_history`，已经执行过、可能执行过或无法确认执行状态的脚本不再回改，后续表结构和默认数据调整统一新增 SQL 脚本。
+`user-bootstrap.sql` 仅使用 `ON CONFLICT DO NOTHING` 补齐缺失默认租户、角色与权限，不覆盖既有密码、权限、角色数据范围或自定义标签。SHA-256 派生资源 ID 的算法保持不变；历史覆盖式权限 UPDATE 不在新入口重放。历史 MySQL SQL 保留，后续结构调整仍新增 PostgreSQL 脚本，不回改已执行或执行状态不明的文件。
 
 默认数据包含：
 
@@ -471,7 +464,7 @@ src/main/resources/db/auth-rag-graph-resource-schema.sql
 
 运行时 DDL 保留通用表结构、默认租户 `100`、无人员绑定的管理员角色 `r_admin_100` 及通用权限资源。首次启动不创建管理员、测试用户、测试部门、第二演示租户或任何固定密码；本轮也不自动创建人员账号。后续首次管理员创建必须通过明确授权的独立流程并使用独立强密码。
 
-数据权限测试应使用测试隔离 fixture；不要把演示账号或密码 seed 加回运行时 `MysqlDdl` 脚本。
+数据权限测试应使用测试隔离 fixture；不要把演示账号或密码 seed 加回运行时 `PostgresqlDdl` 脚本。
 
 ## 本地日志
 
@@ -553,7 +546,7 @@ docs/ai-coding
 
 ## 验证命令
 
-公共依赖固定为 `com:utils:1.5.5`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。普通登录和业务权限不使用该管理令牌。
+公共依赖固定为 `com:utils:1.6.0`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。普通登录和业务权限不使用该管理令牌。
 
 个人新数据库的 `auth-oauth-client-schema.sql` 只创建通用 OAuth 表结构，不预置外部客户端、固定 secret 或正式回调域名。当前 admin-web 使用 `/auth/sessions`，无需 OAuth 客户端 seed；后续接入 OAuth 前端时，显式注册本地 public / none 客户端和实际 callback，并使用 PKCE。此脚本不会删除既有数据库中的客户端。
 
@@ -566,6 +559,10 @@ bash scripts/check-secrets.sh
 
 ## 本批可观测性接入
 
-当前服务版本为 `1.2.1`，公共能力精确消费 `com:utils:1.5.5`，并由公共包传递引入轻量 `com:fleet-observability:0.1.0` 的安全 HTTP 终态事件。公共制品先完成 Maven Local 验证，再按对应 main 确定提交发布远端；目标环境的实际采集与全链读回单独验收。九服务共享 `actuator.yaml` 暴露 health/info/prometheus；除 health 外仍要求 `actuatorReq` 运维令牌，空值或错误值失败关闭。`logging.yml` 使用 ECS 固定字段白名单，未知 MDC、原始消息、正文和异常不进入采集结果；OTel agent 标准 `trace_id/span_id` 与业务会话 ID 分开。应用指标带固定 application/environment 标签，禁止动态业务 ID。
+当前服务版本为 `1.3.0`，公共能力精确消费 `com:utils:1.6.0`，并由公共包传递引入轻量 `com:fleet-observability:0.1.1` 的安全 HTTP 终态事件。公共制品先完成 Maven Local 验证，再按对应 main 确定提交发布远端；目标环境的实际采集与全链读回单独验收。九服务共享 `actuator.yaml` 暴露 health/info/prometheus；除 health 外仍要求 `actuatorReq` 运维令牌，空值或错误值失败关闭。`logging.yml` 使用 ECS 固定字段白名单，未知 MDC、原始消息、正文和异常不进入采集结果；OTel agent 标准 `trace_id/span_id` 与业务会话 ID 分开。应用指标带固定 application/environment 标签，禁止动态业务 ID。
 
 Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 OTel agent 由统一启动入口负责，不通过全局 JAVA_TOOL_OPTIONS 注入 Gradle 或测试。部署时 Java 指标只由 Micrometer Prometheus 提供，OTEL_METRICS_EXPORTER 与 OTEL_LOGS_EXPORTER 均为 none；监控组件、配置发布和实际采集仍须独立验证。回滚须恢复匹配的制品与配置，先恢复旧 dataId 再回退旧消费者，不能用已删除的配置项假装完成回滚。
+
+个人业务 PostgreSQL 迁移对应服务版本为 `1.3.0`，公共库精确消费 `com:utils:1.6.0`（传递安全采集库 `com:fleet-observability:0.1.1`）。版本和本机构建通过不代表目标环境已切库，正式迁移与运行态验收另行记录。
+
+个人 Java 服务已移除 XXL-JOB 依赖、执行器配置与演示任务，不再读取 `xxl-job.yaml`。Conductor OSS 作为 NAS 独立服务通过 REST 接入；当前未接入业务 Java 调度接口，不添加 Java 21 SDK 或虚构任务开关。其他环境仍使用的 NAS 容器不由本次个人源码退役处理。

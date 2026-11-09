@@ -49,7 +49,7 @@
 
 ## 项目边界
 
-- 个人公共库固定使用 `com:utils:1.5.3` 与 `com:rpc-api:1.0.7`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
+- 个人公共库固定使用 `com:utils:1.6.0` 与 `com:rpc-api:1.0.7`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
 
 - `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
 - 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
@@ -73,7 +73,7 @@
 
 - 子智能体可以并行分析 Controller、Service、Mapper、DDL、admin-web 调用、gateway 路由、message API 契约和 utils 公共能力。
 - 不允许多个 worker 同时修改同一认证链路、权限模型、数据范围逻辑、DDL 脚本或 `utils` 公共 API。
-- 用户服务全新或空业务库首次启动前，必须先在目标业务库手动执行 `../utils/src/main/resources/db/common-infra-schema.sql`，再执行或放行 `db/auth-schema.sql`；Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`，不能依赖应用首次启动自动创建该表。
+- 用户服务全新或空业务库首次启动前，必须先在目标业务库手动执行 `../utils/src/main/resources/db/postgresql/common-infra-schema.sql`，再执行或放行 `db/postgresql/user-schema.sql`；Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`，不能依赖应用首次启动自动创建该表。
 - 最终认证边界、权限模型、租户隔离和测试结论必须由主智能体统一判断。
 
 ## 验证命令
