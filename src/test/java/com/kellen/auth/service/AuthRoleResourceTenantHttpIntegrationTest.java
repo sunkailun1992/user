@@ -1,6 +1,9 @@
 package com.kellen.auth.service;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
+import com.kellen.config.mybatis.MyMetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
@@ -65,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -83,9 +87,11 @@ import static org.mockito.Mockito.when;
 class AuthRoleResourceTenantHttpIntegrationTest {
     private static final String A = "fixture-tenant-a", B = "fixture-tenant-b";
     private static final AtomicReference<QueryContext> QUERY = new AtomicReference<>();
+    private static final AtomicInteger GRANT_SQL = new AtomicInteger();
     @LocalServerPort int port;
     @Autowired DataSource dataSource;
     @Autowired AuthGrantService service;
+    @Autowired AuthTenantManagementAccess access;
     @Autowired AuthRoleResourceMapper mapper;
     @Autowired RedisBoundary redis;
     private JdbcTemplate jdbc;
@@ -97,11 +103,11 @@ class AuthRoleResourceTenantHttpIntegrationTest {
         registry.add("security.jwt.secret", () -> value);
     }
     @BeforeEach void fixture() throws Exception {
-        TenantContextHolder.clear(); DataPermissionContextHolder.clear(); QUERY.set(null);
+        TenantContextHolder.clear(); DataPermissionContextHolder.clear(); QUERY.set(null); GRANT_SQL.set(0);
         redis.revoked = false; redis.unavailable = false;
         jdbc = new JdbcTemplate(dataSource);
         String schema = new ClassPathResource("db/postgresql/user-schema.sql").getContentAsString(StandardCharsets.UTF_8);
-        for (String table : List.of("auth_role_resource", "auth_tenant", "auth_user", "auth_user_tenant")) {
+        for (String table : List.of("auth_role_resource", "auth_tenant", "auth_user", "auth_user_tenant", "auth_user_role", "auth_role_data_scope")) {
             jdbc.execute("DROP TABLE IF EXISTS " + table);
             int start = schema.indexOf("CREATE TABLE IF NOT EXISTS " + table + " (");
             jdbc.execute(schema.substring(start, schema.indexOf(";", start) + 1).replace(" COLLATE public.fleet_general_ci", ""));
@@ -112,6 +118,10 @@ class AuthRoleResourceTenantHttpIntegrationTest {
         relation("a-deleted", A, "shared-role", "a-deleted-resource", true);
         relation("a-other-role", A, "other-role", "other-resource", false);
         relation("b-live", B, "shared-role", "b-resource", false);
+        for (String tenant : List.of(A, B)) {
+            jdbc.update("INSERT INTO auth_user_role(id,tenant_id,user_id,role_id) VALUES(?,?,?,?)", tenant + "-user-role", tenant, "subject", "shared-role");
+            jdbc.update("INSERT INTO auth_role_data_scope(id,tenant_id,role_id,dept_id) VALUES(?,?,?,?)", tenant + "-scope", tenant, "shared-role", "department");
+        }
     }
     @AfterEach void clear() { TenantContextHolder.clear(); DataPermissionContextHolder.clear(); }
 
@@ -146,7 +156,7 @@ class AuthRoleResourceTenantHttpIntegrationTest {
     @Test void lifecycleBackendFailureIsRejectedAndRestoresContext() {
         redis.unavailable = true;
         context(B, true);
-        assertThatThrownBy(() -> read(A, "shared-role"))
+        assertThatThrownBy(() -> access.requireTenant(A, "Bearer " + token("platform-admin", B, "PLATFORM_SUPER_ADMIN", true)))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
                 .hasMessage("角色资源访问被拒绝");
         assertContext(B, true); assertThat(QUERY.get()).isNull();
@@ -180,7 +190,7 @@ class AuthRoleResourceTenantHttpIntegrationTest {
     }
     @Test void deniedCrossTenantReadRestoresEveryExistingContext() {
         context(B, true);
-        assertThatThrownBy(() -> service.listRoleResourceIds(B, "shared-role", "Bearer " + token("tenant-admin", A, "TENANT_ADMIN", true)))
+        assertThatThrownBy(() -> access.requireTenant(B, "Bearer " + token("tenant-admin", A, "TENANT_ADMIN", true)))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
         assertContext(B, true);
     }
@@ -190,7 +200,91 @@ class AuthRoleResourceTenantHttpIntegrationTest {
         TenantContextHolder.setTenantId(A); assertThat(mapper.selectById("a-live")).isNotNull();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auth_role_resource", Integer.class)).isEqualTo(4);
     }
-    private List<String> read(String target, String role) { return service.listRoleResourceIds(target, role, "Bearer " + token("platform-admin", B, "PLATFORM_SUPER_ADMIN", true)); }
+    @Test void unauthorizedEmptyResourceSyncCannotChangeAnyStoredRowOrVersion() throws Exception {
+        var before = grantRows();
+        var response = grantRequest("PUT", "/roles/shared-role/resources", token("tenant-admin", A, "TENANT_ADMIN", true), B, true, List.of());
+        assertThat(grantRows()).isEqualTo(before);
+        assertThat(response.statusCode()).isEqualTo(403);
+        assertThat(GRANT_SQL.get()).isZero();
+    }
+    @Test void allEightGrantEndpointsRejectCrossTenantBeforeAnyGrantSql() throws Exception {
+        var before = grantRows();
+        for (var endpoint : endpoints()) {
+            GRANT_SQL.set(0);
+            var response = grantRequest(endpoint[0], endpoint[1], token("tenant-admin", A, "TENANT_ADMIN", true), B, true, List.of());
+            assertThat(response.statusCode()).as(endpoint[0] + " " + endpoint[1]).isEqualTo(403);
+            assertThat(GRANT_SQL.get()).isZero();
+            assertThat(grantRows()).isEqualTo(before);
+        }
+    }
+    @Test void allEightGrantEndpointsRetainOwnTenantAndPlatformCrossTenantAccess() throws Exception {
+        for (String caller : List.of("tenant-admin", "platform-admin")) {
+            String tenant = caller.equals("tenant-admin") ? A : B;
+            String admin = caller.equals("tenant-admin") ? "TENANT_ADMIN" : "PLATFORM_SUPER_ADMIN";
+            for (var endpoint : endpoints()) {
+                var response = grantRequest(endpoint[0], endpoint[1], token(caller, tenant, admin, true), A, false, List.of("a-resource"));
+                assertThat(response.statusCode()).as(caller + " " + endpoint[0] + " " + endpoint[1]).isEqualTo(200);
+                assertThat(json.readTree(response.body()).path("success").asBoolean()).as(caller + " " + endpoint[0] + " " + endpoint[1]).isTrue();
+            }
+        }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auth_role_resource WHERE id='b-live'", Integer.class)).isEqualTo(1);
+    }
+    @Test void allEightGrantEndpointsRejectRevokedTokensWithoutGrantSql() throws Exception {
+        redis.revoked = true;
+        var before = grantRows();
+        for (var endpoint : endpoints()) {
+            GRANT_SQL.set(0);
+            var response = grantRequest(endpoint[0], endpoint[1], token("platform-admin", B, "PLATFORM_SUPER_ADMIN", true), A, false, List.of());
+            assertThat(response.statusCode()).isEqualTo(403);
+            assertThat(GRANT_SQL.get()).isZero(); assertThat(grantRows()).isEqualTo(before);
+        }
+    }
+    @Test void allEightGrantEndpointsFailClosedWhenActiveIdentityLookupFails() throws Exception {
+        var before = grantRows();
+        jdbc.execute("ALTER TABLE auth_user RENAME TO hidden_identity_user");
+        try {
+            for (var endpoint : endpoints()) {
+                GRANT_SQL.set(0);
+                var response = grantRequest(endpoint[0], endpoint[1], token("platform-admin", B, "PLATFORM_SUPER_ADMIN", true), A, false, List.of());
+                assertThat(response.statusCode()).as(endpoint[0] + " " + endpoint[1]).isEqualTo(403);
+                assertThat(GRANT_SQL.get()).isZero(); assertThat(grantRows()).isEqualTo(before);
+            }
+        } finally { jdbc.execute("ALTER TABLE hidden_identity_user RENAME TO auth_user"); }
+    }
+    @Test void allEightGrantEndpointsRequireAuthenticationAndManagePermission() throws Exception {
+        var before = grantRows();
+        for (String credential : new String[]{null, token("platform-admin", B, "PLATFORM_SUPER_ADMIN", false)}) {
+            for (var endpoint : endpoints()) {
+                GRANT_SQL.set(0);
+                var response = grantRequest(endpoint[0], endpoint[1], credential, A, true, List.of());
+                assertThat(response.statusCode()).as(endpoint[0] + " " + endpoint[1]).isEqualTo(403);
+                assertThat(GRANT_SQL.get()).isZero(); assertThat(grantRows()).isEqualTo(before);
+            }
+        }
+    }
+    private List<String[]> endpoints() {
+        return List.of(new String[]{"POST", "/users/subject/roles"}, new String[]{"GET", "/users/subject/roles"},
+                new String[]{"PUT", "/users/subject/roles"}, new String[]{"POST", "/roles/shared-role/resources"},
+                new String[]{"GET", "/roles/shared-role/resources"}, new String[]{"PUT", "/roles/shared-role/resources"},
+                new String[]{"GET", "/roles/shared-role/data-scope-depts"}, new String[]{"PUT", "/roles/shared-role/data-scope-depts"});
+    }
+    private List<List<Map<String,Object>>> grantRows() {
+        return List.of("auth_role_resource", "auth_user_role", "auth_role_data_scope").stream()
+                .map(table -> jdbc.queryForList("SELECT * FROM " + table + " ORDER BY id")).toList();
+    }
+    private HttpResponse<String> grantRequest(String method, String path, String token, String target,
+            boolean forged, List<String> resources) throws Exception {
+        var builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/auth/manage" + path + (method.equals("GET") ? "?tenantId=" + target : "")))
+                .timeout(Duration.ofSeconds(5));
+        if (token != null) builder.header("Authorization", "Bearer " + token);
+        if (forged) builder.header("X-Admin-Type", "PLATFORM_SUPER_ADMIN").header("X-Tenant-Id", target).header("X-Permissions", "user:auth:manage");
+        if (method.equals("GET")) builder.GET();
+        else builder.header("Content-Type", "application/json").method(method, HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of(
+                "tenantId", target, "roleId", "shared-role", "resourceId", "a-resource", "resourceIds", resources,
+                "roleIds", List.of("shared-role"), "deptIds", List.of()))));
+        return HttpClient.newHttpClient().send(builder.build(), HttpResponse.BodyHandlers.ofString());
+    }
+    private List<String> read(String target, String role) { return service.listRoleResourceIds(target, role); }
     private void context(String prior, boolean ignored) {
         TenantContextHolder.setTenantId(prior); if (ignored) TenantContextHolder.ignore(); else TenantContextHolder.clearIgnore();
         if (ignored) DataPermissionContextHolder.ignore(); else DataPermissionContextHolder.clear();
@@ -226,7 +320,7 @@ class AuthRoleResourceTenantHttpIntegrationTest {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnProperty(name = "test.role-resource.tenant.fixture", havingValue = "true")
-    @Import({AuthGrantController.class, AuthGrantServiceImpl.class, AuthSessionRpcServiceImpl.class,
+    @Import({AuthGrantController.class, AuthGrantServiceImpl.class, AuthTenantManagementAccess.class, AuthSessionRpcServiceImpl.class,
             AuthTokenLifecycleService.class, SecurityAuthConfig.class, MyBatisPlusConfig.class, GlobalExceptionHandler.class})
     @ImportAutoConfiguration({
             org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration.class,
@@ -239,22 +333,31 @@ class AuthRoleResourceTenantHttpIntegrationTest {
             org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration.class})
     static class Config {
         @Bean DataSource dataSource() { return new DriverManagerDataSource("jdbc:h2:mem:grant_" + UUID.randomUUID() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "sa", ""); }
-        @Bean SqlSessionFactory sqlSessionFactory(DataSource dataSource, MybatisPlusInterceptor interceptor) throws Exception {
+        @Bean SqlSessionFactory sqlSessionFactory(DataSource dataSource, MybatisPlusInterceptor interceptor, TenantProperties tenant) throws Exception {
             var config = new MybatisConfiguration(); config.setMapUnderscoreToCamelCase(true);
-            for (Class<?> type : List.of(AuthRoleResourceMapper.class, AuthUserMapper.class, AuthTenantMapper.class, AuthUserTenantMapper.class)) config.addMapper(type);
+            var global = new GlobalConfig().setDbConfig(new GlobalConfig.DbConfig()).setMetaObjectHandler(new MyMetaObjectHandler(tenant));
+            GlobalConfigUtils.setGlobalConfig(config, global);
+            for (Class<?> type : List.of(AuthRoleResourceMapper.class, AuthUserMapper.class, AuthTenantMapper.class, AuthUserTenantMapper.class, AuthUserRoleMapper.class, AuthRoleDataScopeMapper.class)) config.addMapper(type);
             interceptor.addInnerInterceptor(new InnerInterceptor() {
                 @Override public void beforeQuery(Executor executor, MappedStatement statement, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql sql) {
+                    if (isGrantStatement(statement)) GRANT_SQL.incrementAndGet();
                     if (statement.getId().endsWith(".selectResourceIdsByRoleId")) QUERY.set(new QueryContext(TenantContextHolder.getTenantId(), TenantContextHolder.isIgnore()));
                 }
+                @Override public void beforeUpdate(Executor executor, MappedStatement statement, Object parameter) {
+                    if (isGrantStatement(statement)) GRANT_SQL.incrementAndGet();
+                }
+                private boolean isGrantStatement(MappedStatement statement) {
+                    return statement.getId().contains("AuthRoleResourceMapper.") || statement.getId().contains("AuthUserRoleMapper.") || statement.getId().contains("AuthRoleDataScopeMapper.");
+                }
             });
-            var factory = new MybatisSqlSessionFactoryBean(); factory.setDataSource(dataSource); factory.setConfiguration(config); factory.setPlugins(interceptor); return factory.getObject();
+            var factory = new MybatisSqlSessionFactoryBean(); factory.setDataSource(dataSource); factory.setConfiguration(config); factory.setGlobalConfig(global); factory.setPlugins(interceptor); return factory.getObject();
         }
         @Bean AuthRoleResourceMapper resources(SqlSessionFactory factory) { return new SqlSessionTemplate(factory).getMapper(AuthRoleResourceMapper.class); }
         @Bean AuthUserMapper users(SqlSessionFactory factory) { return new SqlSessionTemplate(factory).getMapper(AuthUserMapper.class); }
         @Bean AuthTenantMapper tenants(SqlSessionFactory factory) { return new SqlSessionTemplate(factory).getMapper(AuthTenantMapper.class); }
         @Bean AuthUserTenantMapper memberships(SqlSessionFactory factory) { return new SqlSessionTemplate(factory).getMapper(AuthUserTenantMapper.class); }
-        @Bean AuthUserRoleMapper userRoles() { return mock(AuthUserRoleMapper.class); }
-        @Bean AuthRoleDataScopeMapper scopes() { return mock(AuthRoleDataScopeMapper.class); }
+        @Bean AuthUserRoleMapper userRoles(SqlSessionFactory factory) { return new SqlSessionTemplate(factory).getMapper(AuthUserRoleMapper.class); }
+        @Bean AuthRoleDataScopeMapper scopes(SqlSessionFactory factory) { return new SqlSessionTemplate(factory).getMapper(AuthRoleDataScopeMapper.class); }
         @Bean AuthResourceMapper unusedResources() { return mock(AuthResourceMapper.class); }
         @Bean AuthResourceServiceResults results() { return mock(AuthResourceServiceResults.class); }
         @Bean JwtKeyConfig jwtKeyConfig(Environment environment) { return new JwtKeyConfig(environment); }

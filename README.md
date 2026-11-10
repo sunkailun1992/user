@@ -593,3 +593,12 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 通过校验后，服务只在本次角色资源查询内绑定目标租户，并清除旧 tenant-ignore 标志，让公共 MyBatis-Plus 租户插件与固定 SQL 的目标租户一致；成功、空结果、权限拒绝和 SQL 异常都恢复调用前的租户与 ignore 标志。逻辑删除及角色条件保持，普通 Mapper 仍要求租户。本补丁只修该 GET 的身份与查询范围，不代表相邻授权写接口已完成统一跨租户权限治理。
 
 `AuthRoleResourceTenantHttpIntegrationTest` 使用真实 HTTP、Security/ReqInterceptor、User token 生命周期/本地身份实现、Mapper、公共租户插件与 H2；Redis 生命周期数据仅使用合成内存替身，不连接 Nacos 或业务库。覆盖平台跨租户、租户管理员同租户/他租户、伪造头、无权限、失效身份、隔离/逻辑删除以及上下文恢复；H2 不替代 PostgreSQL ICU 与实际部署验收。版本仅更新 User `1.3.5`，不修改 RPC、DDL 或其余业务服务。
+
+
+### 授权关系 HTTP 管理入口的统一租户边界（1.3.6）
+
+`AuthGrantController` 的全部八个 HTTP 入口（用户角色 POST/GET/PUT、角色资源 POST/GET/PUT、角色数据范围部门 GET/PUT）统一先调用 `AuthTenantManagementAccess`。该边界复用 1.3.5 的活跃 User 身份和同一签名 JWT 校验：必须有 `user:auth:manage`，同租户按既有管理权限操作，跨租户额外要求 `PLATFORM_SUPER_ADMIN`。BO/query 的 `tenantId` 仅表示待授权目标，不是调用方身份；请求头不能提升权限。检查在任何授权关系 Service/Mapper 调用之前完成，身份验证或其后端失败均拒绝。
+
+原角色资源 GET 的目标租户绑定和精确上下文恢复保留；认证规则迁到统一 HTTP 边界，不再在 Service 内维护第二份 JWT 策略。内部 bootstrap 绑定及 Service 契约继续不依赖 HTTP token。此补丁只覆盖授权关系 Controller 的八个入口，不代表其他用户/角色/部门等 CRUD 已完成统一租户管理授权审计。
+
+真实 HTTP/MP 回归逐入口验证租户管理员跨租户、失效 token、无管理权限、伪造头及本地身份查询失败均不执行目标授权关系 SQL；三张关系表的完整行（含 version/时间戳）保持不变。空资源同步越权原错误已在 H2 真实重现，修复后 403；同租户和平台跨租户读写正向保持。夹具加载实际公共字段填充器、租户插件和三类 Mapper，避免只凭 Mock Service 断言权限。运行态验收只操作本轮自有隔离 fixture，不向真实其他租户发修改请求。

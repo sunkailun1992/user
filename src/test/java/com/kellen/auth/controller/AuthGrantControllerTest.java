@@ -3,6 +3,7 @@ package com.kellen.auth.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.service.AuthGrantService;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.bean.GlobalExceptionHandler;
 import com.kellen.security.config.SecurityAuthConfig;
 import com.kellen.security.config.TenantProperties;
@@ -62,6 +63,9 @@ class AuthGrantControllerTest {
     @MockitoBean
     private AuthGrantService authGrantService;
 
+    @MockitoBean
+    private AuthTenantManagementAccess access;
+
     /**
      * 请求层测试最小启动配置。
      */
@@ -78,7 +82,7 @@ class AuthGrantControllerTest {
     @Test
     void shouldReturnRoleResourceIdsWhenRequestIsValid() throws Exception {
         // Mock 角色已经绑定两个资源，用于验证前端编辑弹窗可回显历史勾选。
-        when(authGrantService.listRoleResourceIds("100", "role-1", null)).thenReturn(List.of("resource-1", "resource-2"));
+        when(authGrantService.listRoleResourceIds("100", "role-1")).thenReturn(List.of("resource-1", "resource-2"));
 
         // 发起角色资源查询请求，并验证统一响应和资源ID列表。
         mockMvc.perform(get("/auth/manage/roles/role-1/resources")
@@ -90,7 +94,7 @@ class AuthGrantControllerTest {
                 .andExpect(jsonPath("$.data[0]").value("resource-1"))
                 .andExpect(jsonPath("$.data[1]").value("resource-2"));
         // 验证 Controller 将租户和角色传递给业务服务。
-        verify(authGrantService).listRoleResourceIds("100", "role-1", null);
+        verify(authGrantService).listRoleResourceIds("100", "role-1");
     }
 
     /**
