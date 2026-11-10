@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.6.2`、`com:rpc-api:1.0.7`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:1.6.2`、`com:rpc-api:1.0.8`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -19,7 +19,7 @@
 - Seata Client 2.6.0
 - MyBatis-Plus
 - 公共能力依赖 `com:utils`
-- 跨服务契约依赖 `com:rpc-api:1.0.7`
+- 跨服务契约依赖 `com:rpc-api:1.0.8`
 
 ## 服务职责
 
@@ -550,7 +550,7 @@ docs/ai-coding
 
 个人新数据库的 `auth-oauth-client-schema.sql` 只创建通用 OAuth 表结构，不预置外部客户端、固定 secret 或正式回调域名。当前 admin-web 使用 `/auth/sessions`，无需 OAuth 客户端 seed；后续接入 OAuth 前端时，显式注册本地 public / none 客户端和实际 callback，并使用 PKCE。此脚本不会删除既有数据库中的客户端。
 
-严格开放接口签名 RPC 使用 `com:rpc-api:1.0.7` 的 `verifyRequiredOpenApiSignature`；只有客户端明确启用签名且 HMAC、时钟和 nonce 唯一登记全部通过才返回 true。旧 `verifyOpenApiSignature` 保留可选签名契约，严格消费者不得回退调用。JWT 签名使用个人 namespace 的 `security.jwt.secret`（Base64 至少 32 字节），不使用公司环境或历史固定口令；OAuth 显式 issuer 仍由原参数控制。
+严格开放接口签名 RPC 使用 `com:rpc-api:1.0.8` 的 `verifyRequiredOpenApiSignature`；只有客户端明确启用签名且 HMAC、时钟和 nonce 唯一登记全部通过才返回 true。旧 `verifyOpenApiSignature` 保留可选签名契约，严格消费者不得回退调用。JWT 签名使用个人 namespace 的 `security.jwt.secret`（Base64 至少 32 字节），不使用公司环境或历史固定口令；OAuth 显式 issuer 仍由原参数控制。
 
 ```bash
 ./gradlew clean compileJava test
@@ -559,7 +559,7 @@ bash scripts/check-secrets.sh
 
 ## 本批可观测性接入
 
-当前服务版本为 `1.3.2`，公共能力精确消费 `com:utils:1.6.2`，并由公共包传递引入轻量 `com:fleet-observability:0.1.2` 的安全 HTTP 终态事件。公共制品先完成 Maven Local 验证，再按对应 main 确定提交发布远端；目标环境的实际采集与全链读回单独验收。九服务共享 `actuator.yaml` 暴露 health/info/prometheus；除 health 外仍要求 `actuatorReq` 运维令牌，空值或错误值失败关闭。`logging.yml` 使用 ECS 固定字段白名单，未知 MDC、原始消息、正文和异常不进入采集结果；OTel agent 标准 `trace_id/span_id` 与业务会话 ID 分开。应用指标带固定 application/environment 标签，禁止动态业务 ID。
+当前服务版本为 `1.3.3`，公共能力精确消费 `com:utils:1.6.2`，并由公共包传递引入轻量 `com:fleet-observability:0.1.2` 的安全 HTTP 终态事件。公共制品先完成 Maven Local 验证，再按对应 main 确定提交发布远端；目标环境的实际采集与全链读回单独验收。九服务共享 `actuator.yaml` 暴露 health/info/prometheus；除 health 外仍要求 `actuatorReq` 运维令牌，空值或错误值失败关闭。`logging.yml` 使用 ECS 固定字段白名单，未知 MDC、原始消息、正文和异常不进入采集结果；OTel agent 标准 `trace_id/span_id` 与业务会话 ID 分开。应用指标带固定 application/environment 标签，禁止动态业务 ID。
 
 Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 OTel agent 由统一启动入口负责，不通过全局 JAVA_TOOL_OPTIONS 注入 Gradle 或测试。部署时 Java 指标只由 Micrometer Prometheus 提供，OTEL_METRICS_EXPORTER 与 OTEL_LOGS_EXPORTER 均为 none；监控组件、配置发布和实际采集仍须独立验证。回滚须恢复匹配的制品与配置，先恢复旧 dataId 再回退旧消费者，不能用已删除的配置项假装完成回滚。
 
@@ -569,6 +569,10 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 
 ## PostgreSQL 启动修复补丁
 
-当前服务补丁版本为 `1.3.2`，公共依赖精确固定 `com:utils:1.6.2`，接入 PostgreSQL/Druid 超时单位修复及事务化、失败即拒绝启动的 DDL 执行。原定连接 3 秒、读取 30 秒预算保持，RPC 契约 `com:rpc-api:1.0.7` 与轻量采集库 `com:fleet-observability:0.1.2` 保持。公共制品、Jar 构建、服务器与 IDEA 原生启动须分别验证，修改依赖不代表目标环境已恢复。
+当前服务补丁版本为 `1.3.3`，公共依赖精确固定 `com:utils:1.6.2`，接入 PostgreSQL/Druid 超时单位修复及事务化、失败即拒绝启动的 DDL 执行。原定连接 3 秒、读取 30 秒预算保持，RPC 契约 `com:rpc-api:1.0.8` 与轻量采集库 `com:fleet-observability:0.1.2` 保持。公共制品、Jar 构建、服务器与 IDEA 原生启动须分别验证，修改依赖不代表目标环境已恢复。
 
 本次公共观测补丁通过 `com:utils:1.6.2` 精确传递 `com:fleet-observability:0.1.2`，修复 Servlet Security 在 ERROR 分派中再次拒绝导致终态缺失的问题；认证和错误响应保持。源码与测试通过后，目标进程和追踪/日志联结仍须单独读回验收。
+
+### 终端访问身份 RPC
+
+`com:rpc-api:1.0.8` 新增 `AuthSessionRpcService.resolveAccessIdentity`，在认证中心校验 access JWT 的签名、issuer、有效期、jti、类型、撤销状态和 tokenVersion，并用精确主键复核启用账号、启用租户及既有默认租户/平台管理员/显式会员关系。只返回 userId/tenantId，不回传 token、权限或内部实体。该认证 bootstrap 不信任调用方 tenant attachment；最小认证查询短暂忽略租户和数据权限，finally 恢复调用前标志，不扩大为业务查询绕过。

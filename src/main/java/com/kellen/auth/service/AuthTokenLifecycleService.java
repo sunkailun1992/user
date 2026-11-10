@@ -186,6 +186,44 @@ public class AuthTokenLifecycleService {
         return StringUtils.defaultIfBlank(tokenVersion, "0");
     }
 
+    /** 验证终端访问身份；不接受 refresh token、缺少生命周期声明或已失效的历史会话。 */
+    public AccessIdentity requireActiveAccessToken(String accessToken) {
+        if (StringUtils.isBlank(accessToken) || accessToken.length() > 16384) {
+            throw invalidAccess();
+        }
+        Claims claims = parseToken(accessToken);
+        String subject = stringClaim(claims, "sub");
+        String tenantId = stringClaim(claims, "tenantId");
+        String claimedUser = stringClaim(claims, "userId");
+        String issuedVersion = stringClaim(claims, AuthTokenRedisKeys.CLAIM_TOKEN_VERSION);
+        String tokenId = stringClaim(claims, "jti");
+        if (!JwtUtils.issuer().equals(stringClaim(claims, "iss")) || claims.getExpiration() == null
+                || !claims.getExpiration().after(new Date()) || StringUtils.isBlank(tokenId)
+                || subject == null || !subject.matches("[A-Za-z0-9_.:@-]{1,128}")
+                || tenantId == null || !tenantId.matches("[A-Za-z0-9_-]{1,128}")
+                || (claims.containsKey("userId") && !subject.equals(claimedUser))
+                || !AuthTokenRedisKeys.ACCESS_TOKEN_TYPE.equals(stringClaim(claims, AuthTokenRedisKeys.CLAIM_TOKEN_TYPE))
+                || issuedVersion == null || !issuedVersion.matches("[0-9]{1,20}")) {
+            throw invalidAccess();
+        }
+        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(AuthTokenRedisKeys.accessTokenRevoked(tokenId)))
+                || !issuedVersion.equals(currentTokenVersion(subject))) {
+            throw invalidAccess();
+        }
+        return new AccessIdentity(subject, tenantId);
+    }
+
+    private UserException invalidAccess() {
+        return new UserException(ReturnCode.无效TOKEN, "访问身份验证失败");
+    }
+
+    private String stringClaim(Claims claims, String name) {
+        return claims.get(name) instanceof String text ? text : null;
+    }
+
+    /** 仅在认证中心内部传递的已验证声明，不包含原 token。 */
+    public record AccessIdentity(String userId, String tenantId) { }
+
     private Claims parseToken(String token) {
         try {
             return JwtUtils.parseJwt(token);

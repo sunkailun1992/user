@@ -23,3 +23,5 @@
 
 - 登录用户、租户、数据源、Seata XID、请求 ID、版本号、流量泳道等横切上下文优先由 Dubbo attachment/filter 透传。
 - 确实作为业务查询条件的字段可以保留在接口参数中，例如显式查询指定租户用户。
+
+`AuthSessionRpcService` 是认证 bootstrap 特例：输入终端 access token，由 provider 验证完整生命周期及数据库授权后返回最小 userId/tenantId。token 不记录、不回传；调用方 attachment 不能代替验签。bootstrap 忽略标志只覆盖精确主键及授权关系查询，并恢复原标志。
