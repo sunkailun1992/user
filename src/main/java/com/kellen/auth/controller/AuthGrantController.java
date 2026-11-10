@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -118,14 +119,16 @@ public class AuthGrantController {
      *
      * @param tenantId 租户ID
      * @param roleId   角色ID
+     * @param authorization 当前 User access JWT
      * @return 资源ID列表
      * @author sunkailun
      */
     @GetMapping("/roles/{roleId}/resources")
     @Operation(summary = "查询角色资源", description = "查询角色已绑定的权限资源ID列表，用于授权树回显")
-    public ApiResponse<List<String>> listRoleResourceIds(@PathVariable String roleId, @RequestParam String tenantId) {
+    public ApiResponse<List<String>> listRoleResourceIds(@PathVariable String roleId, @RequestParam String tenantId,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
         // 返回当前角色已绑定的资源ID列表，用于前端树形授权回显。
-        return ApiResponse.success(authGrantService.listRoleResourceIds(tenantId, roleId)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
+        return ApiResponse.success(authGrantService.listRoleResourceIds(tenantId, roleId, authorization)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
 
     /**

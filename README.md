@@ -584,3 +584,12 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 ### 终端访问身份 RPC
 
 `com:rpc-api:1.0.8` 新增 `AuthSessionRpcService.resolveAccessIdentity`，在认证中心校验 access JWT 的签名、issuer、有效期、jti、类型、撤销状态和 tokenVersion，并用精确主键复核启用账号、启用租户及既有默认租户/平台管理员/显式会员关系。只返回 userId/tenantId，不回传 token、权限或内部实体。该认证 bootstrap 不信任调用方 tenant attachment；最小认证查询短暂忽略租户和数据权限，finally 恢复调用前标志，不扩大为业务查询绕过。
+
+
+### 角色资源授权回显的租户范围（1.3.5）
+
+`GET /auth/manage/roles/{roleId}/resources?tenantId=...` 保留 `user:auth:manage` 管理权限，并在读取前复用 User 本地访问身份流程验证 access JWT 生命周期、启用账号和租户授权。同一签名 JWT 的用户、租户必须与已验证身份一致；自己的租户可按既有管理权限读取，跨租户回显还必须具有 `PLATFORM_SUPER_ADMIN` 声明。请求头中的管理员类别、权限和租户不能提升访问范围。未知、失效身份、生命周期后端失败及越权请求均拒绝。
+
+通过校验后，服务只在本次角色资源查询内绑定目标租户，并清除旧 tenant-ignore 标志，让公共 MyBatis-Plus 租户插件与固定 SQL 的目标租户一致；成功、空结果、权限拒绝和 SQL 异常都恢复调用前的租户与 ignore 标志。逻辑删除及角色条件保持，普通 Mapper 仍要求租户。本补丁只修该 GET 的身份与查询范围，不代表相邻授权写接口已完成统一跨租户权限治理。
+
+`AuthRoleResourceTenantHttpIntegrationTest` 使用真实 HTTP、Security/ReqInterceptor、User token 生命周期/本地身份实现、Mapper、公共租户插件与 H2；Redis 生命周期数据仅使用合成内存替身，不连接 Nacos 或业务库。覆盖平台跨租户、租户管理员同租户/他租户、伪造头、无权限、失效身份、隔离/逻辑删除以及上下文恢复；H2 不替代 PostgreSQL ICU 与实际部署验收。版本仅更新 User `1.3.5`，不修改 RPC、DDL 或其余业务服务。

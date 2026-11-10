@@ -58,9 +58,10 @@ public interface AuthGrantService {
      *
      * @param tenantId 租户ID
      * @param roleId   角色ID
+     * @param authorization 当前 User access JWT
      * @return 资源ID列表
      */
-    List<String> listRoleResourceIds(String tenantId, String roleId);
+    List<String> listRoleResourceIds(String tenantId, String roleId, String authorization);
 
     /**
      * 按完整资源ID列表同步角色资源关系。

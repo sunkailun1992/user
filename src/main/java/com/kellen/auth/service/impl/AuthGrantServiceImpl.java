@@ -17,6 +17,9 @@ import com.kellen.auth.mapper.AuthRoleDataScopeMapper;
 import com.kellen.auth.mapper.AuthRoleResourceMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthGrantService;
+import com.kellen.auth.rpc.AuthSessionRpcServiceImpl;
+import com.kellen.utils.auth.JwtUtils;
+import org.springframework.security.access.AccessDeniedException;
 import com.kellen.auth.service.results.AuthResourceServiceResults;
 import com.kellen.datapermission.DataPermissionContextHolder;
 import com.kellen.utils.context.TenantContextHolder;
@@ -24,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -69,6 +73,9 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      */
     private final AuthResourceServiceResults authResourceServiceResults;
 
+    /** 复用本地认证中心的活跃令牌、账号和租户授权验证，不发起远程 RPC。 */
+    private final AuthSessionRpcServiceImpl identities;
+
     /**
      * 构造授权关系业务服务。
      *
@@ -77,12 +84,14 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      * @param authRoleDataScopeMapper    角色自定义数据范围Mapper
      * @param authResourceMapper         资源Mapper
      * @param authResourceServiceResults 资源结果转换增强
+     * @param identities 本地认证中心访问身份验证
      */
     public AuthGrantServiceImpl(AuthUserRoleMapper authUserRoleMapper,
                                 AuthRoleResourceMapper authRoleResourceMapper,
                                 AuthRoleDataScopeMapper authRoleDataScopeMapper,
                                 AuthResourceMapper authResourceMapper,
-                                AuthResourceServiceResults authResourceServiceResults) {
+                                AuthResourceServiceResults authResourceServiceResults,
+                                AuthSessionRpcServiceImpl identities) {
         // 保存用户角色Mapper。
         this.authUserRoleMapper = authUserRoleMapper;
         // 保存角色资源Mapper。
@@ -93,6 +102,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
         this.authResourceMapper = authResourceMapper;
         // 保存资源结果转换增强。
         this.authResourceServiceResults = authResourceServiceResults;
+        this.identities = identities;
     }
 
     /**
@@ -187,12 +197,44 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      *
      * @param tenantId 租户ID
      * @param roleId   角色ID
+     * @param authorization 当前 User access JWT
      * @return 资源ID列表
      */
     @Override
-    public List<String> listRoleResourceIds(String tenantId, String roleId) {
-        // 按租户和角色查询当前有效的角色资源关系。
-        return authRoleResourceMapper.selectResourceIdsByRoleId(tenantId, roleId);
+    public List<String> listRoleResourceIds(String tenantId, String roleId, String authorization) {
+        String previousTenant = TenantContextHolder.getTenantId();
+        boolean previousIgnore = TenantContextHolder.isIgnore();
+        try {
+            requireRoleResourceTenant(tenantId, authorization);
+            TenantContextHolder.clearIgnore();
+            TenantContextHolder.setTenantId(tenantId);
+            return authRoleResourceMapper.selectResourceIdsByRoleId(tenantId, roleId);
+        } finally {
+            TenantContextHolder.setTenantId(previousTenant);
+            if (previousIgnore) TenantContextHolder.ignore(); else TenantContextHolder.clearIgnore();
+        }
+    }
+
+    /** 本租户管理保持；跨租户回显还必须由活跃的平台管理员发起，不能信任客户端租户或权限头。 */
+    private void requireRoleResourceTenant(String tenantId, String authorization) {
+        try {
+            if (StringUtils.isBlank(tenantId) || authorization == null || !authorization.startsWith("Bearer ")) {
+                throw new AccessDeniedException("角色资源访问被拒绝");
+            }
+            String token = authorization.substring(7);
+            var identity = identities.resolveAccessIdentity(token);
+            var claims = JwtUtils.parseJwt(token);
+            if (identity == null || !identity.getUserId().equals(claims.get("userId"))
+                    || !identity.getTenantId().equals(claims.get("tenantId"))
+                    || !(claims.get("permissions") instanceof Collection<?> permissions)
+                    || !permissions.contains("user:auth:manage")
+                    || (!tenantId.equals(identity.getTenantId())
+                    && !"PLATFORM_SUPER_ADMIN".equals(claims.get("adminType")))) {
+                throw new AccessDeniedException("角色资源访问被拒绝");
+            }
+        } catch (RuntimeException rejected) {
+            throw new AccessDeniedException("角色资源访问被拒绝");
+        }
     }
 
     /**
