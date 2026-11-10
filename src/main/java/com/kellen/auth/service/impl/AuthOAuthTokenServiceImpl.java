@@ -1,6 +1,5 @@
 package com.kellen.auth.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kellen.auth.config.OAuthAuthorizationServerProperties;
@@ -14,6 +13,7 @@ import com.kellen.auth.service.AuthAuthenticationService;
 import com.kellen.auth.service.AuthOAuthTokenService;
 import com.kellen.security.AuthTokenRedisKeys;
 import com.kellen.utils.auth.JwtUtils;
+import com.kellen.utils.context.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * OAuth token 服务实现。
@@ -109,7 +110,7 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
                   <form method="post" action="/oauth2/authorize" autocomplete="on">
                     {{inputs}}
                     <label>租户 ID</label>
-                    <input name="tenantId" value="100" required>
+                    <input name="tenantId" value="{{tenantId}}" readonly required>
                     <label>用户名</label>
                     <input name="username" autocomplete="username" required>
                     <label>密码</label>
@@ -122,6 +123,7 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
                 </html>
                 """
                 .replace("{{clientId}}", html(request.clientId()))
+                .replace("{{tenantId}}", html(request.clientTenantId()))
                 .replace("{{error}}", StringUtils.isBlank(error) ? "" : "<div class=\"error\">" + html(error) + "</div>")
                 .replace("{{inputs}}", hiddenAuthorizeInputs(params))
                 .replace("{{scope}}", html(request.scope()))
@@ -131,11 +133,19 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
     @Override
     public URI authorize(MultiValueMap<String, String> form) {
         AuthorizationRequest request = validateAuthorizationRequest(form);
+        if (StringUtils.isNotBlank(form.getFirst("tenantId"))
+                && !StringUtils.equals(request.clientTenantId(), form.getFirst("tenantId"))) {
+            throw oauthError("access_denied", "Resource owner authentication failed", HttpStatus.FORBIDDEN);
+        }
         LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setTenantId(form.getFirst("tenantId"));
+        loginRequest.setTenantId(request.clientTenantId());
         loginRequest.setUsername(form.getFirst("username"));
         loginRequest.setPassword(form.getFirst("password"));
-        OAuthAuthorizeUser user = authAuthenticationService.authenticateForOAuth(loginRequest);
+        OAuthAuthorizeUser user = inClientTenant(request.clientTenantId(),
+                () -> authAuthenticationService.authenticateForOAuth(loginRequest));
+        if (user == null || !StringUtils.equals(request.clientTenantId(), user.tenantId())) {
+            throw oauthError("access_denied", "Resource owner authentication failed", HttpStatus.FORBIDDEN);
+        }
 
         String code = UUID.randomUUID().toString();
         storeAuthorizationCode(code, new AuthorizationCodeRecord(
@@ -226,7 +236,9 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
         if (record == null) {
             throw oauthError("invalid_grant", "Authorization code is invalid or expired", HttpStatus.BAD_REQUEST);
         }
-        if (!StringUtils.equals(record.clientId(), client.getClientId()) || !StringUtils.equals(record.redirectUri(), redirectUri)) {
+        if (!StringUtils.equals(record.clientId(), client.getClientId())
+                || !StringUtils.equals(record.redirectUri(), redirectUri)
+                || !StringUtils.equals(record.tenantId(), client.getTenantId())) {
             throw oauthError("invalid_grant", "Authorization code binding does not match", HttpStatus.BAD_REQUEST);
         }
         if (!pkceMatches(record, codeVerifier)) {
@@ -267,7 +279,8 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
                 resource,
                 StringUtils.trimToEmpty(params.getFirst("state")),
                 codeChallenge,
-                codeChallengeMethod
+                codeChallengeMethod,
+                client.getTenantId()
         );
     }
 
@@ -279,12 +292,15 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
                                                 Set<String> scopes,
                                                 String audience) {
         long ttlSeconds = resolveTtl(client.getAccessTokenTtlSeconds());
+        if (StringUtils.isBlank(tenantId) || !StringUtils.equals(tenantId, client.getTenantId())) {
+            throw oauthError("invalid_client", "Client authentication failed", HttpStatus.UNAUTHORIZED);
+        }
         String joinedScopes = String.join(" ", scopes);
         Map<String, Object> claims = new LinkedHashMap<>();
         claims.put(AuthTokenRedisKeys.CLAIM_TOKEN_TYPE, AuthTokenRedisKeys.ACCESS_TOKEN_TYPE);
         claims.put("userId", subject);
         claims.put("username", username);
-        claims.put("tenantId", StringUtils.defaultIfBlank(tenantId, StringUtils.defaultIfBlank(client.getTenantId(), "1")));
+        claims.put("tenantId", tenantId);
         claims.put("client_id", client.getClientId());
         claims.put("grant_type", grantType);
         claims.put("scope", joinedScopes);
@@ -332,15 +348,42 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
         }
     }
 
+    /** 先以公开 client_id 定位唯一租户，再由正常租户/逻辑删除插件读取完整认证配置。 */
     private AuthOAuthClient findEnabledClient(String clientId) {
-        AuthOAuthClient client = authOAuthClientMapper.selectOne(new LambdaQueryWrapper<AuthOAuthClient>()
-                .eq(AuthOAuthClient::getClientId, clientId)
-                .eq(AuthOAuthClient::getState, AuthStateEnum.启用)
-                .last("LIMIT 1"));
-        if (client == null) {
+        List<AuthOAuthClient> identities = authOAuthClientMapper.selectEnabledOAuthIdentities(clientId);
+        if (identities == null || identities.size() != 1
+                || StringUtils.isAnyBlank(identities.get(0).getId(), identities.get(0).getTenantId())) {
+            throw oauthError("invalid_client", "Client authentication failed", HttpStatus.UNAUTHORIZED);
+        }
+        AuthOAuthClient identity = identities.get(0);
+        AuthOAuthClient client = inClientTenant(identity.getTenantId(), () -> authOAuthClientMapper.selectById(identity.getId()));
+        if (client == null || client.getState() != AuthStateEnum.启用
+                || !StringUtils.equals(clientId, client.getClientId())
+                || !StringUtils.equals(identity.getTenantId(), client.getTenantId())) {
             throw oauthError("invalid_client", "Client authentication failed", HttpStatus.UNAUTHORIZED);
         }
         return client;
+    }
+
+    /**
+     * 只在已定位的 OAuth client 租户内执行认证查询，嵌套认证清理后也恢复原上下文。
+     *
+     * @param tenantId 来自客户端数据库记录的租户，不采用请求头或旧线程租户
+     * @param action 本次 OAuth 认证读取或资源所有者认证
+     * @return 认证操作结果
+     */
+    private <T> T inClientTenant(String tenantId, Supplier<T> action) {
+        String previousTenant = TenantContextHolder.getTenantId();
+        boolean previouslyIgnored = TenantContextHolder.isIgnore();
+        try {
+            TenantContextHolder.clearIgnore();
+            TenantContextHolder.setTenantId(tenantId);
+            return action.get();
+        } finally {
+            TenantContextHolder.clear();
+            TenantContextHolder.setTenantId(previousTenant);
+            if (previouslyIgnored) TenantContextHolder.ignore();
+        }
     }
 
     private boolean clientSecretMatches(String rawSecret, String storedSecret) {
@@ -565,7 +608,8 @@ public class AuthOAuthTokenServiceImpl implements AuthOAuthTokenService {
             String resource,
             String state,
             String codeChallenge,
-            String codeChallengeMethod
+            String codeChallengeMethod,
+            String clientTenantId
     ) {
     }
 

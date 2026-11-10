@@ -102,6 +102,14 @@ OAuth client 存在 `auth_oauth_client` 表：
 | `audiences` | 允许的 resource/audience，例如 `mcp` |
 | `access_token_ttl_seconds` | access token 有效秒数，服务端上限 30 天 |
 
+### OAuth 客户端租户定位（1.3.4）
+
+`client_id` 由全局唯一索引约束，不依赖匿名请求的 `X-Tenant-Id`。公开 token/authorize 入口仅通过专用 Mapper 投影查找启用、未删除客户端的主键和所属租户，再绑定该数据库租户，由正常 MyBatis-Plus 租户与逻辑删除插件读取完整客户端；专用投影不读取 secret，其他 Mapper 方法继续要求租户。未知、异常重复、禁用、已删除或缺少租户的 client 与错误 secret 均返回相同 `invalid_client`/401，不再回退到默认租户。
+
+PKCE 授权页显示注册客户端的租户；提交的不同租户和认证用户的租户不匹配均拒绝，授权码交换还复核其已绑定的租户。成功、认证失败和 SQL 异常后恢复调用前的租户与 ignore 标志，不能让公开认证扩大为业务查询绕过。当前补丁只更新 User 为 `1.3.4`，OAuth 响应、scope、resource、JWT 与 RPC 契约保持。
+
+`AuthOAuthTenantHttpIntegrationTest` 使用仅测试依赖 H2 `2.4.240` 的内存 PostgreSQL 模式，加载真实 Controller/Service、Security/ReqInterceptor、Mapper 与公共 MyBatis-Plus 插件；不连接 Nacos、Redis 或业务库。覆盖匿名 Basic token、伪造租户头、普通查询缺租户仍拒绝、上下文恢复、错误凭据/不可用 client、全局唯一与异常跨租户重复、完整 PKCE/一次性授权码及 client 迁租户后的拒绝。H2 仅证明该查询与拦截器链，不代替 PostgreSQL ICU 排序、实际部署或 MCP token→tools 联调；升级后应使用同一已注册 client 独立验收。
+
 `/auth/third-party/sessions` 仍保留给 TduckX 等企业内部私有 HMAC 集成；未来如果统一认证治理，再双轨迁移到 OAuth，不要直接删除旧接口。
 
 ## 基础设施地址
@@ -559,7 +567,7 @@ bash scripts/check-secrets.sh
 
 ## 本批可观测性接入
 
-当前服务版本为 `1.3.3`，公共能力精确消费 `com:utils:1.6.2`，并由公共包传递引入轻量 `com:fleet-observability:0.1.2` 的安全 HTTP 终态事件。公共制品先完成 Maven Local 验证，再按对应 main 确定提交发布远端；目标环境的实际采集与全链读回单独验收。九服务共享 `actuator.yaml` 暴露 health/info/prometheus；除 health 外仍要求 `actuatorReq` 运维令牌，空值或错误值失败关闭。`logging.yml` 使用 ECS 固定字段白名单，未知 MDC、原始消息、正文和异常不进入采集结果；OTel agent 标准 `trace_id/span_id` 与业务会话 ID 分开。应用指标带固定 application/environment 标签，禁止动态业务 ID。
+当前服务版本为 `1.3.4`，公共能力精确消费 `com:utils:1.6.2`，并由公共包传递引入轻量 `com:fleet-observability:0.1.2` 的安全 HTTP 终态事件。公共制品先完成 Maven Local 验证，再按对应 main 确定提交发布远端；目标环境的实际采集与全链读回单独验收。九服务共享 `actuator.yaml` 暴露 health/info/prometheus；除 health 外仍要求 `actuatorReq` 运维令牌，空值或错误值失败关闭。`logging.yml` 使用 ECS 固定字段白名单，未知 MDC、原始消息、正文和异常不进入采集结果；OTel agent 标准 `trace_id/span_id` 与业务会话 ID 分开。应用指标带固定 application/environment 标签，禁止动态业务 ID。
 
 Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 OTel agent 由统一启动入口负责，不通过全局 JAVA_TOOL_OPTIONS 注入 Gradle 或测试。部署时 Java 指标只由 Micrometer Prometheus 提供，OTEL_METRICS_EXPORTER 与 OTEL_LOGS_EXPORTER 均为 none；监控组件、配置发布和实际采集仍须独立验证。回滚须恢复匹配的制品与配置，先恢复旧 dataId 再回退旧消费者，不能用已删除的配置项假装完成回滚。
 

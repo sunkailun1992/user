@@ -1,6 +1,5 @@
 package com.kellen.auth.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kellen.auth.config.OAuthAuthorizationServerProperties;
 import com.kellen.auth.dto.LoginRequest;
 import com.kellen.auth.dto.OAuthAuthorizeUser;
@@ -14,7 +13,6 @@ import com.kellen.utils.auth.JwtUtils;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,8 +58,7 @@ class AuthOAuthTokenServiceTest {
 
     @Test
     void issueClientCredentialsTokenEmbedsMcpClaims() {
-        when(authOAuthClientMapper.selectOne(ArgumentMatchers.<LambdaQueryWrapper<AuthOAuthClient>>any()))
-                .thenReturn(client());
+        stubClient(client());
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "client_credentials");
@@ -85,8 +83,7 @@ class AuthOAuthTokenServiceTest {
 
     @Test
     void issueClientCredentialsTokenRejectsUnauthorizedScope() {
-        when(authOAuthClientMapper.selectOne(ArgumentMatchers.<LambdaQueryWrapper<AuthOAuthClient>>any()))
-                .thenReturn(client());
+        stubClient(client());
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "client_credentials");
@@ -104,8 +101,7 @@ class AuthOAuthTokenServiceTest {
     void issueClientCredentialsTokenCapsTtlAtThirtyDays() {
         AuthOAuthClient client = client();
         client.setAccessTokenTtlSeconds(60L * 24L * 60L * 60L);
-        when(authOAuthClientMapper.selectOne(ArgumentMatchers.<LambdaQueryWrapper<AuthOAuthClient>>any()))
-                .thenReturn(client);
+        stubClient(client);
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "client_credentials");
@@ -133,8 +129,7 @@ class AuthOAuthTokenServiceTest {
     @Test
     void authorizationCodeFlowIssuesMcpTokenWithPkce() throws Exception {
         AuthOAuthClient client = publicClient();
-        when(authOAuthClientMapper.selectOne(ArgumentMatchers.<LambdaQueryWrapper<AuthOAuthClient>>any()))
-                .thenReturn(client);
+        stubClient(client);
         when(authAuthenticationService.authenticateForOAuth(any(LoginRequest.class)))
                 .thenReturn(new OAuthAuthorizeUser("user-1", "admin", "100"));
 
@@ -170,6 +165,12 @@ class AuthOAuthTokenServiceTest {
         assertThat(claims.get("client_id", String.class)).isEqualTo("cherry-studio-local");
         assertThat(claims.get("grant_type", String.class)).isEqualTo("authorization_code");
         assertThat(claims.get("aud", String.class)).isEqualTo("http://localhost:7100/api/mcp");
+    }
+
+    private void stubClient(AuthOAuthClient client) {
+        client.setId("fixture-" + client.getClientId());
+        when(authOAuthClientMapper.selectEnabledOAuthIdentities(client.getClientId())).thenReturn(List.of(client));
+        when(authOAuthClientMapper.selectById(client.getId())).thenReturn(client);
     }
 
     private AuthOAuthClient client() {
