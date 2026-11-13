@@ -100,6 +100,10 @@ traffic:
           - message
         "[com.kellen.rpc.auth.AuthOpenApiRpcService]":
           - ai-agent
+        # ai 与 ai-agent 在本机灰度通道内校验访问令牌；本机只有灰度 user 时，未纳入会因找不到稳定提供方而 401。
+        "[com.kellen.rpc.auth.AuthSessionRpcService]":
+          - ai
+          - ai-agent
 
 dubbo:
   provider:
