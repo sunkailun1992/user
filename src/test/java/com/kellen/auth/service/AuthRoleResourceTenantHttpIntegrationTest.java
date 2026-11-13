@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.kellen.config.mybatis.MyMetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kellen.auth.controller.AuthGrantController;
 import com.kellen.auth.mapper.*;

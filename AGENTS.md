@@ -23,7 +23,7 @@
 
 - 项目名称：`user`
 - 项目类型：用户中心、认证、租户、角色、权限、数据范围后端
-- 技术栈：Java 17、Spring Boot、Gradle、MyBatis-Plus、Nacos、Dubbo、`com:utils`、`com:rpc-api`
+- 技术栈：Java 21、Spring Boot、Gradle、MyBatis-Plus、Nacos、Dubbo、`com:utils`、`com:rpc-api`
 - 项目关系：`user` 与 `message` 是同级独立业务模块，可通过 `../rpc-api` 中的 Dubbo 契约互相调用；两者底层统一依赖同级 `../utils` 公共工具项目
 - 同级协作：`../rpc-api` 提供跨服务 RPC 接口和 DTO 契约；`../utils` 提供统一响应、认证上下文、多租户、错误码和公共工具；`../message` 提供消息能力；`../gateway` 负责路由；`../admin-web` 负责后台页面
 - 核心风险：登录认证、JWT、租户隔离、角色权限、数据范围、用户状态、敏感字段、密码和 token 生命周期
@@ -51,7 +51,7 @@
 
 ## 项目边界
 
-- 个人公共库固定使用 `com:utils:1.6.2` 与 `com:rpc-api:1.0.8`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
+- 个人公共库固定使用 `com:utils:1.6.6` 与 `com:rpc-api:1.0.9`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
 
 - `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
 - 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。

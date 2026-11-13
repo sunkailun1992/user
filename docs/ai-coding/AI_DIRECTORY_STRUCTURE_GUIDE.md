@@ -1,6 +1,6 @@
 # AI 目录管理规范
 
-本规范约束 AI 在 `user` 用户中心服务中新增、移动、拆分和命名目录的方式。目录管理必须基于当前 Java 17、Spring Boot、Gradle、MyBatis-Plus 和 Nacos 微服务结构，不把其它语言或其它仓库目录规则直接套进来。
+本规范约束 AI 在 `user` 用户中心服务中新增、移动、拆分和命名目录的方式。目录管理必须基于当前 Java 21、Spring Boot、Gradle、MyBatis-Plus 和 Nacos 微服务结构，不把其它语言或其它仓库目录规则直接套进来。
 
 ## 核心依据
 

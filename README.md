@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.6.2`、`com:rpc-api:1.0.8`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:1.6.6`、`com:rpc-api:1.0.9`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -10,16 +10,16 @@
 
 ## 技术基线
 
-- Java 17
-- Spring Boot 4.0.4
-- Spring Cloud 2025.1.1
+- Java 21
+- Spring Boot 4.0.9
+- Spring Cloud 2025.1.4
 - Spring Cloud Alibaba 2025.1.0.0
-- Nacos Client 3.2.2
+- Nacos Client 3.3.0
 - Seata Server 2.7.0
 - Seata Client 2.6.0
 - MyBatis-Plus
 - 公共能力依赖 `com:utils`
-- 跨服务契约依赖 `com:rpc-api:1.0.8`
+- 跨服务契约依赖 `com:rpc-api:1.0.9`
 
 ## 服务职责
 
