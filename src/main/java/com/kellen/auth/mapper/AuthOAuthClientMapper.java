@@ -23,6 +23,6 @@ public interface AuthOAuthClientMapper extends BaseMapper<AuthOAuthClient> {
      * @return 零到两个身份投影，完整客户端仍须在所属租户下读取
      */
     @InterceptorIgnore(tenantLine = "true")
-    @Select("SELECT id, tenant_id FROM auth_oauth_client WHERE client_id = #{clientId} AND state = 1 AND is_delete = false LIMIT 2")
+    @Select("SELECT id, tenant_id FROM auth_oauth_client WHERE client_id = #{clientId} AND state = 1 AND is_deleted = false LIMIT 2")
     List<AuthOAuthClient> selectEnabledOAuthIdentities(@Param("clientId") String clientId);
 }

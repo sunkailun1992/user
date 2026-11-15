@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kellen.database.MigrationTables;
 import com.kellen.auth.config.OAuthAuthorizationServerProperties;
 import com.kellen.auth.controller.OAuthController;
 import com.kellen.auth.dto.OAuthAuthorizeUser;
@@ -37,7 +38,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -111,10 +111,7 @@ class AuthOAuthTenantHttpIntegrationTest {
         TenantContextHolder.clear(); reset(authentication); FULL_READ.set(null);
         jdbc = new JdbcTemplate(dataSource);
         jdbc.execute("DROP TABLE IF EXISTS auth_oauth_client");
-        String schema = new ClassPathResource("db/postgresql/user-schema.sql").getContentAsString(StandardCharsets.UTF_8);
-        int start = schema.indexOf("CREATE TABLE IF NOT EXISTS auth_oauth_client (");
-        jdbc.execute(schema.substring(start, schema.indexOf(";", start) + 1)
-                .replace(" COLLATE public.fleet_general_ci", ""));
+        jdbc.execute(MigrationTables.createTable("auth_oauth_client"));
         jdbc.execute("CREATE UNIQUE INDEX uk_auth_oauth_client_client_id ON auth_oauth_client(client_id)");
         insert("client-a", CLIENT, TENANT, false);
         insert("public-a", PUBLIC, TENANT, true);
@@ -182,7 +179,7 @@ class AuthOAuthTenantHttpIntegrationTest {
         insert("deleted", "fixture-deleted", TENANT, false);
         insert("missing-tenant", "fixture-no-tenant", "", false);
         jdbc.update("UPDATE auth_oauth_client SET state=2 WHERE id='disabled'");
-        jdbc.update("UPDATE auth_oauth_client SET is_delete=true WHERE id='deleted'");
+        jdbc.update("UPDATE auth_oauth_client SET is_deleted=true WHERE id='deleted'");
         for (String id : new String[]{"fixture-unknown", "fixture-disabled", "fixture-deleted", "fixture-no-tenant", "x' OR '1'='1"}) {
             assertInvalidClient(token(id, SECRET, TENANT));
         }

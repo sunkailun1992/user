@@ -23,7 +23,7 @@ class AuthQueryFieldWhitelistTest {
     private static final Map<String, String> ALLOWED_FIELDS = Map.of(
             "id", "id", // 允许主键字段。
             "name", "name", // 允许名称字段。
-            "createDateTime", "create_date_time" // 允许创建时间驼峰字段映射数据库字段。
+            "createTime", "create_time" // 允许创建时间驼峰字段映射数据库字段。
     );
 
     /**
@@ -33,9 +33,9 @@ class AuthQueryFieldWhitelistTest {
      */
     @Test
     void shouldFallbackDefaultSortFieldWhenRequestedSortFieldIsUnsafe() {
-        String sortField = AuthQueryFieldWhitelist.resolveSortField("name desc", "createDateTime", ALLOWED_FIELDS); // 解析带 SQL 片段的非法排序字段。
+        String sortField = AuthQueryFieldWhitelist.resolveSortField("name desc", "createTime", ALLOWED_FIELDS); // 解析带 SQL 片段的非法排序字段。
 
-        assertThat(sortField).isEqualTo("create_date_time"); // 验证非法排序字段没有原样进入 SQL。
+        assertThat(sortField).isEqualTo("create_time"); // 验证非法排序字段没有原样进入 SQL。
     }
 
     /**

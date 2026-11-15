@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.6.8`、`com:rpc-api:1.0.9`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:1.6.9`、`com:rpc-api:1.0.9`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -440,25 +440,18 @@ PostgreSQL 使用 `postgresql.*` / `postgresql-gray.*` 连接键与 `org.postgre
 
 真实 PG 结构回归通过受控进程环境提供 `FLEET_PG_TEST_URL`、`FLEET_PG_TEST_USERNAME`、`FLEET_PG_TEST_PASSWORD`；只允许 `fleet_pg_test_` 前缀的独立测试库，测试只创建并清理随机 schema。未提供时明确跳过，H2 回归不能代替 PostgreSQL 验收。凭据不得写进命令文本、仓库或测试报告。
 
-表结构和默认基础数据由 MyBatis-Plus 自动 DDL 维护。
-
-DDL 入口：
+表结构和默认基础数据只由本服务的 Flyway 迁移维护：
 
 ```text
-src/main/java/com/kellen/bean/PostgresqlDdl.java
+src/main/resources/db/migration/V1__baseline.sql             现有结构快照与默认数据，只在空库执行
+src/main/resources/db/migration/V2__drop_ddl_history.sql     删除旧 DDL 方式的执行记录表
+src/main/resources/db/migration/V3__rename_audit_columns.sql 审计列按实体基类改名
+src/main/resources/db/migration/V4__drop_unused_columns.sql  删除没人读写的列，删前逐列核对为空
 ```
 
-SQL 脚本按公共基础表、认证业务结构、缺失默认权限补齐排序：
+表结构只由本服务 `src/main/resources/db/migration` 的 Flyway 迁移管理；已提交的迁移文件不修改，改结构只新增 `V<下一个>__<说明>.sql`；新库保持空库，由服务首次启动时的 Flyway 建表，不手工执行任何公共脚本。已有的库由 `baseline-on-migrate` 把版本 1 登记为基线、不执行 V1，再执行 V2 起的迁移。Seata AT 的 `undo_log` 在 `V1__baseline.sql` 里；数据源块的 `spring.datasource.dynamic.seata` 跟随 `seata.enabled`，Seata 开启时数据源创建阶段（早于 Flyway）就会检查该表，所以启用 Seata 前库里须已完成迁移。
 
-```text
-../utils/src/main/resources/db/postgresql/common-infra-schema.sql
-src/main/resources/db/postgresql/user-schema.sql
-src/main/resources/db/postgresql/user-bootstrap.sql
-```
-
-全新或空业务库首次启动前，必须先手动执行公共基础表和业务结构；Seata AT 会在 `DataSource` 初始化时先检查 `undo_log`。迁移现有数据时先仅建结构、迁入原有全部行，再启动应用；不要在迁移前执行 bootstrap 或复制旧 MySQL `ddl_history` 为新 PostgreSQL 任务完成证据。
-
-`user-bootstrap.sql` 仅使用 `ON CONFLICT DO NOTHING` 补齐缺失默认租户、角色与权限，不覆盖既有密码、权限、角色数据范围或自定义标签。SHA-256 派生资源 ID 的算法保持不变；历史覆盖式权限 UPDATE 不在新入口重放。历史 MySQL SQL 保留，后续结构调整仍新增 PostgreSQL 脚本，不回改已执行或执行状态不明的文件。
+V1 的种子段仅用 `ON CONFLICT DO NOTHING` 补齐缺失默认租户、角色与权限，不覆盖既有密码、权限、角色数据范围或自定义标签；SHA-256 派生资源 ID 的算法保持不变。
 
 默认数据包含：
 
@@ -470,9 +463,9 @@ src/main/resources/db/postgresql/user-bootstrap.sql
 
 ## 个人数据库初始化边界
 
-运行时 DDL 保留通用表结构、默认租户 `100`、无人员绑定的管理员角色 `r_admin_100` 及通用权限资源。首次启动不创建管理员、测试用户、测试部门、第二演示租户或任何固定密码；本轮也不自动创建人员账号。后续首次管理员创建必须通过明确授权的独立流程并使用独立强密码。
+迁移保留通用表结构、默认租户 `100`、无人员绑定的管理员角色 `r_admin_100` 及通用权限资源。首次启动不创建管理员、测试用户、测试部门、第二演示租户或任何固定密码；本轮也不自动创建人员账号。后续首次管理员创建必须通过明确授权的独立流程并使用独立强密码。
 
-数据权限测试应使用测试隔离 fixture；不要把演示账号或密码 seed 加回运行时 `PostgresqlDdl` 脚本。
+数据权限测试应使用测试隔离 fixture；不要把演示账号或密码 seed 加进 Flyway 迁移。
 
 ## 本地日志
 

@@ -13,7 +13,7 @@ import java.util.Map;
 @Component
 public class AuthOAuthClientServiceQuery {
 
-    private static final String DEFAULT_SORT_FIELD = "modify_date_time";
+    private static final String DEFAULT_SORT_FIELD = "update_time";
 
     private static final Map<String, String> ALLOWED_FIELDS = Map.ofEntries(
             Map.entry("id", "id"),
@@ -30,10 +30,10 @@ public class AuthOAuthClientServiceQuery {
             Map.entry("tenantId", "tenant_id"),
             Map.entry("tenant_id", "tenant_id"),
             Map.entry("version", "version"),
-            Map.entry("createDateTime", "create_date_time"),
-            Map.entry("create_date_time", "create_date_time"),
-            Map.entry("modifyDateTime", "modify_date_time"),
-            Map.entry("modify_date_time", "modify_date_time")
+            Map.entry("createTime", "create_time"),
+            Map.entry("create_time", "create_time"),
+            Map.entry("updateTime", "update_time"),
+            Map.entry("update_time", "update_time")
     );
 
     public QueryWrapper<AuthOAuthClient> query(AuthOAuthClientQuery query, QueryWrapper<AuthOAuthClient> queryWrapper) {

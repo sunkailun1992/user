@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kellen.auth.controller.AuthGrantController;
 import com.kellen.auth.mapper.*;
 import com.kellen.auth.rpc.AuthSessionRpcServiceImpl;
+import com.kellen.database.MigrationTables;
 import com.kellen.auth.service.impl.AuthGrantServiceImpl;
 import com.kellen.auth.service.results.AuthResourceServiceResults;
 import com.kellen.bean.GlobalExceptionHandler;
@@ -44,7 +45,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -60,7 +60,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
@@ -106,11 +105,9 @@ class AuthRoleResourceTenantHttpIntegrationTest {
         TenantContextHolder.clear(); DataPermissionContextHolder.clear(); QUERY.set(null); GRANT_SQL.set(0);
         redis.revoked = false; redis.unavailable = false;
         jdbc = new JdbcTemplate(dataSource);
-        String schema = new ClassPathResource("db/postgresql/user-schema.sql").getContentAsString(StandardCharsets.UTF_8);
         for (String table : List.of("auth_role_resource", "auth_tenant", "auth_user", "auth_user_tenant", "auth_user_role", "auth_role_data_scope")) {
             jdbc.execute("DROP TABLE IF EXISTS " + table);
-            int start = schema.indexOf("CREATE TABLE IF NOT EXISTS " + table + " (");
-            jdbc.execute(schema.substring(start, schema.indexOf(";", start) + 1).replace(" COLLATE public.fleet_general_ci", ""));
+            jdbc.execute(MigrationTables.createTable(table));
         }
         jdbc.update("INSERT INTO auth_tenant(id,name,tenant_id) VALUES(?,?,?),(?,?,?)", A, "fixture-a", A, B, "fixture-b", B);
         user("tenant-admin", A, "TENANT_ADMIN"); user("platform-admin", B, "PLATFORM_SUPER_ADMIN");
@@ -298,7 +295,7 @@ class AuthRoleResourceTenantHttpIntegrationTest {
         jdbc.update("INSERT INTO auth_user(id,username,password,tenant_id,admin_type) VALUES(?,?,?,?,?)", id, id, "synthetic-unused", tenant, admin);
     }
     private void relation(String id, String tenant, String role, String resource, boolean deleted) {
-        jdbc.update("INSERT INTO auth_role_resource(id,tenant_id,role_id,resource_id,is_delete) VALUES(?,?,?,?,?)", id, tenant, role, resource, deleted);
+        jdbc.update("INSERT INTO auth_role_resource(id,tenant_id,role_id,resource_id,is_deleted) VALUES(?,?,?,?,?)", id, tenant, role, resource, deleted);
     }
     private String token(String user, String tenant, String admin, boolean manage) {
         return JwtUtils.createJwt(UUID.randomUUID().toString(), user, Map.of("userId", user, "tenantId", tenant,

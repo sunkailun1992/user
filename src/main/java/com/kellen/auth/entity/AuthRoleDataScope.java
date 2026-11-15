@@ -21,6 +21,18 @@ import lombok.Setter;
 public class AuthRoleDataScope extends AuthEntity {
 
     /**
+     * 关系编码，由授权或绑定逻辑用两端ID拼成。
+     */
+    @Schema(description = "编码")
+    private String code;
+
+    /**
+     * 说明。
+     */
+    @Schema(description = "说明")
+    private String description;
+
+    /**
      * 角色ID。
      */
     @Schema(description = "角色ID")
