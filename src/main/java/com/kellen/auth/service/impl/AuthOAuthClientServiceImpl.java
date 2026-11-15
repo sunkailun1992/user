@@ -164,16 +164,16 @@ public class AuthOAuthClientServiceImpl implements AuthOAuthClientService {
         boolean publicClient = CLIENT_TYPE_PUBLIC.equalsIgnoreCase(bo.getClientType());
         boolean noTokenAuth = TOKEN_AUTH_METHOD_NONE.equalsIgnoreCase(bo.getTokenEndpointAuthMethod());
         if (noTokenAuth && !publicClient) {
-            throw new UserException(ReturnCode.用户请求参数错误, "tokenEndpointAuthMethod=none 只能用于 public 客户端");
+            throw new UserException(ReturnCode.REQUEST_PARAMETER_ERROR, "tokenEndpointAuthMethod=none 只能用于 public 客户端");
         }
         if (!noTokenAuth && create && StringUtils.isBlank(bo.getClientSecret())) {
-            throw new UserException(ReturnCode.请求必填参数为空, "保密客户端必须配置 clientSecret");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "保密客户端必须配置 clientSecret");
         }
         if (containsToken(bo.getGrantTypes(), GRANT_TYPE_AUTHORIZATION_CODE) && StringUtils.isBlank(bo.getRedirectUris())) {
-            throw new UserException(ReturnCode.请求必填参数为空, "authorization_code 客户端必须配置 redirectUris");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "authorization_code 客户端必须配置 redirectUris");
         }
         if (containsToken(bo.getGrantTypes(), GRANT_TYPE_CLIENT_CREDENTIALS) && noTokenAuth) {
-            throw new UserException(ReturnCode.用户请求参数错误, "client_credentials 不能使用 tokenEndpointAuthMethod=none");
+            throw new UserException(ReturnCode.REQUEST_PARAMETER_ERROR, "client_credentials 不能使用 tokenEndpointAuthMethod=none");
         }
     }
 

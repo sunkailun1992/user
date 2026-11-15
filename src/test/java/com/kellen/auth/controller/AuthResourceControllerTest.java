@@ -109,8 +109,8 @@ class AuthResourceControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(ReturnCode.成功.getState()))
-                .andExpect(jsonPath("$.msg").value(ReturnCode.成功.getName()))
+                .andExpect(jsonPath("$.code").value(ReturnCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.msg").doesNotExist())
                 .andExpect(jsonPath("$.data").value("resource-1"));
         // 捕获 Controller 传给 Service 的 BO，验证请求层没有丢字段。
         ArgumentCaptor<AuthResourceBO> captor = ArgumentCaptor.forClass(AuthResourceBO.class);
@@ -143,8 +143,8 @@ class AuthResourceControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value(ReturnCode.请求必填参数为空.getState()))
-                .andExpect(jsonPath("$.msg").value(ReturnCode.请求必填参数为空.getName()))
+                .andExpect(jsonPath("$.code").value(ReturnCode.REQUIRED_PARAMETER_MISSING.getCode()))
+                .andExpect(jsonPath("$.msg").doesNotExist())
                 .andExpect(jsonPath("$.errorMessage").exists());
         // 验证参数校验失败时不会进入业务服务，避免写入脏数据。
         verifyNoInteractions(authResourceService);

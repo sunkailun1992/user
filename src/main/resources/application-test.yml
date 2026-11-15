@@ -65,7 +65,3 @@ spring:
       - "optional:nacos:dubbo.yaml?refreshEnabled=true"
       # mybatis-plus.yaml：MyBatis-Plus 通用行为配置。
       - "optional:nacos:mybatis-plus.yaml?refreshEnabled=true"
-      # rabbitmq.yaml：RabbitMQ 连接和消息基础配置。
-      - "optional:nacos:rabbitmq.yaml?refreshEnabled=true"
-      # elasticsearch.yaml：Elasticsearch 连接配置。
-      - "optional:nacos:elasticsearch.yaml?refreshEnabled=true"

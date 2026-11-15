@@ -178,14 +178,14 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             TenantContextHolder.setTenantId(refreshSession.tenantId());
             AuthUser user = findCurrentUser(refreshSession.userId());
             if (user == null) {
-                throw new UserException(ReturnCode.用户身份校验失败, "用户不存在");
+                throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "用户不存在");
             }
             if (AuthStateEnum.禁用 == user.getState()) {
                 authTokenLifecycleService.revokeUserTokens(user.getId());
-                throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
+                throw new UserException(ReturnCode.USER_ACCOUNT_FROZEN, "用户已禁用");
             }
             if (!canAccessTenant(user, refreshSession.tenantId())) {
-                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+                throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "用户无当前租户登录权限");
             }
             return buildLoginResponse(user, refreshSession.tenantId(), "REFRESH", null);
         } finally {
@@ -218,12 +218,12 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         // 校验用户名。
         if (StringUtils.isBlank(request.getUsername())) {
             // 用户名为空时返回参数错误。
-            throw new UserException(ReturnCode.请求必填参数为空, "用户名不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "用户名不能为空");
         }
         // 校验密码。
         if (StringUtils.isBlank(request.getPassword())) {
             // 密码为空时返回参数错误。
-            throw new UserException(ReturnCode.请求必填参数为空, "密码不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "密码不能为空");
         }
         // 解析租户ID。
         String tenantId = resolveTenantId(request);
@@ -235,12 +235,12 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 校验用户和密码。
             if (user == null) {
                 // 登录失败时不暴露账号是否存在。
-                throw new UserException(ReturnCode.用户密码错误, "用户名或密码错误");
+                throw new UserException(ReturnCode.USER_PASSWORD_ERROR, "用户名或密码错误");
             }
             // 校验用户状态。
             if (AuthStateEnum.禁用 == user.getState()) {
                 // 禁用账号不允许登录。
-                throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
+                throw new UserException(ReturnCode.USER_ACCOUNT_FROZEN, "用户已禁用");
             }
             // 复用统一会话签发逻辑。
             return buildLoginResponse(user, tenantId, "LOCAL", null);
@@ -259,23 +259,23 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
     @Override
     public OAuthAuthorizeUser authenticateForOAuth(LoginRequest request) {
         if (StringUtils.isBlank(request.getUsername())) {
-            throw new UserException(ReturnCode.请求必填参数为空, "用户名不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "用户名不能为空");
         }
         if (StringUtils.isBlank(request.getPassword())) {
-            throw new UserException(ReturnCode.请求必填参数为空, "密码不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "密码不能为空");
         }
         String tenantId = resolveTenantId(request);
         try {
             TenantContextHolder.setTenantId(tenantId);
             AuthUser user = findLoginUser(request.getUsername(), request.getPassword(), tenantId);
             if (user == null) {
-                throw new UserException(ReturnCode.用户密码错误, "用户名或密码错误");
+                throw new UserException(ReturnCode.USER_PASSWORD_ERROR, "用户名或密码错误");
             }
             if (AuthStateEnum.禁用 == user.getState()) {
-                throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
+                throw new UserException(ReturnCode.USER_ACCOUNT_FROZEN, "用户已禁用");
             }
             if (!canAccessTenant(user, tenantId)) {
-                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+                throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "用户无当前租户登录权限");
             }
             return new OAuthAuthorizeUser(user.getId(), user.getUsername(), tenantId);
         } finally {
@@ -295,19 +295,19 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
     @Override
     public AuthLoginVO createSessionForUser(String tenantId, String userId, String loginProvider, String subjectType) {
         if (StringUtils.isAnyBlank(tenantId, userId)) {
-            throw new UserException(ReturnCode.用户请求参数错误, "本地租户和用户不能为空");
+            throw new UserException(ReturnCode.REQUEST_PARAMETER_ERROR, "本地租户和用户不能为空");
         }
         try {
             TenantContextHolder.setTenantId(tenantId);
             AuthUser user = findCurrentUser(userId);
             if (user == null) {
-                throw new UserException(ReturnCode.用户身份校验失败, "本地用户不存在");
+                throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "本地用户不存在");
             }
             if (AuthStateEnum.禁用 == user.getState()) {
-                throw new UserException(ReturnCode.用户账户被冻结, "用户已禁用");
+                throw new UserException(ReturnCode.USER_ACCOUNT_FROZEN, "用户已禁用");
             }
             if (!canAccessTenant(user, tenantId)) {
-                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+                throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "用户无当前租户登录权限");
             }
             return buildLoginResponse(user, tenantId, loginProvider, subjectType);
         } finally {
@@ -327,7 +327,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         // 校验用户是否登录。
         if (currentUser == null) {
             // 未登录时返回身份校验失败。
-            throw new UserException(ReturnCode.用户身份校验失败, "用户未登录");
+            throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "用户未登录");
         }
         try {
             // 设置租户上下文。
@@ -374,7 +374,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
         // 校验用户是否登录。
         if (currentUser == null) {
             // 未登录时返回身份校验失败。
-            throw new UserException(ReturnCode.用户身份校验失败, "用户未登录");
+            throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "用户未登录");
         }
         try {
             // 设置当前租户上下文。
@@ -414,7 +414,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
             // 校验租户是否存在。
             if (tenant == null) {
                 // 租户不存在按参数错误处理。
-                throw new UserException(ReturnCode.用户请求参数错误, "租户不存在");
+                throw new UserException(ReturnCode.REQUEST_PARAMETER_ERROR, "租户不存在");
             }
             // 返回租户ID。
             return tenant.getId();
@@ -677,7 +677,7 @@ public class AuthAuthenticationServiceImpl implements AuthAuthenticationService 
                     .orElse(null);
             if (accessUser == null) {
                 // 账号密码正确但没有目标租户权限时给出明确提示。
-                throw new UserException(ReturnCode.用户身份校验失败, "用户无当前租户登录权限");
+                throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "用户无当前租户登录权限");
             }
             // 返回可登录用户。
             return accessUser;

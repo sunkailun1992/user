@@ -92,28 +92,28 @@ public class AuthTokenLifecycleService {
      */
     public RefreshSession consumeRefreshToken(String refreshToken) {
         if (StringUtils.isBlank(refreshToken)) {
-            throw new UserException(ReturnCode.无效TOKEN, "refreshToken不能为空");
+            throw new UserException(ReturnCode.INVALID_TOKEN, "refreshToken不能为空");
         }
         Claims claims = parseToken(refreshToken);
         if (!AuthTokenRedisKeys.REFRESH_TOKEN_TYPE.equals(claims.get(AuthTokenRedisKeys.CLAIM_TOKEN_TYPE, String.class))) {
-            throw new UserException(ReturnCode.无效TOKEN, "无效refreshToken");
+            throw new UserException(ReturnCode.INVALID_TOKEN, "无效refreshToken");
         }
         String tokenId = claims.getId();
         if (StringUtils.isBlank(tokenId)) {
-            throw new UserException(ReturnCode.无效TOKEN, "无效refreshToken");
+            throw new UserException(ReturnCode.INVALID_TOKEN, "无效refreshToken");
         }
         String key = AuthTokenRedisKeys.refreshToken(tokenId);
         String rawSession = stringRedisTemplate.opsForValue().get(key);
         if (StringUtils.isBlank(rawSession)) {
-            throw new UserException(ReturnCode.用户登录已过期, "refreshToken已失效");
+            throw new UserException(ReturnCode.USER_LOGIN_EXPIRED, "refreshToken已失效");
         }
         stringRedisTemplate.delete(key);
         RefreshSession session = deserializeRefreshSession(rawSession);
         if (!StringUtils.equals(session.userId(), claims.getSubject())) {
-            throw new UserException(ReturnCode.无效TOKEN, "refreshToken主体不匹配");
+            throw new UserException(ReturnCode.INVALID_TOKEN, "refreshToken主体不匹配");
         }
         if (!StringUtils.equals(session.tokenVersion(), currentTokenVersion(session.userId()))) {
-            throw new UserException(ReturnCode.用户登录已过期, "登录状态已失效");
+            throw new UserException(ReturnCode.USER_LOGIN_EXPIRED, "登录状态已失效");
         }
         return session;
     }
@@ -214,7 +214,7 @@ public class AuthTokenLifecycleService {
     }
 
     private UserException invalidAccess() {
-        return new UserException(ReturnCode.无效TOKEN, "访问身份验证失败");
+        return new UserException(ReturnCode.INVALID_TOKEN, "访问身份验证失败");
     }
 
     private String stringClaim(Claims claims, String name) {
@@ -228,7 +228,7 @@ public class AuthTokenLifecycleService {
         try {
             return JwtUtils.parseJwt(token);
         } catch (Exception e) {
-            throw new UserException(ReturnCode.无效TOKEN, "无效token");
+            throw new UserException(ReturnCode.INVALID_TOKEN, "无效token");
         }
     }
 
@@ -246,7 +246,7 @@ public class AuthTokenLifecycleService {
     private RefreshSession deserializeRefreshSession(String rawSession) {
         String[] values = rawSession.split("\\|", -1);
         if (values.length < 3 || StringUtils.isBlank(values[0])) {
-            throw new UserException(ReturnCode.无效TOKEN, "无效refreshToken");
+            throw new UserException(ReturnCode.INVALID_TOKEN, "无效refreshToken");
         }
         return new RefreshSession(values[0], values[1], values[2]);
     }

@@ -83,10 +83,10 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
         validateOpenApiSignatureRequest(request);
         AuthExternalClient client = findEnabledClient(request.getProviderCode(), request.getClientId());
         if (!Boolean.TRUE.equals(client.getSignatureRequired()) || StringUtils.isBlank(client.getClientSecret())) {
-            throw new UserException(ReturnCode.用户签名异常, "客户端未启用严格签名认证");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "客户端未启用严格签名认证");
         }
         if (client.getAllowedClockSkewSeconds() != null && client.getAllowedClockSkewSeconds() < 1) {
-            throw new UserException(ReturnCode.用户签名异常, "客户端签名时钟配置不合法");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "客户端签名时钟配置不合法");
         }
         verifyOpenApiSignatureValue(request, client);
         recordOpenApiNonce(request, client);
@@ -95,13 +95,13 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
 
     private void validateRequest(ThirdPartySessionRequest request) {
         if (request == null) {
-            throw new UserException(ReturnCode.请求必填参数为空, "三方认证请求不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "三方认证请求不能为空");
         }
         if (StringUtils.isAnyBlank(request.getProviderCode(), request.getClientId())) {
-            throw new UserException(ReturnCode.请求必填参数为空, "三方系统和客户端不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "三方系统和客户端不能为空");
         }
         if (StringUtils.isAllBlank(request.getExternalUserId(), request.getExternalPatientId())) {
-            throw new UserException(ReturnCode.请求必填参数为空, "外部用户或主体不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "外部用户或主体不能为空");
         }
     }
 
@@ -115,7 +115,7 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
                     .eq(AuthExternalClient::getState, AuthStateEnum.启用)
                     .last("LIMIT 1"));
             if (client == null) {
-                throw new UserException(ReturnCode.用户未获得第三方登录授权, "三方客户端未授权");
+                throw new UserException(ReturnCode.THIRD_PARTY_LOGIN_NOT_AUTHORIZED, "三方客户端未授权");
             }
             return client;
         } finally {
@@ -129,27 +129,27 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
             return;
         }
         if (request.getTimestamp() == null || StringUtils.isAnyBlank(request.getNonce(), request.getSignature())) {
-            throw new UserException(ReturnCode.用户签名异常, "三方签名参数不完整");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "三方签名参数不完整");
         }
         long skewSeconds = client.getAllowedClockSkewSeconds() == null
                 ? DEFAULT_ALLOWED_CLOCK_SKEW_SECONDS
                 : client.getAllowedClockSkewSeconds();
         long nowMillis = Instant.now().toEpochMilli();
         if (Math.abs(nowMillis - request.getTimestamp()) > skewSeconds * 1000L) {
-            throw new UserException(ReturnCode.用户签名异常, "三方签名已过期");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "三方签名已过期");
         }
         String expected = hmacSha256Hex(client.getClientSecret(), canonicalSignText(request));
         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8), request.getSignature().getBytes(StandardCharsets.UTF_8))) {
-            throw new UserException(ReturnCode.用户签名异常, "三方签名不正确");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "三方签名不正确");
         }
     }
 
     private void validateOpenApiSignatureRequest(OpenApiSignatureVerifyRequest request) {
         if (request == null) {
-            throw new UserException(ReturnCode.请求必填参数为空, "开放接口签名校验请求不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "开放接口签名校验请求不能为空");
         }
         if (StringUtils.isAnyBlank(request.getProviderCode(), request.getClientId())) {
-            throw new UserException(ReturnCode.请求必填参数为空, "开放接口系统和客户端不能为空");
+            throw new UserException(ReturnCode.REQUIRED_PARAMETER_MISSING, "开放接口系统和客户端不能为空");
         }
     }
 
@@ -158,7 +158,7 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
             return;
         }
         if (StringUtils.isAnyBlank(request.getTimestamp(), request.getNonce(), request.getSignature())) {
-            throw new UserException(ReturnCode.用户签名异常, "开放接口签名参数不完整");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "开放接口签名参数不完整");
         }
         long requestTimestamp = parseTimestamp(request.getTimestamp());
         long skewSeconds = client.getAllowedClockSkewSeconds() == null
@@ -166,11 +166,11 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
                 : client.getAllowedClockSkewSeconds();
         long nowMillis = Instant.now().toEpochMilli();
         if (requestTimestamp < nowMillis - skewSeconds * 1000L || requestTimestamp > nowMillis + skewSeconds * 1000L) {
-            throw new UserException(ReturnCode.用户签名异常, "开放接口签名已过期");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "开放接口签名已过期");
         }
         String expected = hmacSha256Hex(client.getClientSecret(), canonicalOpenApiSignText(request));
         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8), request.getSignature().getBytes(StandardCharsets.UTF_8))) {
-            throw new UserException(ReturnCode.用户签名异常, "开放接口签名不正确");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "开放接口签名不正确");
         }
     }
 
@@ -200,10 +200,10 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
             nonce.setState(AuthStateEnum.启用);
             nonce.setTenantId(StringUtils.defaultIfBlank(client.getTenantId(), "1"));
             if (authExternalSignatureNonceMapper.insert(nonce) != 1) {
-                throw new UserException(ReturnCode.用户签名异常, "开放接口签名随机串未登记");
+                throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "开放接口签名随机串未登记");
             }
         } catch (DuplicateKeyException e) {
-            throw new UserException(ReturnCode.用户签名异常, "开放接口签名随机串已使用");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "开放接口签名随机串已使用");
         } finally {
             TenantContextHolder.clearIgnore();
             DataPermissionContextHolder.clear();
@@ -222,7 +222,7 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
                     .eq(AuthExternalIdentity::getState, AuthStateEnum.启用)
                     .last("LIMIT 1"));
             if (identity == null) {
-                throw new UserException(ReturnCode.用户未获得第三方登录授权, "外部身份未绑定本地用户");
+                throw new UserException(ReturnCode.THIRD_PARTY_LOGIN_NOT_AUTHORIZED, "外部身份未绑定本地用户");
             }
             return identity;
         } finally {
@@ -256,7 +256,7 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
         try {
             return Long.parseLong(timestamp);
         } catch (NumberFormatException e) {
-            throw new UserException(ReturnCode.用户签名异常, "开放接口时间戳不正确");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "开放接口时间戳不正确");
         }
     }
 
@@ -266,7 +266,7 @@ public class AuthThirdPartyAuthenticationServiceImpl implements AuthThirdPartyAu
             mac.init(new SecretKeySpec(normalize(secret).getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             return HexFormat.of().formatHex(mac.doFinal(text.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            throw new UserException(ReturnCode.用户签名异常, "三方签名计算失败");
+            throw new UserException(ReturnCode.USER_SIGNATURE_ERROR, "三方签名计算失败");
         }
     }
 

@@ -48,7 +48,7 @@ public class AuthSessionRpcServiceImpl implements AuthSessionRpcService {
                     .eq(AuthUserTenant::getUserId, identity.userId())
                     .eq(AuthUserTenant::getRelationTenantId, identity.tenantId())
                     .eq(AuthUserTenant::getState, AuthStateEnum.启用)) > 0)) {
-                throw new UserException(ReturnCode.用户身份校验失败, "访问身份验证失败");
+                throw new UserException(ReturnCode.USER_AUTHENTICATION_FAILED, "访问身份验证失败");
             }
             AuthSessionIdentityRpcDTO result = new AuthSessionIdentityRpcDTO();
             result.setUserId(identity.userId()); result.setTenantId(identity.tenantId());

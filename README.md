@@ -429,7 +429,7 @@ return ApiResponse.fail(returnCode, "稳定错误提示");
 | --- | --- |
 | `success` | 是否成功 |
 | `code` | 统一错误码 |
-| `msg` | 错误码默认提示 |
+| `traceId` | 当前请求的追踪号，没有时不输出 |
 | `data` | 业务返回数据 |
 | `errorMessage` | 失败时的稳定错误提示 |
 | `timestamp` | 服务端响应时间 |
