@@ -21,24 +21,6 @@ import lombok.Setter;
 @Schema(description = "认证用户对象")
 public class AuthUser extends AuthEntity {
 
-    /**
-     * 业务编码。
-     */
-    @Schema(description = "编码")
-    private String code;
-
-    /**
-     * 业务说明。
-     */
-    @Schema(description = "说明")
-    private String description;
-
-    /**
-     * 排序值。
-     */
-    @Schema(description = "排序")
-    private Integer sorting;
-
     @Schema(description = "用户名")
     private String username;
 

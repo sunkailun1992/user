@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.kellen.auth.entity.AuthExternalIdentity;
 import com.kellen.auth.mapper.AuthExternalIdentityMapper;
 import com.kellen.auth.typehandler.PostgresqlJsonStringTypeHandler;
+import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.type.JdbcType;
-import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.core.io.ByteArrayResource;
@@ -15,6 +17,7 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,19 +43,13 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
                 .containsExactlyElementsOf(TABLES);
         for (String table : TABLES) {
             assertThat(columns(table)).as(table)
-                    .contains("id", "create_time", "update_time", "creator", "updater", "is_deleted", "tenant_id", "version")
-                    .doesNotContain("create_date_time", "modify_date_time", "create_name", "modify_name", "is_delete", "label");
+                    .contains("id", "code", "description", "create_time", "creator", "update_time", "updater", "is_deleted",
+                            "label", "sorting", "version", "tenant_id", "create_dept")
+                    .doesNotContain("create_date_time", "modify_date_time", "create_name", "modify_name", "is_delete");
         }
-        for (String table : List.of("auth_tenant", "auth_role", "auth_dept", "auth_user", "auth_resource")) {
-            assertThat(columns(table)).as(table).contains("code", "description", "sorting");
-        }
-        for (String table : List.of("auth_role_data_scope", "auth_role_resource", "auth_user_role", "auth_user_tenant")) {
-            assertThat(columns(table)).as(table).contains("code", "description").doesNotContain("sorting");
-        }
-        for (String table : List.of("auth_external_client", "auth_external_identity", "auth_external_signature_nonce",
-                "auth_oauth_client")) {
-            assertThat(columns(table)).as(table).doesNotContain("code", "description", "sorting");
-        }
+        assertThat(number("SELECT count(*) FROM information_schema.columns WHERE table_schema = '" + schema
+                + "' AND column_name = 'create_dept' AND data_type = 'character varying' AND character_maximum_length = 64"
+                + " AND is_nullable = 'YES'")).isEqualTo(TABLES.size());
         assertThat(number("SELECT count(*) FROM information_schema.tables WHERE table_schema = '" + schema
                 + "' AND table_name = 'ddl_history'")).isZero();
         assertThat(number("SELECT count(*) FROM information_schema.tables WHERE table_schema = '" + schema
@@ -60,13 +57,28 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
     }
 
     @Test
-    void dropUnusedColumnsRefusesWhenAColumnStillHasData() throws Exception {
+    void createDeptIsAddedWithoutDroppingAnyColumnOrRow() throws Exception {
         migrate("3");
-        execute("INSERT INTO auth_user_role(id, user_id, role_id, tenant_id, sorting) VALUES ('fixture-sorted', 'u', 'r', 't', 7)");
-        assertThatThrownBy(() -> migrate(null)).isInstanceOf(FlywayException.class);
-        assertThat(appliedVersions()).containsExactly("1", "2", "3");
-        assertThat(columns("auth_user_role")).contains("sorting", "label");
-        assertThat(columns("auth_external_client")).contains("code");
+        execute("INSERT INTO auth_user_role(id, user_id, role_id, tenant_id, sorting, label) VALUES ('fixture-kept', 'u', 'r', 't', 7, 'synthetic')");
+        migrate(null);
+        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4");
+        assertThat(number("SELECT count(*) FROM auth_user_role WHERE id = 'fixture-kept' AND sorting = 7 AND label = 'synthetic'"
+                + " AND create_dept IS NULL")).isEqualTo(1);
+        assertThat(strings("SELECT col_description(('" + schema + ".auth_user_role')::regclass, ordinal_position::int)"
+                + " FROM information_schema.columns WHERE table_schema = '" + schema
+                + "' AND table_name = 'auth_user_role' AND column_name = 'create_dept'")).containsExactly("创建部门ID");
+    }
+
+    @Test
+    void everyEntityFieldMapsToAColumnOfItsTable() throws Exception {
+        migrate(null);
+        var assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "entity-columns");
+        for (Class<?> entity : EntityBaseFieldsTest.ENTITIES) {
+            TableInfo info = TableInfoHelper.initTableInfo(assistant, entity);
+            List<String> mapped = new ArrayList<>(List.of(info.getKeyColumn()));
+            info.getFieldList().forEach(field -> mapped.add(field.getColumn()));
+            assertThat(columns(info.getTableName())).as(entity.getSimpleName()).containsAll(mapped);
+        }
     }
 
     @Test

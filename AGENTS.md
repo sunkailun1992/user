@@ -51,11 +51,11 @@
 
 ## 项目边界
 
-- 个人公共库固定使用 `com:utils:1.6.9` 与 `com:rpc-api:1.0.9`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
+- 个人公共库固定使用 `com:utils:1.7.0` 与 `com:rpc-api:1.0.9`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
 
 - `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
 - 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
-- 新增业务表必须按 `docs/ai-coding/PROJECT_CODING_SPEC.md` 补齐公共列（实体继承 `AuthEntity`，即 `TenantEntityBase` 加 `id`、`version`）；`version` 只做乐观锁，业务版本使用 `*_version` 命名。
+- 新增业务表必须按 `docs/ai-coding/PROJECT_CODING_SPEC.md` 补齐公共列（实体继承 `AuthEntity`，即 `TenantEntityBase` 加认证用的 `type`、`state` 枚举）；`version` 只做乐观锁，业务版本使用 `*_version` 命名。
 - 认证、租户、用户上下文必须复用 `../utils` 当前公共能力，不恢复旧 token 用户对象或旧响应结构。
 - 与 `message` 等业务模块互调时走 `../rpc-api` 中的 RPC 契约，不直接复制对方业务代码、接口或 DTO。
 - `gateway` 只转发请求，不做业务级鉴权；`admin-web` 只展示和调用接口，不能替代后端权限校验。
@@ -76,7 +76,7 @@
 
 - 子智能体可以并行分析 Controller、Service、Mapper、DDL、admin-web 调用、gateway 路由、message API 契约和 utils 公共能力。
 - 不允许多个 worker 同时修改同一认证链路、权限模型、数据范围逻辑、DDL 脚本或 `utils` 公共 API。
-- 表结构只由本服务 `src/main/resources/db/migration` 的 Flyway 迁移管理；已提交的迁移文件不修改，改结构只新增 `V<下一个>__<说明>.sql`；新库保持空库，由服务首次启动时的 Flyway 建表，不手工执行任何公共脚本。Seata AT 的 `undo_log` 在 `V1__baseline.sql` 里；数据源块的 `spring.datasource.dynamic.seata` 跟随 `seata.enabled`，Seata 开启时数据源创建阶段（早于 Flyway）就会检查该表，所以启用 Seata 前库里须已完成迁移。
+- 表结构只由本服务 `src/main/resources/db/migration` 的 Flyway 迁移管理；已提交的迁移文件不修改，改结构只新增 `V<下一个>__<说明>.sql`；新库保持空库，由服务首次启动时的 Flyway 建表，不手工执行任何公共脚本。Seata AT 的 `undo_log` 在 `V1__baseline.sql` 里；数据源块固定 `spring.datasource.dynamic.seata: true`，不设总开关；建池时 Seata AT 代理就检查该表，utils 在创建任何 Bean 之前先执行 Flyway 迁移，新空库首次启动即建出该表。
 - 最终认证边界、权限模型、租户隔离和测试结论必须由主智能体统一判断。
 
 ## 验证命令

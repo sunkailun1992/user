@@ -9,14 +9,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 从服务自己的迁移文件取 H2（PostgreSQL 模式）能执行的建表语句：V1 的建表加上 V3 的审计列改名。
+ * 从服务自己的迁移文件取 H2（PostgreSQL 模式）能执行的建表语句：V1 的建表，加上 V3 的审计列改名与 V4 新增的创建部门列。
  *
- * <p>只供不连 PostgreSQL 的 HTTP 集成测试用；真实结构由 {@code PostgresqlSchemaLiveTest} 在 PostgreSQL 上迁移核对。
- * 之后版本删掉的列在这里仍保留，实体不映射它们，不影响测试。</p>
+ * <p>只供不连 PostgreSQL 的 HTTP 集成测试用；真实结构由 {@code PostgresqlSchemaLiveTest} 在 PostgreSQL 上迁移核对。</p>
  */
 public final class MigrationTables {
 
     private static final Pattern RENAME = Pattern.compile("ALTER TABLE (\\w+) RENAME COLUMN (\\w+) TO (\\w+);");
+    private static final Pattern ADD = Pattern.compile("ALTER TABLE (\\w+) ADD COLUMN ([^;]+);");
 
     private MigrationTables() {
     }
@@ -25,7 +25,7 @@ public final class MigrationTables {
      * 取一张表在 H2 上可执行的建表语句。
      *
      * @param table 表名
-     * @return 去掉 ICU 排序规则、审计列已改名的建表语句
+     * @return 去掉 ICU 排序规则、审计列已改名、已补新增列的建表语句
      */
     public static String createTable(String table) {
         String baseline = read("db/migration/V1__baseline.sql");
@@ -40,7 +40,15 @@ public final class MigrationTables {
                 ddl = ddl.replaceAll("\\b" + rename.group(2) + "\\b", rename.group(3));
             }
         }
-        return ddl;
+        Matcher add = ADD.matcher(read("db/migration/V4__add_create_dept.sql"));
+        while (add.find()) {
+            if (add.group(1).equals(table)) {
+                int end = ddl.lastIndexOf(");");
+                ddl = ddl.substring(0, end).stripTrailing() + ",\n    " + add.group(2).replace(" COLLATE fleet_general_ci", "")
+                        + "\n" + ddl.substring(end);
+            }
+        }
+        return ddl.replace(" COLLATE fleet_general_ci", "");
     }
 
     private static String read(String path) {
