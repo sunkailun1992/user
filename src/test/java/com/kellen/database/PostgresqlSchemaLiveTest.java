@@ -34,18 +34,34 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
     /** V1 里种子段的开头标记；种子用 ON CONFLICT DO NOTHING，只补缺失的行。 */
     private static final String SEED_MARKER = "-- 种子数据";
 
+    /** 每张表都必须有的全部基础字段；undo_log 与 Flyway 记录表是框架表，除外。 */
+    private static final List<String> BASE_COLUMNS = List.of("id", "code", "description", "create_time", "create_by",
+            "update_time", "update_by", "is_deleted", "label", "sorting", "version", "tenant_id", "create_dept");
+
+    @Test
+    void everyTableHasAllBaseColumns() throws Exception {
+        migrate(null);
+        List<String> tables = strings("SELECT table_name FROM information_schema.tables WHERE table_schema = '" + schema
+                + "' AND table_type = 'BASE TABLE' AND table_name NOT IN ('undo_log', 'flyway_schema_history') ORDER BY 1");
+        assertThat(tables).isNotEmpty();
+        for (String table : tables) {
+            assertThat(columns(table)).as(table).containsAll(BASE_COLUMNS)
+                    .doesNotContain("creator", "updater", "create_name", "modify_name", "create_date_time", "modify_date_time");
+        }
+    }
+
     @Test
     void migratesEmptySchemaToLatestVersion() throws Exception {
         assertThat(migrate(null).success).isTrue();
-        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4");
+        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4", "5");
         assertThat(strings("SELECT table_name FROM information_schema.tables WHERE table_schema = '" + schema
                 + "' AND table_type = 'BASE TABLE' AND table_name NOT IN ('undo_log', 'flyway_schema_history') ORDER BY 1"))
                 .containsExactlyElementsOf(TABLES);
         for (String table : TABLES) {
             assertThat(columns(table)).as(table)
-                    .contains("id", "code", "description", "create_time", "creator", "update_time", "updater", "is_deleted",
+                    .contains("id", "code", "description", "create_time", "create_by", "update_time", "update_by", "is_deleted",
                             "label", "sorting", "version", "tenant_id", "create_dept")
-                    .doesNotContain("create_date_time", "modify_date_time", "create_name", "modify_name", "is_delete");
+                    .doesNotContain("create_date_time", "modify_date_time", "create_name", "modify_name", "is_delete", "creator", "updater");
         }
         assertThat(number("SELECT count(*) FROM information_schema.columns WHERE table_schema = '" + schema
                 + "' AND column_name = 'create_dept' AND data_type = 'character varying' AND character_maximum_length = 64"
@@ -61,7 +77,7 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
         migrate("3");
         execute("INSERT INTO auth_user_role(id, user_id, role_id, tenant_id, sorting, label) VALUES ('fixture-kept', 'u', 'r', 't', 7, 'synthetic')");
         migrate(null);
-        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4");
+        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4", "5");
         assertThat(number("SELECT count(*) FROM auth_user_role WHERE id = 'fixture-kept' AND sorting = 7 AND label = 'synthetic'"
                 + " AND create_dept IS NULL")).isEqualTo(1);
         assertThat(strings("SELECT col_description(('" + schema + ".auth_user_role')::regclass, ordinal_position::int)"
