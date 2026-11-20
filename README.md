@@ -600,3 +600,7 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 ### 账号已创建事件（1.4.5）
 
 `POST /auth/manage/users` 新建账号、插入用户与租户关联后，`UserAccountEventProducer` 经 utils 的 `MqTemplate.sendAfterCommit` 在事务提交后发 `com.kellen.rpc.user.event.UserAccountCreatedEvent`（事件 ID、发生时刻、租户 ID、用户 ID、用户名与昵称，消息 key 为事件 ID）；同租户同用户名已存在时直接返回、不发。事务回滚不发，提交后发送失败只记日志、不影响建账号。主题读 Nacos `user-spring.yaml` 的 `fleet.mq.topic.user-account-created`，RocketMQ 地址、生产者组与账号也在该文件（见 utils 的消息队列规范 `docs/ai-coding/MQ_SPEC.md`）。message 收到后给新用户发欢迎站内信。依赖升级为 `com:utils:1.7.2`、`com:rpc-api:1.1.0`。
+
+### RocketMQ 客户端版本锁定（1.4.6）
+
+`build.gradle` 照 Nacos、Seata 的写法把 `rocketmq-client`、`rocketmq-remoting`、`rocketmq-common` 锁到 `5.5.1`（与 NAS 上 5.5 服务端同一版本线）。Spring Cloud Alibaba 的 BOM 会把客户端管成 5.3.1，而 utils 排除了只发到 5.3.2 的 rocketmq-acl，5.3.1 里没有 ACL 签名类 `AclClientRPCHook`，配了 RocketMQ 账号的生产者建不起来，1.4.5 因此启动失败。`RocketMqClientCompatibilityTest` 锁住这一点。
