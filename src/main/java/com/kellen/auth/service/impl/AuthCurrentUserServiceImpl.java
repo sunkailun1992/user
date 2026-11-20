@@ -52,6 +52,8 @@ public class AuthCurrentUserServiceImpl implements AuthCurrentUserService {
         List<AuthResource> resources = AuthQueryScope.inTenant(current.getTenantId(), () -> authGrantService.findResourcesByUserId(current.getUserId()));
         AuthCurrentResourceVO vo = new AuthCurrentResourceVO();
         vo.setUserId(current.getUserId());
+        vo.setUsername(user == null ? null : user.getUsername());
+        vo.setNickname(user == null ? null : user.getNickname());
         vo.setTenantId(current.getTenantId());
         vo.setDeptId(current.getDeptId());
         vo.setAdminType(user == null ? null : tenantAccess.adminType(user).getValue());

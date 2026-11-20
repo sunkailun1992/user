@@ -24,6 +24,18 @@ public class AuthCurrentResourceVO implements Serializable {
     private String userId;
 
     /**
+     * 用户名（后台右上角显示；登录在 Keycloak，前端从这里拿当前用户的资料）。
+     */
+    @Schema(description = "用户名")
+    private String username;
+
+    /**
+     * 昵称。
+     */
+    @Schema(description = "昵称")
+    private String nickname;
+
+    /**
      * 租户ID。
      */
     @Schema(description = "租户ID")

@@ -11,7 +11,7 @@ plugins {
  * 项目基础信息
  */
 group = 'com'
-version = '1.5.0'
+version = '1.5.1'
 description = 'user'
 
 def privateMavenUrl = providers.gradleProperty('privateMavenUrl')

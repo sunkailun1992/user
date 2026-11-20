@@ -52,7 +52,7 @@ user 自己是资源服务器（`com:utils:2.0.0` 自动配置）：校验访问
 
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
-| `GET` | `/auth/current/resources` | 当前用户在活动租户下的前端菜单、后端权限码与可切换租户 |
+| `GET` | `/auth/current/resources` | 当前用户的用户名与昵称，以及在活动租户下的前端菜单、后端权限码与可切换租户（登录在 Keycloak，admin-web 从这里拿当前用户的资料） |
 | `GET` | `/auth/current/tenants` | 当前用户可切换的启用租户，切换时在请求头 `X-Tenant-Id` 里指定 |
 
 两者都要求 `user:auth:resources`。未登录或令牌无效返回 401（A0220），停用、租户不可访问或缺权限返回 403（A0301），业务上下文暂时取不到返回 503（C0110）。
