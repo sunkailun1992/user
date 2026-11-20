@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.bo.AuthRoleBO;
+import com.kellen.auth.entity.enums.AuthAdminTypeEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import com.kellen.auth.entity.query.AuthRoleQuery;
@@ -16,6 +17,8 @@ import com.kellen.auth.service.query.AuthRoleServiceQuery;
 import com.kellen.auth.service.results.AuthRoleServiceResults;
 import com.kellen.utils.convert.GeneralConvertor;
 import com.kellen.utils.context.TenantContextHolder;
+import com.kellen.utils.enumeration.ReturnCode;
+import com.kellen.utils.exception.UserException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -134,6 +137,7 @@ public class AuthRoleServiceImpl implements AuthRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(AuthRoleBO bo) {
+        requireAllowedCode(bo.getCode());
         try {
             // 设置目标租户上下文。
             TenantContextHolder.setTenantId(bo.getTenantId());
@@ -171,6 +175,7 @@ public class AuthRoleServiceImpl implements AuthRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean update(AuthRoleBO bo) {
+        requireAllowedCode(bo.getCode());
         try {
             // 设置目标租户上下文，避免更新依赖请求头隐式租户。
             TenantContextHolder.setTenantId(bo.getTenantId());
@@ -275,5 +280,17 @@ public class AuthRoleServiceImpl implements AuthRoleService {
         }
         // assignment 明确传 false 时跳过结果增强，其余情况默认增强。
         return !Boolean.FALSE.equals(query.getAssignment());
+    }
+
+    /**
+     * 角色编码不能用管理员分类的保留名（PLATFORM_SUPER_ADMIN、TENANT_ADMIN，忽略大小写）：否则持有该角色的用户会带上
+     * 管理员分类的 {@code ROLE_} 角色，租户管理员就能冒充平台管理员。
+     *
+     * @param code 角色编码，修改时为空表示不改编码
+     */
+    private static void requireAllowedCode(String code) {
+        if (AuthAdminTypeEnum.reservesRoleCode(code)) {
+            throw new UserException(ReturnCode.REQUEST_PARAMETER_ERROR, "角色编码不能使用管理员分类：PLATFORM_SUPER_ADMIN、TENANT_ADMIN");
+        }
     }
 }

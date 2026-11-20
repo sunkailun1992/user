@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:2.0.0`、`com:rpc-api:2.0.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:2.0.1`、`com:rpc-api:2.0.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -46,7 +46,7 @@
 
 第5阶段起登录、口令、令牌签发、注销与机器到机器凭证都在 Keycloak（`github-dev` 域，由 `../utils/ops/github-dev/keycloak/terraform` 管理）：浏览器经网关 BFF 登录（授权码加 PKCE），服务与脚本带 Bearer 访问令牌。user 不再签发或校验自签 JWT；登录、刷新、注销会话，第三方 HMAC 会话与开放接口签名校验，`/oauth2/*` 与发现文档，OAuth 客户端管理接口都已删除，不留兼容层。
 
-user 自己是资源服务器（`com:utils:2.0.0` 自动配置）：校验访问令牌的签发方、受众 `github-api` 与有效期，按令牌里的 `user_id` 与请求头 `X-Tenant-Id` 取业务上下文（权限码、`ROLE_<角色编码>`、`ROLE_<管理员分类>`、部门、数据范围、可访问租户）。其他服务经 Dubbo 调 user 的 `SecurityContextRpcService` 取同一份上下文；user 自己用本地实现。
+user 自己是资源服务器（`com:utils:2.0.1` 自动配置）：校验访问令牌的签发方、受众 `github-api` 与有效期，按令牌里的 `user_id` 与请求头 `X-Tenant-Id` 取业务上下文（权限码、`ROLE_<角色编码>`、`ROLE_<管理员分类>`、部门、数据范围、可访问租户）。角色编码不能用管理员分类的保留名（`PLATFORM_SUPER_ADMIN`、`TENANT_ADMIN`），建、改角色时拒绝，拼权限时跳过残留的重名角色。其他服务经 Dubbo 调 user 的 `SecurityContextRpcService` 取同一份上下文；user 自己用本地实现。
 
 当前用户接口在 `com.kellen.auth.controller.AuthController`：
 
@@ -497,7 +497,7 @@ docs/ai-coding
 
 ## 验证命令
 
-公共依赖固定为 `com:utils:2.0.0`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。业务接口只认 Keycloak 访问令牌，不使用该管理令牌。
+公共依赖固定为 `com:utils:2.0.1`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。业务接口只认 Keycloak 访问令牌，不使用该管理令牌。
 
 ```bash
 ./gradlew clean compileJava test
@@ -545,3 +545,10 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 - Flyway V6：`auth_user` 加 `idp_subject`（Keycloak 用户 ID，唯一），删 `password`；删 `auth_oauth_client`、`auth_external_client`、`auth_external_identity`、`auth_external_signature_nonce`。迁移前用 `nas_pg.py backup` 备份 user 库；在副本库上核对过迁移后各业务表行数不变。已有账号的 Keycloak 账号由第5阶段切换时的账号迁移脚本建立并回填 `idp_subject`。
 - 配置：资源服务器与 `keycloak-admin` 客户端注册在 Nacos `user-spring.yaml`（Keycloak 地址与客户端密钥是运行时占位符）；三套 profile 不再导入 `security-jwt.yaml`。
 - 测试：`KeycloakAccountClientTest`（MockWebServer 模拟 Admin REST，版本跟随 Spring Cloud BOM 管理的 OkHttp）、`AuthUserServiceImplKeycloakTest`、`SecurityContextRpcServiceImplTest`、`AuthSecurityContextInvalidationTest`、`OldAuthEndpointsRemovedTest`、`PostgresqlSchemaLiveTest`（V6）与 `KeycloakAccountLiveTest`（NAS 上的真实 Keycloak，只在设置了 `FLEET_KC_TEST_USER_ADMIN_CLIENT_SECRET` 时运行，CI 自动跳过）。
+
+### 角色编码保留名与取令牌超时（1.5.2）
+
+- 角色编码不能用管理员分类的保留名（`PLATFORM_SUPER_ADMIN`、`TENANT_ADMIN`，忽略大小写与首尾空白）：业务上下文把角色拼成 `ROLE_<角色编码>`、把管理员分类拼成 `ROLE_<分类>`，重名会让租户管理员建一个这样的角色授给自己，就带上 `ROLE_PLATFORM_SUPER_ADMIN`（user 的跨租户管理与 ai 的平台控制面都按它判）。建角色、改角色时拒绝（`A0400`）；库里残留的重名角色在拼权限时跳过并记警告。做法同 RuoYi-Vue-Plus 的 `checkRoleAllowed`、芋道的 `validateRoleDuplicate`（不允许新角色用内置管理员标识）。2026-11-21 只读核对 `github_dev_user` 的 9 个角色，没有重名。
+- 依赖升到 `com:utils:2.0.1`：取 Keycloak 管理令牌（客户端凭证）访问令牌端点有连接 5 秒、读取 10 秒超时，Keycloak 卡住时账号同步按失败处理，不再无限等待。
+- 测试：`AuthRoleServiceImplReservedCodeTest`（建、改角色的保留名，先失败后通过）、`SecurityContextRpcServiceImplTest.roleCodeNamedAfterAnAdminTypeNeverGrantsThatRole`（库里已有的重名角色不给角色）。
+

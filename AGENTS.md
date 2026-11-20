@@ -51,10 +51,11 @@
 
 ## 项目边界
 
-- 个人公共库固定使用 `com:utils:2.0.0` 与 `com:rpc-api:2.0.0`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
+- 个人公共库固定使用 `com:utils:2.0.1` 与 `com:rpc-api:2.0.0`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
 
 - `user` 负责账号（经 Keycloak Admin REST API 同步登录账号）、业务上下文提供方（`SecurityContextRpcService`）、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
 - 登录、口令、令牌签发与注销由 Keycloak 负责（`github-dev` 域，Terraform 在 `../utils/ops/github-dev/keycloak/terraform`）；不在 user 里恢复自签 JWT、登录会话、OAuth 授权服务器或第三方签名接口。服务接入、受众、机器令牌与令牌交换按 `../utils/docs/ai-coding/AUTH_SPEC.md`。
+- 角色编码不能用管理员分类的保留名（`PLATFORM_SUPER_ADMIN`、`TENANT_ADMIN`，忽略大小写）：业务上下文的 `ROLE_<角色编码>` 与 `ROLE_<管理员分类>` 同一命名空间，重名等于冒充管理员；建、改角色时拒绝，拼权限时跳过残留的重名角色。
 - 用户、授权关系、角色、权限资源、部门或租户的写操作，必须经 `AuthSecurityContextInvalidator` 让受影响用户的业务上下文换版本（事务提交后生效）。
 - 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
 - 新增业务表必须按 `docs/ai-coding/PROJECT_CODING_SPEC.md` 补齐公共列（实体继承 `AuthEntity`，即 `TenantEntityBase` 加认证用的 `type`、`state` 枚举）；`version` 只做乐观锁，业务版本使用 `*_version` 命名。

@@ -3,6 +3,7 @@ package com.kellen.auth.rpc;
 import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.AuthUser;
+import com.kellen.auth.entity.enums.AuthAdminTypeEnum;
 import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.service.AuthDataScopeResolver;
@@ -14,6 +15,8 @@ import com.kellen.security.oauth2.SecurityContextResult;
 import com.kellen.security.oauth2.SecurityContextRpcService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
 
 import java.util.ArrayList;
@@ -34,6 +37,8 @@ import java.util.List;
 @Primary
 @DubboService
 public class SecurityContextRpcServiceImpl implements SecurityContextRpcService {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityContextRpcServiceImpl.class);
 
     private final AuthUserMapper authUserMapper;
 
@@ -96,7 +101,10 @@ public class SecurityContextRpcServiceImpl implements SecurityContextRpcService 
         List<AuthResource> resources = authGrantService.findResourcesByUserId(user.getId());
         List<String> authorities = new ArrayList<>(authGrantService.toPermissionCodes(resources));
         for (AuthRole role : dataScopeResolver.rolesOf(user.getId())) {
-            if (StringUtils.isNotBlank(role.getCode())) {
+            if (AuthAdminTypeEnum.reservesRoleCode(role.getCode())) {
+                // 写入时已拒绝保留名；库里残留的重名角色不给角色，否则持有者带上管理员分类的 ROLE_ 角色。
+                log.warn("角色编码与管理员分类重名，已跳过：roleId={}", role.getId());
+            } else if (StringUtils.isNotBlank(role.getCode())) {
                 authorities.add("ROLE_" + role.getCode());
             }
         }

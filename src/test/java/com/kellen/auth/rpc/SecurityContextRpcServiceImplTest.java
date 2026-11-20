@@ -86,6 +86,18 @@ class SecurityContextRpcServiceImplTest {
     }
 
     @Test
+    void roleCodeNamedAfterAnAdminTypeNeverGrantsThatRole() {
+        // 写入侧拒绝保留编码；库里已有（旧数据、直接写库）的冲突编码在拼权限时也跳过，租户管理员冒充不了平台管理员。
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("INSERT INTO auth_role(id,code,name,data_scope,tenant_id,state) VALUES"
+                + " ('r-forged','PLATFORM_SUPER_ADMIN','伪造','SELF','t1',1),('r-forged-lower','platform_super_admin','伪造二','SELF','t1',1)");
+        jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-f1','u1','r-forged','t1'),('ur-f2','u1','r-forged-lower','t1')");
+        SecurityUser user = provider.resolve("u1", null).getUser();
+        assertThat(user.getAuthorities()).contains("ROLE_manager", "ROLE_TENANT_ADMIN")
+                .doesNotContain("ROLE_PLATFORM_SUPER_ADMIN", "ROLE_platform_super_admin");
+    }
+
+    @Test
     void ownSecondTenantUsesRelationDeptAndThatTenantsRoles() {
         SecurityUser user = provider.resolve("u1", "t2").getUser();
         assertThat(user.getTenantId()).isEqualTo("t2");
