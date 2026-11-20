@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.7.0`、`com:rpc-api:1.0.9`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:1.7.2`、`com:rpc-api:1.1.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -19,7 +19,8 @@
 - Seata Client 2.6.0
 - MyBatis-Plus
 - 公共能力依赖 `com:utils`
-- 跨服务契约依赖 `com:rpc-api:1.0.9`
+- 跨服务契约依赖 `com:rpc-api:1.1.0`
+- 消息队列：RocketMQ（经 `com:utils` 的消息模块）
 
 ## 服务职责
 
@@ -35,6 +36,7 @@
 - 角色数据范围授权
 - 登录认证
 - 当前用户资源查询
+- 新建账号后发“账号已创建”事件（RocketMQ），message 据此发欢迎站内信
 
 `user` 与 `message` 是同级独立业务模块，可通过 API 互相调用；公共工具、认证上下文、多租户、统一返回、统一异常、数据权限、MyBatis-Plus 公共配置等底层能力统一复用同级 `utils` 项目，不在业务服务内重复实现。
 
@@ -114,7 +116,7 @@ PKCE 授权页显示注册客户端的租户；提交的不同租户和认证用
 
 ## 基础设施地址
 
-除 `application.yml` 中连接 Nacos 自身的启动入口外，PostgreSQL、Redis、RabbitMQ、Seata、Elasticsearch、Kibana 等基础设施地址统一放在 Nacos `reuse-configuration.yaml`。
+除 `application.yml` 中连接 Nacos 自身的启动入口外，PostgreSQL、Redis、RocketMQ、Seata、Elasticsearch、Kibana 等基础设施地址统一放在 Nacos `reuse-configuration.yaml`。
 
 蒲公英、Tailscale、节点小宝等组网地址变化时，优先只修改 `custom.infra-host` 和 `custom.local-service-host`：
 
@@ -124,7 +126,6 @@ custom:
   infra-nacos-addr: ${custom.infra-host}:8848
   infra-postgresql-addr: ${custom.infra-host}:<POSTGRESQL_PORT>
   infra-redis-addr: ${custom.infra-host}:6379
-  infra-rabbitmq-addr: ${custom.infra-host}:5672
   infra-seata-addr: ${custom.infra-host}:8091
   infra-elasticsearch-addr: ${custom.infra-host}:9200
   infra-elasticsearch-uri: http://${custom.infra-host}:9200
@@ -595,3 +596,7 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 原角色资源 GET 的目标租户绑定和精确上下文恢复保留；认证规则迁到统一 HTTP 边界，不再在 Service 内维护第二份 JWT 策略。内部 bootstrap 绑定及 Service 契约继续不依赖 HTTP token。此补丁只覆盖授权关系 Controller 的八个入口，不代表其他用户/角色/部门等 CRUD 已完成统一租户管理授权审计。
 
 真实 HTTP/MP 回归逐入口验证租户管理员跨租户、失效 token、无管理权限、伪造头及本地身份查询失败均不执行目标授权关系 SQL；三张关系表的完整行（含 version/时间戳）保持不变。空资源同步越权原错误已在 H2 真实重现，修复后 403；同租户和平台跨租户读写正向保持。夹具加载实际公共字段填充器、租户插件和三类 Mapper，避免只凭 Mock Service 断言权限。运行态验收只操作本轮自有隔离 fixture，不向真实其他租户发修改请求。
+
+### 账号已创建事件（1.4.5）
+
+`POST /auth/manage/users` 新建账号、插入用户与租户关联后，`UserAccountEventProducer` 经 utils 的 `MqTemplate.sendAfterCommit` 在事务提交后发 `com.kellen.rpc.user.event.UserAccountCreatedEvent`（事件 ID、发生时刻、租户 ID、用户 ID、用户名与昵称，消息 key 为事件 ID）；同租户同用户名已存在时直接返回、不发。事务回滚不发，提交后发送失败只记日志、不影响建账号。主题读 Nacos `user-spring.yaml` 的 `fleet.mq.topic.user-account-created`，RocketMQ 地址、生产者组与账号也在该文件（见 utils 的消息队列规范 `docs/ai-coding/MQ_SPEC.md`）。message 收到后给新用户发欢迎站内信。依赖升级为 `com:utils:1.7.2`、`com:rpc-api:1.1.0`。

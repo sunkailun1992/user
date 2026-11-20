@@ -12,6 +12,7 @@ import com.kellen.auth.entity.query.AuthUserQuery;
 import com.kellen.auth.entity.vo.AuthUserVO;
 import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.mapper.AuthUserTenantMapper;
+import com.kellen.auth.mq.producer.UserAccountEventProducer;
 import com.kellen.auth.service.AuthTokenLifecycleService;
 import com.kellen.auth.service.AuthUserService;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
@@ -64,6 +65,11 @@ public class AuthUserServiceImpl implements AuthUserService {
     private final AuthTokenLifecycleService authTokenLifecycleService;
 
     /**
+     * “账号已创建”事件的生产者。
+     */
+    private final UserAccountEventProducer userAccountEventProducer;
+
+    /**
      * 密码编码器。
      */
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -76,12 +82,14 @@ public class AuthUserServiceImpl implements AuthUserService {
      * @param authUserServiceResults 用户结果增强
      * @param authUserTenantMapper   用户租户关联Mapper
      * @param authTokenLifecycleService token 生命周期服务
+     * @param userAccountEventProducer  “账号已创建”事件的生产者
      */
     public AuthUserServiceImpl(AuthUserMapper authUserMapper,
                                AuthUserServiceQuery authUserServiceQuery,
                                AuthUserServiceResults authUserServiceResults,
                                AuthUserTenantMapper authUserTenantMapper,
-                               AuthTokenLifecycleService authTokenLifecycleService) {
+                               AuthTokenLifecycleService authTokenLifecycleService,
+                               UserAccountEventProducer userAccountEventProducer) {
         // 保存用户Mapper。
         this.authUserMapper = authUserMapper;
         // 保存用户查询增强。
@@ -92,6 +100,8 @@ public class AuthUserServiceImpl implements AuthUserService {
         this.authUserTenantMapper = authUserTenantMapper;
         // 保存 token 生命周期服务。
         this.authTokenLifecycleService = authTokenLifecycleService;
+        // 保存“账号已创建”事件的生产者。
+        this.userAccountEventProducer = userAccountEventProducer;
     }
 
     /**
@@ -176,6 +186,8 @@ public class AuthUserServiceImpl implements AuthUserService {
             authUserMapper.insert(user);
             // 同步用户可访问租户。
             syncUserTenants(user.getId(), bo);
+            // 事务提交后发“账号已创建”事件，回滚则不发。
+            userAccountEventProducer.publishAccountCreated(user, bo.getTenantId());
             // 返回用户ID。
             return user.getId();
         } finally {
