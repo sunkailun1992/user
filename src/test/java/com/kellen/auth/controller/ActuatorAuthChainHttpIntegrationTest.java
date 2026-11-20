@@ -1,13 +1,9 @@
 package com.kellen.auth.controller;
 
-import com.kellen.auth.entity.vo.AuthLoginVO;
-import com.kellen.auth.entity.vo.AuthTenantVO;
-import com.kellen.auth.service.AuthAuthenticationService;
-import com.kellen.auth.service.AuthTenantService;
-import com.kellen.auth.service.AuthThirdPartyAuthenticationService;
+import com.kellen.auth.service.AuthCurrentUserService;
+import com.kellen.auth.support.ResourceServerTestConfiguration;
 import com.kellen.bean.GlobalExceptionHandler;
 import com.kellen.security.config.ActuatorSecurityConfig;
-import com.kellen.security.config.SecurityAuthConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,95 +16,79 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 /**
- * 以真实 HTTP 验证 Actuator 新链与既有登录安全链并存。
+ * 以真实 HTTP 验证 Actuator 链与资源服务器链并存。
  *
- * <p>仅模拟业务服务，不连接 Redis、数据库或 Nacos；所有请求经过真实 MVC、参数校验及安全过滤器链，
- * 防止公共依赖升级把正常登录入口误当作管理端点。</p>
+ * <p>仅模拟业务服务，不连接 Redis、数据库、Nacos 或 Keycloak；请求经过真实 MVC 与两条安全过滤器链：
+ * 监控口令只开监控端点，业务接口只认 Bearer 访问令牌（这里的解码器一律拒绝，验证缺令牌与坏令牌都是 401）。</p>
  */
 @SpringBootTest(classes = ActuatorAuthChainHttpIntegrationTest.Config.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"spring.config.name=actuator-auth-isolated", "spring.cloud.nacos.config.enabled=false",
                 "spring.cloud.nacos.discovery.enabled=false", "spring.cloud.nacos.config.import-check.enabled=false",
-                "spring.cloud.discovery.enabled=false", "security.auth.enabled=true",
-                "security.auth.header-enabled=false", "management.endpoints.web.exposure.include=health",
+                "spring.cloud.discovery.enabled=false", "management.endpoints.web.exposure.include=health",
+                "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.invalid/realms/github-dev",
                 "security.actuator.token=synthetic-user-actuator-test-token"})
 class ActuatorAuthChainHttpIntegrationTest {
 
     @LocalServerPort private int port;
-    @MockitoBean private AuthAuthenticationService authentication;
-    @MockitoBean private AuthTenantService tenants;
-    @MockitoBean private AuthThirdPartyAuthenticationService thirdParty;
-
-    @Test
-    void publicTenantLookupStillReturnsTheBusinessEnvelopeWithoutManagementToken() throws Exception {
-        var tenant = new AuthTenantVO();
-        tenant.setId("fixture-tenant");
-        tenant.setName("合成测试租户");
-        when(tenants.list(any())).thenReturn(List.of(tenant));
-
-        var response = send("/auth/tenants", null, false);
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("\"success\":true", "fixture-tenant");
-        verify(tenants).list(any());
-    }
-
-    @Test
-    void normalLoginRemainsPublicWithoutActuatorHeader() throws Exception {
-        when(authentication.login(any())).thenReturn(syntheticLogin());
-
-        var response = send("/auth/sessions", "{}", false);
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("\"success\":true", "synthetic-access-token");
-        verify(authentication).login(any());
-    }
+    @MockitoBean private AuthCurrentUserService currentUser;
 
     @Test
     void healthRemainsPublicForDeploymentProbes() throws Exception {
-        assertThat(send("/actuator/health", null, false).statusCode()).isEqualTo(200);
+        assertThat(send("/actuator/health", false, null).statusCode()).isEqualTo(200);
     }
 
     @Test
     void actuatorDiscoveryRequiresItsConfiguredHeader() throws Exception {
-        assertThat(send("/actuator", null, false).statusCode()).isEqualTo(401);
-        assertThat(send("/actuator", null, true).statusCode()).isEqualTo(200);
+        assertThat(send("/actuator", false, null).statusCode()).isEqualTo(401);
+        assertThat(send("/actuator", true, null).statusCode()).isEqualTo(200);
     }
 
     @Test
-    void managementTokenDoesNotGrantAccessToNormalProtectedBusinessResources() throws Exception {
-        assertThat(send("/auth/current/resources", null, true).statusCode()).isIn(401, 403);
-        verifyNoInteractions(authentication);
+    void managementTokenDoesNotGrantAccessToBusinessResources() throws Exception {
+        var response = send("/auth/current/resources", true, null);
+        assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.body()).contains("\"success\":false", "A0220");
+        verifyNoInteractions(currentUser);
     }
 
-    private AuthLoginVO syntheticLogin() {
-        var result = new AuthLoginVO();
-        result.setToken("synthetic-access-token");
-        return result;
+    @Test
+    void businessRequestWithoutBearerTokenIs401() throws Exception {
+        var response = send("/auth/current/tenants", false, null);
+        assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.headers().firstValue("WWW-Authenticate")).hasValueSatisfying(value -> assertThat(value).startsWith("Bearer"));
+        verifyNoInteractions(currentUser);
     }
 
-    private HttpResponse<String> send(String path, String body, boolean actuatorAuthorized) throws Exception {
-        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path));
+    @Test
+    void invalidBearerTokenIs401WithoutEchoingTheToken() throws Exception {
+        var response = send("/auth/current/tenants", false, "synthetic-invalid-access-token");
+        assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.body()).contains("A0220").doesNotContain("synthetic-invalid-access-token");
+        assertThat(response.headers().firstValue("WWW-Authenticate")).hasValueSatisfying(value -> assertThat(value).contains("invalid_token"));
+        verifyNoInteractions(currentUser);
+    }
+
+    private HttpResponse<String> send(String path, boolean actuatorAuthorized, String bearer) throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET();
         if (actuatorAuthorized) {
             request.header("actuatorReq", "synthetic-user-actuator-test-token");
         }
-        if (body == null) {
-            request.GET();
-        } else {
-            request.header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body));
+        if (bearer != null) {
+            request.header("Authorization", "Bearer " + bearer);
         }
-        return HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString());
+        try (HttpClient client = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).build()) {
+            return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+        }
     }
 
     @Configuration(proxyBeanMethods = false)
-    @Import({AuthController.class, SecurityAuthConfig.class, ActuatorSecurityConfig.class, GlobalExceptionHandler.class})
+    @Import({AuthController.class, ResourceServerTestConfiguration.class, ActuatorSecurityConfig.class, GlobalExceptionHandler.class})
     @ImportAutoConfiguration({
             org.springframework.boot.tomcat.autoconfigure.servlet.TomcatServletWebServerAutoConfiguration.class,
             org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration.class,

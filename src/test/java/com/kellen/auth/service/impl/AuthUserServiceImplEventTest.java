@@ -2,10 +2,11 @@ package com.kellen.auth.service.impl;
 
 import com.kellen.auth.entity.AuthUser;
 import com.kellen.auth.entity.bo.AuthUserBO;
+import com.kellen.auth.keycloak.KeycloakAccountClient;
 import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.mapper.AuthUserTenantMapper;
 import com.kellen.auth.mq.producer.UserAccountEventProducer;
-import com.kellen.auth.service.AuthTokenLifecycleService;
+import com.kellen.auth.service.AuthSecurityContextInvalidator;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
 import com.kellen.auth.service.results.AuthUserServiceResults;
 import com.kellen.utils.context.TenantContextHolder;
@@ -34,8 +35,10 @@ class AuthUserServiceImplEventTest {
 
     private final UserAccountEventProducer producer = mock(UserAccountEventProducer.class);
 
+    private final KeycloakAccountClient keycloak = mock(KeycloakAccountClient.class);
+
     private final AuthUserServiceImpl service = new AuthUserServiceImpl(authUserMapper, mock(AuthUserServiceQuery.class),
-            mock(AuthUserServiceResults.class), mock(AuthUserTenantMapper.class), mock(AuthTokenLifecycleService.class), producer);
+            mock(AuthUserServiceResults.class), mock(AuthUserTenantMapper.class), keycloak, mock(AuthSecurityContextInvalidator.class), producer);
 
     @AfterEach
     void clearContext() {
@@ -48,6 +51,7 @@ class AuthUserServiceImplEventTest {
             invocation.<AuthUser>getArgument(0).setId("u-new");
             return 1;
         }).when(authUserMapper).insert(any(AuthUser.class));
+        when(keycloak.createAccount(eq("u-new"), eq("alice"), eq("Alice"), any())).thenReturn("kc-new");
 
         assertThat(service.save(newUser())).isEqualTo("u-new");
 
@@ -66,7 +70,7 @@ class AuthUserServiceImplEventTest {
 
         assertThat(service.save(newUser())).isEqualTo("u-old");
 
-        verifyNoInteractions(producer);
+        verifyNoInteractions(producer, keycloak);
     }
 
     /** 新账号的写入参数；口令是每次随机生成的测试值。 */

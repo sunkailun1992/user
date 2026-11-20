@@ -9,6 +9,7 @@ import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.query.AuthResourceQuery;
 import com.kellen.auth.entity.vo.AuthResourceVO;
 import com.kellen.auth.mapper.AuthResourceMapper;
+import com.kellen.auth.service.AuthSecurityContextInvalidator;
 import com.kellen.auth.service.AuthResourceService;
 import com.kellen.auth.service.query.AuthResourceServiceQuery;
 import com.kellen.auth.service.results.AuthResourceServiceResults;
@@ -46,21 +47,30 @@ public class AuthResourceServiceImpl implements AuthResourceService {
     private final AuthResourceServiceResults authResourceServiceResults;
 
     /**
+     * 业务上下文缓存失效通知。
+     */
+    private final AuthSecurityContextInvalidator securityContextInvalidator;
+
+    /**
      * 构造权限资源业务服务。
      *
      * @param authResourceMapper         资源Mapper
      * @param authResourceServiceQuery   资源查询增强
      * @param authResourceServiceResults 资源结果增强
+     * @param securityContextInvalidator 业务上下文缓存失效通知
      */
     public AuthResourceServiceImpl(AuthResourceMapper authResourceMapper,
                                    AuthResourceServiceQuery authResourceServiceQuery,
-                                   AuthResourceServiceResults authResourceServiceResults) {
+                                   AuthResourceServiceResults authResourceServiceResults,
+                                   AuthSecurityContextInvalidator securityContextInvalidator) {
         // 保存资源Mapper。
         this.authResourceMapper = authResourceMapper;
         // 保存资源查询增强。
         this.authResourceServiceQuery = authResourceServiceQuery;
         // 保存资源结果增强。
         this.authResourceServiceResults = authResourceServiceResults;
+        // 保存业务上下文缓存失效通知。
+        this.securityContextInvalidator = securityContextInvalidator;
     }
 
     /**
@@ -166,7 +176,12 @@ public class AuthResourceServiceImpl implements AuthResourceService {
             // 租户条件由租户插件处理，更新实体不主动写 tenant_id。
             resource.setTenantId(null);
             // 使用updateById执行乐观锁更新。
-            return authResourceMapper.updateById(resource) > 0;
+            boolean updated = authResourceMapper.updateById(resource) > 0;
+            if (updated) {
+                // 资源编码、分类与状态决定权限码：绑定了该资源的角色下的用户换版本。
+                securityContextInvalidator.resourceMembers(List.of(bo.getId()));
+            }
+            return updated;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();
@@ -187,7 +202,12 @@ public class AuthResourceServiceImpl implements AuthResourceService {
             // 设置目标租户上下文，避免删除依赖请求头隐式租户。
             TenantContextHolder.setTenantId(tenantId);
             // 按ID逻辑删除资源。
-            return authResourceMapper.deleteById(id) > 0;
+            boolean removed = authResourceMapper.deleteById(id) > 0;
+            if (removed) {
+                // 资源删除后不再给出权限码：绑定了该资源的角色下的用户换版本。
+                securityContextInvalidator.resourceMembers(List.of(id));
+            }
+            return removed;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();

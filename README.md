@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:1.7.2`、`com:rpc-api:1.1.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:2.0.0`、`com:rpc-api:2.0.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -19,7 +19,8 @@
 - Seata Client 2.6.0
 - MyBatis-Plus
 - 公共能力依赖 `com:utils`
-- 跨服务契约依赖 `com:rpc-api:1.1.0`
+- 跨服务契约依赖 `com:rpc-api:2.0.0`
+- 登录与令牌：Keycloak 26（NAS，`github-dev` 域），本服务是 OAuth2 资源服务器（经 `com:utils` 自动配置）
 - 消息队列：RocketMQ（经 `com:utils` 的消息模块）
 
 ## 服务职责
@@ -34,85 +35,50 @@
 - 用户角色授权
 - 角色资源授权
 - 角色数据范围授权
-- 登录认证
+- Keycloak 账号同步（登录、口令与令牌在 Keycloak）
+- 业务上下文提供方：按访问令牌给出权限码、角色、部门、数据范围与可访问租户（Dubbo `SecurityContextRpcService`）
 - 当前用户资源查询
 - 新建账号后发“账号已创建”事件（RocketMQ），message 据此发欢迎站内信
 
 `user` 与 `message` 是同级独立业务模块，可通过 API 互相调用；公共工具、认证上下文、多租户、统一返回、统一异常、数据权限、MyBatis-Plus 公共配置等底层能力统一复用同级 `utils` 项目，不在业务服务内重复实现。
 
-## 认证入口
+## 认证与授权
 
-认证入口在 `com.kellen.auth.controller.AuthController`：
+第5阶段起登录、口令、令牌签发、注销与机器到机器凭证都在 Keycloak（`github-dev` 域，由 `../utils/ops/github-dev/keycloak/terraform` 管理）：浏览器经网关 BFF 登录（授权码加 PKCE），服务与脚本带 Bearer 访问令牌。user 不再签发或校验自签 JWT；登录、刷新、注销会话，第三方 HMAC 会话与开放接口签名校验，`/oauth2/*` 与发现文档，OAuth 客户端管理接口都已删除，不留兼容层。
+
+user 自己是资源服务器（`com:utils:2.0.0` 自动配置）：校验访问令牌的签发方、受众 `github-api` 与有效期，按令牌里的 `user_id` 与请求头 `X-Tenant-Id` 取业务上下文（权限码、`ROLE_<角色编码>`、`ROLE_<管理员分类>`、部门、数据范围、可访问租户）。其他服务经 Dubbo 调 user 的 `SecurityContextRpcService` 取同一份上下文；user 自己用本地实现。
+
+当前用户接口在 `com.kellen.auth.controller.AuthController`：
 
 | 方法 | 地址 | 说明 |
 | --- | --- | --- |
-| `GET` | `/auth/tenants` | 登录前公开查询租户列表，用于前端租户下拉选择 |
-| `POST` | `/auth/sessions` | 创建登录会话 |
-| `POST` | `/auth/third-party/sessions` | 企业内部三方 HMAC 签名换统一 JWT，保留给 TduckX 等私有集成 |
-| `POST` | `/oauth2/token` | OAuth2 client_credentials 换短期 access token，供 MCP 等机器到机器接入 |
-| `GET` | `/.well-known/oauth-authorization-server` | OAuth 授权服务器发现 |
-| `GET` | `/auth/current/resources` | 查询当前用户权限资源 |
+| `GET` | `/auth/current/resources` | 当前用户在活动租户下的前端菜单、后端权限码与可切换租户 |
+| `GET` | `/auth/current/tenants` | 当前用户可切换的启用租户，切换时在请求头 `X-Tenant-Id` 里指定 |
 
-`GET /auth/tenants`、`POST /auth/sessions`、`POST /auth/third-party/sessions`、`POST /oauth2/token` 和 `/.well-known/**` 不加 `@PreAuthorize`。
+两者都要求 `user:auth:resources`。未登录或令牌无效返回 401（A0220），停用、租户不可访问或缺权限返回 403（A0301），业务上下文暂时取不到返回 503（C0110）。
 
-授权服务器 metadata 的 `token_endpoint` 应通过 `oauth.authorization-server.external-base-url` 指向外部可访问的 gateway / auth 地址，本地可用 `${OAUTH_AUTHORIZATION_SERVER_EXTERNAL_BASE_URL:http://localhost:7100}`。
+### 账号同步
 
-如果 `security.auth.enabled=true`，需要在 Nacos `security.auth.permit-urls` 中放行：
+admin-web 经 `/auth/manage/users` 建、改、停用、删除账号与重置口令时，user 经 Keycloak Admin REST API 同步（`KeycloakAccountClient`，客户端凭证 `github-user-admin`，服务账号只有 manage-users、view-users）：
 
-```text
-/auth/tenants
-/auth/sessions
-/auth/third-party/sessions
-/oauth2/token
-/.well-known/**
-```
+- 建账号：在 Keycloak 建登录账号，带属性 `user_id`（业务用户 ID）、昵称（`firstName`）与临时口令，首次登录必须改口令；Keycloak 用户 ID 回填 `auth_user.idp_subject`。
+- 改用户名或昵称、启停、重置口令（设为临时口令）、删除账号都同步到 Keycloak；用户名与昵称以 user 为准，用户在 Keycloak 账号控制台只能看不能改。
+- Keycloak 调用失败时本地事务回滚；建好 Keycloak 账号后本地事务回滚的，补偿删除该账号。Keycloak 用户名全域唯一，与其他租户的用户重名时返回「用户名已存在」（A0111）。
+- 还没有 Keycloak 账号的旧数据（账号迁移前）只改本地资料，这时改口令明确报错（A0201），不静默跳过。
+- user 库不存口令（Flyway V6 删除 `auth_user.password`）。
 
-## OAuth2 机器到机器接入
+### 业务上下文缓存
 
-新外部系统和 MCP 客户端优先走 OAuth2 `client_credentials`，不要长期配置一次性 `Bearer JWT`。
+utils 的 `SecurityUserCache` 缓存业务上下文（本实例 30 秒，Redis 副本按用户版本号区分）。下面的改动由 `AuthSecurityContextInvalidator` 让受影响用户换版本，事务提交后才换，回滚不换（提交前换的话，并发请求可能读到旧数据又按新版本缓存）：
 
-调用方式：
-
-```bash
-curl -X POST 'http://<gateway-or-user>/oauth2/token' \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  -u '<client_id>:<client_secret>' \
-  -d 'grant_type=client_credentials' \
-  -d 'scope=mcp.tools.read mcp.tools.call' \
-  -d 'resource=mcp'
-```
-
-返回字段按 OAuth 标准使用蛇形命名：
-
-```json
-{
-  "access_token": "<短期JWT>",
-  "token_type": "Bearer",
-  "expires_in": 900,
-  "scope": "mcp.tools.read mcp.tools.call"
-}
-```
-
-OAuth client 存在 `auth_oauth_client` 表：
-
-| 字段 | 说明 |
+| 改动 | 受影响用户 |
 | --- | --- |
-| `client_id` | 外部系统长期配置的客户端 ID |
-| `client_secret` | 客户端密钥，建议保存 BCrypt 哈希；兼容历史明文仅用于迁移 |
-| `grant_types` | 当前支持 `client_credentials` |
-| `scopes` | 允许的 scope，例如 `mcp.tools.read mcp.tools.call` |
-| `audiences` | 允许的 resource/audience，例如 `mcp` |
-| `access_token_ttl_seconds` | access token 有效秒数，服务端上限 30 天 |
-
-### OAuth 客户端租户定位（1.3.4）
-
-`client_id` 由全局唯一索引约束，不依赖匿名请求的 `X-Tenant-Id`。公开 token/authorize 入口仅通过专用 Mapper 投影查找启用、未删除客户端的主键和所属租户，再绑定该数据库租户，由正常 MyBatis-Plus 租户与逻辑删除插件读取完整客户端；专用投影不读取 secret，其他 Mapper 方法继续要求租户。未知、异常重复、禁用、已删除或缺少租户的 client 与错误 secret 均返回相同 `invalid_client`/401，不再回退到默认租户。
-
-PKCE 授权页显示注册客户端的租户；提交的不同租户和认证用户的租户不匹配均拒绝，授权码交换还复核其已绑定的租户。成功、认证失败和 SQL 异常后恢复调用前的租户与 ignore 标志，不能让公开认证扩大为业务查询绕过。当前补丁只更新 User 为 `1.3.4`，OAuth 响应、scope、resource、JWT 与 RPC 契约保持。
-
-`AuthOAuthTenantHttpIntegrationTest` 使用仅测试依赖 H2 `2.4.240` 的内存 PostgreSQL 模式，加载真实 Controller/Service、Security/ReqInterceptor、Mapper 与公共 MyBatis-Plus 插件；不连接 Nacos、Redis 或业务库。覆盖匿名 Basic token、伪造租户头、普通查询缺租户仍拒绝、上下文恢复、错误凭据/不可用 client、全局唯一与异常跨租户重复、完整 PKCE/一次性授权码及 client 迁租户后的拒绝。H2 仅证明该查询与拦截器链，不代替 PostgreSQL ICU 排序、实际部署或 MCP token→tools 联调；升级后应使用同一已注册 client 独立验收。
-
-`/auth/third-party/sessions` 仍保留给 TduckX 等企业内部私有 HMAC 集成；未来如果统一认证治理，再双轨迁移到 OAuth，不要直接删除旧接口。
+| 用户建、改、删 | 该用户 |
+| 用户角色授权 | 该用户 |
+| 角色资源、角色数据范围部门、角色改删 | 角色下的用户 |
+| 权限资源改删 | 绑定了该资源的角色下的用户 |
+| 部门建改删、租户改删 | 归属与关联该租户的用户、平台超级管理员 |
+| 新建租户 | 平台超级管理员 |
 
 ## 基础设施地址
 
@@ -176,26 +142,7 @@ OpenAPI 原始文档地址：
 http://127.0.0.1:7500/v3/api-docs
 ```
 
-第三方文档 UI 已移除，服务只保留标准 OpenAPI3 `/v3/api-docs`。调试需要鉴权的用户接口时，先调用 `POST /auth/sessions` 获取登录响应中的 `token`，再把 JWT 写入 `Authorization: Bearer <token>` 请求头。当前 OpenAPI 已声明 Bearer JWT 安全方案。调试 MCP 等机器到机器接口时，优先通过 `POST /oauth2/token` 换短期 access token。
-
-登录示例：
-
-```json
-{
-  "tenantId": "100",
-  "username": "admin",
-  "password": "<YOUR_PASSWORD>"
-}
-```
-
-如果通过网关聚合文档访问，调试地址会带 `/user` 前缀；如果直接访问 `user` 服务文档，调试地址不带网关前缀。
-
-Controller 必须使用 OpenAPI3 注解：
-
-```java
-@Tag(name = "用户管理", description = "维护认证用户、所属部门、启用状态和角色授权基础数据")
-@Operation(summary = "分页查询用户", description = "按查询条件分页返回当前租户下的用户数据，用于用户管理列表")
-```
+第三方文档 UI 已移除，服务只保留标准 OpenAPI3 `/v3/api-docs`。调试需要鉴权的接口时，把 Keycloak 签发的访问令牌（受众含 `github-api`）写入 `Authorization: Bearer <访问令牌>`；经网关调试时先在浏览器登录，网关会话代为带上令牌（写请求要带 CSRF 头）。当前 OpenAPI 已声明 Bearer JWT 安全方案。
 
 这样 OpenAPI 文档会展示业务名称，避免出现 `auth-user-controller`、`list_1`、`save_1` 等默认名称。
 
@@ -309,7 +256,7 @@ menu:rag:graph
 | `FRONTEND` | 前端菜单、页面、按钮 |
 | `BACKEND` | 后端接口权限 |
 
-登录返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。RAG 增量脚本按每个现有租户创建稳定资源，并只让原本已拥有 `user:auth:manage` 的角色继承 RAG 权限；不依赖环境中的用户、角色或资源主键。
+`GET /auth/current/resources` 返回的 `permissions` 用于后端权限判断，`frontendResources` 用于前端展示控制。RAG 增量脚本按每个现有租户创建稳定资源，并只让原本已拥有 `user:auth:manage` 的角色继承 RAG 权限；不依赖环境中的用户、角色或资源主键。
 
 ## 数据权限
 
@@ -448,11 +395,13 @@ src/main/resources/db/migration/V1__baseline.sql             现有结构快照�
 src/main/resources/db/migration/V2__drop_ddl_history.sql     删除旧 DDL 方式的执行记录表
 src/main/resources/db/migration/V3__rename_audit_columns.sql 审计列按实体基类改名
 src/main/resources/db/migration/V4__add_create_dept.sql      租户表新增创建部门列 create_dept
+src/main/resources/db/migration/V5__rename_create_by_update_by.sql 审计列 creator/updater 改为 create_by/update_by
+src/main/resources/db/migration/V6__keycloak_accounts.sql    auth_user 加 idp_subject、删 password；删自研 OAuth 与第三方认证四张表
 ```
 
 表结构只由本服务 `src/main/resources/db/migration` 的 Flyway 迁移管理；已提交的迁移文件不修改，改结构只新增 `V<下一个>__<说明>.sql`；新库保持空库，由服务首次启动时的 Flyway 建表，不手工执行任何公共脚本。已有的库由 `baseline-on-migrate` 把版本 1 登记为基线、不执行 V1，再执行 V2 起的迁移。Seata AT 的 `undo_log` 在 `V1__baseline.sql` 里；数据源块固定 `spring.datasource.dynamic.seata: true`，不设总开关；建池时 Seata AT 代理就检查该表，utils 在创建任何 Bean 之前先执行 Flyway 迁移，新空库首次启动即建出该表。
 
-V1 的种子段仅用 `ON CONFLICT DO NOTHING` 补齐缺失默认租户、角色与权限，不覆盖既有密码、权限、角色数据范围或自定义标签；SHA-256 派生资源 ID 的算法保持不变。
+V1 的种子段仅用 `ON CONFLICT DO NOTHING` 补齐缺失默认租户、角色与权限，不覆盖既有权限、角色数据范围或自定义标签；SHA-256 派生资源 ID 的算法保持不变。
 
 默认数据包含：
 
@@ -548,11 +497,7 @@ docs/ai-coding
 
 ## 验证命令
 
-公共依赖固定为 `com:utils:1.6.2`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。普通登录和业务权限不使用该管理令牌。
-
-个人新数据库的 `auth-oauth-client-schema.sql` 只创建通用 OAuth 表结构，不预置外部客户端、固定 secret 或正式回调域名。当前 admin-web 使用 `/auth/sessions`，无需 OAuth 客户端 seed；后续接入 OAuth 前端时，显式注册本地 public / none 客户端和实际 callback，并使用 PKCE。此脚本不会删除既有数据库中的客户端。
-
-严格开放接口签名 RPC 使用 `com:rpc-api:1.0.8` 的 `verifyRequiredOpenApiSignature`；只有客户端明确启用签名且 HMAC、时钟和 nonce 唯一登记全部通过才返回 true。旧 `verifyOpenApiSignature` 保留可选签名契约，严格消费者不得回退调用。JWT 签名使用个人 namespace 的 `security.jwt.secret`（Base64 至少 32 字节），不使用公司环境或历史固定口令；OAuth 显式 issuer 仍由原参数控制。
+公共依赖固定为 `com:utils:2.0.0`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。业务接口只认 Keycloak 访问令牌，不使用该管理令牌。
 
 ```bash
 ./gradlew clean compileJava test
@@ -575,32 +520,28 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 
 本次公共观测补丁通过 `com:utils:1.6.2` 精确传递 `com:fleet-observability:0.1.2`，修复 Servlet Security 在 ERROR 分派中再次拒绝导致终态缺失的问题；认证和错误响应保持。源码与测试通过后，目标进程和追踪/日志联结仍须单独读回验收。
 
-### 终端访问身份 RPC
+### 授权关系管理入口的租户边界
 
-`com:rpc-api:1.0.8` 新增 `AuthSessionRpcService.resolveAccessIdentity`，在认证中心校验 access JWT 的签名、issuer、有效期、jti、类型、撤销状态和 tokenVersion，并用精确主键复核启用账号、启用租户及既有默认租户/平台管理员/显式会员关系。只返回 userId/tenantId，不回传 token、权限或内部实体。该认证 bootstrap 不信任调用方 tenant attachment；最小认证查询短暂忽略租户和数据权限，finally 恢复调用前标志，不扩大为业务查询绕过。
+`AuthGrantController` 的全部八个 HTTP 入口（用户角色 POST/GET/PUT、角色资源 POST/GET/PUT、角色数据范围部门 GET/PUT）在调用任何授权关系 Service/Mapper 之前先过 `AuthTenantManagementAccess`：当前用户由资源服务器按 Keycloak 访问令牌与业务上下文写入，必须有 `user:auth:manage`；目标租户是自己的活动租户时按既有管理权限操作，跨租户还要求 `ROLE_PLATFORM_SUPER_ADMIN`。BO/query 的 `tenantId` 只表示待授权目标；请求头里的管理员分类与权限一律不认，`X-Tenant-Id` 只用来选择活动租户，能否访问由 user 核对。
 
+角色资源回显只在本次查询内绑定目标租户并清除旧 tenant-ignore 标志，成功、空结果、权限拒绝和 SQL 异常都恢复调用前的租户与 ignore 标志；普通 Mapper 仍要求租户。
 
-### 角色资源授权回显的租户范围（1.3.5）
-
-`GET /auth/manage/roles/{roleId}/resources?tenantId=...` 保留 `user:auth:manage` 管理权限，并在读取前复用 User 本地访问身份流程验证 access JWT 生命周期、启用账号和租户授权。同一签名 JWT 的用户、租户必须与已验证身份一致；自己的租户可按既有管理权限读取，跨租户回显还必须具有 `PLATFORM_SUPER_ADMIN` 声明。请求头中的管理员类别、权限和租户不能提升访问范围。未知、失效身份、生命周期后端失败及越权请求均拒绝。
-
-通过校验后，服务只在本次角色资源查询内绑定目标租户，并清除旧 tenant-ignore 标志，让公共 MyBatis-Plus 租户插件与固定 SQL 的目标租户一致；成功、空结果、权限拒绝和 SQL 异常都恢复调用前的租户与 ignore 标志。逻辑删除及角色条件保持，普通 Mapper 仍要求租户。本补丁只修该 GET 的身份与查询范围，不代表相邻授权写接口已完成统一跨租户权限治理。
-
-`AuthRoleResourceTenantHttpIntegrationTest` 使用真实 HTTP、Security/ReqInterceptor、User token 生命周期/本地身份实现、Mapper、公共租户插件与 H2；Redis 生命周期数据仅使用合成内存替身，不连接 Nacos 或业务库。覆盖平台跨租户、租户管理员同租户/他租户、伪造头、无权限、失效身份、隔离/逻辑删除以及上下文恢复；H2 不替代 PostgreSQL ICU 与实际部署验收。版本仅更新 User `1.3.5`，不修改 RPC、DDL 或其余业务服务。
-
-
-### 授权关系 HTTP 管理入口的统一租户边界（1.3.6）
-
-`AuthGrantController` 的全部八个 HTTP 入口（用户角色 POST/GET/PUT、角色资源 POST/GET/PUT、角色数据范围部门 GET/PUT）统一先调用 `AuthTenantManagementAccess`。该边界复用 1.3.5 的活跃 User 身份和同一签名 JWT 校验：必须有 `user:auth:manage`，同租户按既有管理权限操作，跨租户额外要求 `PLATFORM_SUPER_ADMIN`。BO/query 的 `tenantId` 仅表示待授权目标，不是调用方身份；请求头不能提升权限。检查在任何授权关系 Service/Mapper 调用之前完成，身份验证或其后端失败均拒绝。
-
-原角色资源 GET 的目标租户绑定和精确上下文恢复保留；认证规则迁到统一 HTTP 边界，不再在 Service 内维护第二份 JWT 策略。内部 bootstrap 绑定及 Service 契约继续不依赖 HTTP token。此补丁只覆盖授权关系 Controller 的八个入口，不代表其他用户/角色/部门等 CRUD 已完成统一租户管理授权审计。
-
-真实 HTTP/MP 回归逐入口验证租户管理员跨租户、失效 token、无管理权限、伪造头及本地身份查询失败均不执行目标授权关系 SQL；三张关系表的完整行（含 version/时间戳）保持不变。空资源同步越权原错误已在 H2 真实重现，修复后 403；同租户和平台跨租户读写正向保持。夹具加载实际公共字段填充器、租户插件和三类 Mapper，避免只凭 Mock Service 断言权限。运行态验收只操作本轮自有隔离 fixture，不向真实其他租户发修改请求。
+`AuthRoleResourceTenantHttpIntegrationTest` 走真实 HTTP 与资源服务器链：测试解码器给出带 `user_id` 的令牌，业务上下文由 user 自己的提供方按 H2 数据计算，经 utils 的令牌转换、缓存与授权判断。逐入口验证租户管理员跨租户（含伪造头）、无管理权限、未登录、停用、归属租户停用以及业务上下文取不到（503）时都不执行授权关系 SQL，三张关系表的完整行保持不变；同租户与平台跨租户读写正向保持。访问令牌的撤销由 Keycloak 负责（短时效访问令牌加会话注销），资源服务器不查撤销名单。H2 不替代 PostgreSQL ICU 与实际部署验收。
 
 ### 账号已创建事件（1.4.5）
 
-`POST /auth/manage/users` 新建账号、插入用户与租户关联后，`UserAccountEventProducer` 经 utils 的 `MqTemplate.sendAfterCommit` 在事务提交后发 `com.kellen.rpc.user.event.UserAccountCreatedEvent`（事件 ID、发生时刻、租户 ID、用户 ID、用户名与昵称，消息 key 为事件 ID）；同租户同用户名已存在时直接返回、不发。事务回滚不发，提交后发送失败只记日志、不影响建账号。主题读 Nacos `user-spring.yaml` 的 `fleet.mq.topic.user-account-created`，RocketMQ 地址、生产者组与账号也在该文件（见 utils 的消息队列规范 `docs/ai-coding/MQ_SPEC.md`）。message 收到后给新用户发欢迎站内信。依赖升级为 `com:utils:1.7.2`、`com:rpc-api:1.1.0`。
+`POST /auth/manage/users` 新建账号、插入用户与租户关联后，`UserAccountEventProducer` 经 utils 的 `MqTemplate.sendAfterCommit` 在事务提交后发 `com.kellen.rpc.user.event.UserAccountCreatedEvent`（事件 ID、发生时刻、租户 ID、用户 ID、用户名与昵称，消息 key 为事件 ID）；同租户同用户名已存在时直接返回、不发。事务回滚不发，提交后发送失败只记日志、不影响建账号。主题读 Nacos `user-spring.yaml` 的 `fleet.mq.topic.user-account-created`，RocketMQ 地址、生产者组与账号也在该文件（见 utils 的消息队列规范 `docs/ai-coding/MQ_SPEC.md`）。message 收到后给新用户发欢迎站内信。依赖当时升级为 `com:utils:1.7.2`、`com:rpc-api:1.1.0`（第5阶段起为 2.0.0）。
 
 ### RocketMQ 客户端版本锁定（1.4.6）
 
 `build.gradle` 照 Nacos、Seata 的写法把 `rocketmq-client`、`rocketmq-remoting`、`rocketmq-common` 锁到 `5.5.1`（与 NAS 上 5.5 服务端同一版本线）。Spring Cloud Alibaba 的 BOM 会把客户端管成 5.3.1，而 utils 排除了只发到 5.3.2 的 rocketmq-acl，5.3.1 里没有 ACL 签名类 `AclClientRPCHook`，配了 RocketMQ 账号的生产者建不起来，1.4.5 因此启动失败。`RocketMqClientCompatibilityTest` 锁住这一点。
+
+### Keycloak 账号与资源服务器（1.5.0）
+
+第5阶段（设计见 kellen-workspace 的 `docs/superpowers/specs/2026-11-20-phase5-keycloak-design.md`）：登录、口令与令牌交给 Keycloak，user 改为资源服务器加账号同步，依赖升级为 `com:utils:2.0.0`、`com:rpc-api:2.0.0`（两者都删除了自签 JWT 与旧认证契约）。
+
+- 删除（不留兼容层）：登录、刷新、注销会话，第三方 HMAC 会话与开放接口签名校验，`/oauth2/*` 与发现文档，OAuth 客户端管理接口，令牌生命周期与第三方认证服务，`AuthSessionRpcService`、`AuthIdentityRpcService`、`AuthOpenApiRpcService` 三个 Dubbo 提供方；`/auth/tenants` 只给旧登录页用，一并删除。
+- 新增：Dubbo 提供方 `SecurityContextRpcService`；Keycloak 账号同步与业务上下文缓存失效（见「认证与授权」）。
+- Flyway V6：`auth_user` 加 `idp_subject`（Keycloak 用户 ID，唯一），删 `password`；删 `auth_oauth_client`、`auth_external_client`、`auth_external_identity`、`auth_external_signature_nonce`。迁移前用 `nas_pg.py backup` 备份 user 库；在副本库上核对过迁移后各业务表行数不变。已有账号的 Keycloak 账号由第5阶段切换时的账号迁移脚本建立并回填 `idp_subject`。
+- 配置：资源服务器与 `keycloak-admin` 客户端注册在 Nacos `user-spring.yaml`（Keycloak 地址与客户端密钥是运行时占位符）；三套 profile 不再导入 `security-jwt.yaml`。
+- 测试：`KeycloakAccountClientTest`（MockWebServer 模拟 Admin REST，版本跟随 Spring Cloud BOM 管理的 OkHttp）、`AuthUserServiceImplKeycloakTest`、`SecurityContextRpcServiceImplTest`、`AuthSecurityContextInvalidationTest`、`OldAuthEndpointsRemovedTest`、`PostgresqlSchemaLiveTest`（V6）与 `KeycloakAccountLiveTest`（NAS 上的真实 Keycloak，只在设置了 `FLEET_KC_TEST_USER_ADMIN_CLIENT_SECRET` 时运行，CI 自动跳过）。

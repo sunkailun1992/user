@@ -8,6 +8,7 @@ import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.query.AuthTenantQuery;
 import com.kellen.auth.entity.vo.AuthTenantVO;
 import com.kellen.auth.mapper.AuthTenantMapper;
+import com.kellen.auth.service.AuthSecurityContextInvalidator;
 import com.kellen.auth.service.AuthTenantService;
 import com.kellen.auth.service.query.AuthTenantServiceQuery;
 import com.kellen.auth.service.results.AuthTenantServiceResults;
@@ -47,21 +48,30 @@ public class AuthTenantServiceImpl implements AuthTenantService {
     private final AuthTenantServiceResults authTenantServiceResults;
 
     /**
+     * 业务上下文缓存失效通知。
+     */
+    private final AuthSecurityContextInvalidator securityContextInvalidator;
+
+    /**
      * 构造租户业务服务。
      *
      * @param authTenantMapper         租户Mapper
      * @param authTenantServiceQuery   租户查询增强
      * @param authTenantServiceResults 租户结果增强
+     * @param securityContextInvalidator 业务上下文缓存失效通知
      */
     public AuthTenantServiceImpl(AuthTenantMapper authTenantMapper,
                                  AuthTenantServiceQuery authTenantServiceQuery,
-                                 AuthTenantServiceResults authTenantServiceResults) {
+                                 AuthTenantServiceResults authTenantServiceResults,
+                                 AuthSecurityContextInvalidator securityContextInvalidator) {
         // 保存租户Mapper。
         this.authTenantMapper = authTenantMapper;
         // 保存租户查询增强。
         this.authTenantServiceQuery = authTenantServiceQuery;
         // 保存租户结果增强。
         this.authTenantServiceResults = authTenantServiceResults;
+        // 保存业务上下文缓存失效通知。
+        this.securityContextInvalidator = securityContextInvalidator;
     }
 
     /**
@@ -152,6 +162,8 @@ public class AuthTenantServiceImpl implements AuthTenantService {
             tenant.setState(bo.getState() == null ? AuthStateEnum.启用 : bo.getState());
             // 插入租户。
             authTenantMapper.insert(tenant);
+            // 平台超级管理员可选的启用租户多了一个：他们的业务上下文换版本。
+            securityContextInvalidator.platformAdmins();
             // 返回租户ID。
             return tenant.getId();
         } finally {
@@ -175,7 +187,12 @@ public class AuthTenantServiceImpl implements AuthTenantService {
             // 将 BO 转换为实体，保留 version 触发乐观锁。
             AuthTenant tenant = GeneralConvertor.convertor(bo, AuthTenant.class);
             // 使用updateById执行乐观锁更新。
-            return authTenantMapper.updateById(tenant) > 0;
+            boolean updated = authTenantMapper.updateById(tenant) > 0;
+            if (updated) {
+                // 租户状态决定能否使用该租户：归属、关联该租户的用户与平台超级管理员换版本。
+                securityContextInvalidator.tenantMembers(bo.getId());
+            }
+            return updated;
         } finally {
             // 清理租户忽略标记。
             TenantContextHolder.clearIgnore();
@@ -195,7 +212,12 @@ public class AuthTenantServiceImpl implements AuthTenantService {
             // 租户是全局主数据，删除时忽略租户插件。
             TenantContextHolder.ignore();
             // 按ID逻辑删除租户。
-            return authTenantMapper.deleteById(id) > 0;
+            boolean removed = authTenantMapper.deleteById(id) > 0;
+            if (removed) {
+                // 租户删除后不能再使用：归属、关联该租户的用户与平台超级管理员换版本。
+                securityContextInvalidator.tenantMembers(id);
+            }
+            return removed;
         } finally {
             // 清理租户忽略标记。
             TenantContextHolder.clearIgnore();

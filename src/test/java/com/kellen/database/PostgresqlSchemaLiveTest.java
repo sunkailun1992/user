@@ -1,19 +1,13 @@
 package com.kellen.database;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
-import com.kellen.auth.entity.AuthExternalIdentity;
-import com.kellen.auth.mapper.AuthExternalIdentityMapper;
-import com.kellen.auth.typehandler.PostgresqlJsonStringTypeHandler;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
-import org.apache.ibatis.type.JdbcType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -27,9 +21,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @EnabledIfEnvironmentVariable(named = "FLEET_PG_TEST_URL", matches = ".+")
 class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
 
-    private static final List<String> TABLES = List.of("auth_dept", "auth_external_client", "auth_external_identity",
-            "auth_external_signature_nonce", "auth_oauth_client", "auth_resource", "auth_role", "auth_role_data_scope",
+    private static final List<String> TABLES = List.of("auth_dept", "auth_resource", "auth_role", "auth_role_data_scope",
             "auth_role_resource", "auth_tenant", "auth_user", "auth_user_role", "auth_user_tenant");
+
+    /** V6 删除的自研 OAuth 客户端与第三方认证表。 */
+    private static final List<String> REMOVED_TABLES = List.of("auth_oauth_client", "auth_external_client", "auth_external_identity",
+            "auth_external_signature_nonce");
 
     /** V1 里种子段的开头标记；种子用 ON CONFLICT DO NOTHING，只补缺失的行。 */
     private static final String SEED_MARKER = "-- 种子数据";
@@ -53,7 +50,7 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
     @Test
     void migratesEmptySchemaToLatestVersion() throws Exception {
         assertThat(migrate(null).success).isTrue();
-        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4", "5");
+        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4", "5", "6");
         assertThat(strings("SELECT table_name FROM information_schema.tables WHERE table_schema = '" + schema
                 + "' AND table_type = 'BASE TABLE' AND table_name NOT IN ('undo_log', 'flyway_schema_history') ORDER BY 1"))
                 .containsExactlyElementsOf(TABLES);
@@ -77,7 +74,7 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
         migrate("3");
         execute("INSERT INTO auth_user_role(id, user_id, role_id, tenant_id, sorting, label) VALUES ('fixture-kept', 'u', 'r', 't', 7, 'synthetic')");
         migrate(null);
-        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4", "5");
+        assertThat(appliedVersions()).containsExactly("1", "2", "3", "4", "5", "6");
         assertThat(number("SELECT count(*) FROM auth_user_role WHERE id = 'fixture-kept' AND sorting = 7 AND label = 'synthetic'"
                 + " AND create_dept IS NULL")).isEqualTo(1);
         assertThat(strings("SELECT col_description(('" + schema + ".auth_user_role')::regclass, ordinal_position::int)"
@@ -100,10 +97,10 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
     @Test
     void usernameAndResourceKeysRetainCaseAndAccentInsensitiveUniqueness() throws Exception {
         migrate(null);
-        execute("INSERT INTO auth_user(id, username, password, tenant_id) VALUES ('fixture-user', 'Café', 'synthetic-only', 'fixture-tenant')");
+        execute("INSERT INTO auth_user(id, username, tenant_id) VALUES ('fixture-user', 'Café', 'fixture-tenant')");
         assertThat(number("SELECT count(*) FROM auth_user WHERE username = 'CAFE' AND is_deleted = false")).isEqualTo(1);
         assertThat(number("SELECT count(*) FROM auth_user WHERE username LIKE 'caf%'")).isEqualTo(1);
-        assertThatThrownBy(() -> execute("INSERT INTO auth_user(id, username, password, tenant_id) VALUES ('fixture-duplicate', 'CAFE', 'synthetic-only', 'fixture-tenant')"))
+        assertThatThrownBy(() -> execute("INSERT INTO auth_user(id, username, tenant_id) VALUES ('fixture-duplicate', 'CAFE', 'fixture-tenant')"))
                 .isInstanceOf(SQLException.class).extracting("SQLState").isEqualTo("23505");
         execute("INSERT INTO auth_resource(id, name, resource_category, code, tenant_id) VALUES ('fixture-resource', 'fixture', 'BACKEND', 'API:CAFÉ', 'fixture-tenant')");
         assertThatThrownBy(() -> execute("INSERT INTO auth_resource(id, name, resource_category, code, tenant_id) VALUES ('fixture-resource-duplicate', 'fixture', 'BACKEND', 'api:cafe', 'fixture-tenant')"))
@@ -128,36 +125,27 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
     }
 
     @Test
-    void explicitJsonHandlerSurvivesARealMapperRoundTripAndDatabaseValidation() throws Exception {
+    void v6KeepsUsersAddsUniqueKeycloakSubjectAndDropsPasswordAndOldAuthTables() throws Exception {
+        migrate("5");
+        execute("INSERT INTO auth_user(id, username, password, tenant_id) VALUES ('fixture-kept', 'fixture', 'synthetic-only', 'fixture-tenant')");
+        long users = number("SELECT count(*) FROM auth_user");
         migrate(null);
-        var configuration = new MybatisConfiguration();
-        configuration.setMapUnderscoreToCamelCase(true);
-        configuration.addMapper(AuthExternalIdentityMapper.class);
-        var factory = new MybatisSqlSessionFactoryBean();
-        factory.setDataSource(new SingleConnectionDataSource(connection, true));
-        factory.setConfiguration(configuration);
-        try (var session = factory.getObject().openSession(true)) {
-            var identity = new AuthExternalIdentity();
-            identity.setId("fixture-json");
-            identity.setProviderCode("synthetic");
-            identity.setExternalTenantId("");
-            identity.setExternalUserId("");
-            identity.setExternalPatientId("");
-            identity.setLocalTenantId("fixture-tenant");
-            identity.setLocalUserId("fixture-user");
-            identity.setTenantId("fixture-tenant");
-            identity.setDeleted(false);
-            identity.setMetadataJson("{\"synthetic\":true}");
-            var mapper = session.getMapper(AuthExternalIdentityMapper.class);
-            assertThat(mapper.insert(identity)).isEqualTo(1);
-            session.clearCache();
-            assertThat(mapper.selectById(identity.getId()).getMetadataJson()).isEqualTo("{\"synthetic\": true}");
+        assertThat(number("SELECT count(*) FROM auth_user")).isEqualTo(users);
+        assertThat(number("SELECT count(*) FROM auth_user WHERE id = 'fixture-kept' AND idp_subject IS NULL")).isEqualTo(1);
+        assertThat(columns("auth_user")).contains("idp_subject").doesNotContain("password");
+        assertThat(number("SELECT count(*) FROM pg_indexes WHERE schemaname = '" + schema + "' AND tablename = 'auth_user'"
+                + " AND indexname = 'uk_auth_user_idp_subject' AND indexdef LIKE 'CREATE UNIQUE INDEX%(idp_subject)'")).isEqualTo(1);
+        assertThat(strings("SELECT col_description(('" + schema + ".auth_user')::regclass, ordinal_position::int)"
+                + " FROM information_schema.columns WHERE table_schema = '" + schema
+                + "' AND table_name = 'auth_user' AND column_name = 'idp_subject'")).containsExactly("Keycloak用户ID（访问令牌sub）");
+        for (String table : REMOVED_TABLES) {
+            assertThat(number("SELECT count(*) FROM information_schema.tables WHERE table_schema = '" + schema
+                    + "' AND table_name = '" + table + "'")).as(table).isZero();
         }
-        try (var statement = connection.prepareStatement("UPDATE auth_external_identity SET metadata_json = ? WHERE id = 'fixture-json'")) {
-            new PostgresqlJsonStringTypeHandler().setNonNullParameter(statement, 1, "not-json", JdbcType.OTHER);
-            assertThatThrownBy(statement::executeUpdate).isInstanceOf(SQLException.class)
-                    .extracting("SQLState").isEqualTo("22P02");
-        }
+        execute("INSERT INTO auth_user(id, username, tenant_id) VALUES ('fixture-unlinked', 'unlinked', 'fixture-tenant')");
+        execute("UPDATE auth_user SET idp_subject = 'kc-fixture' WHERE id = 'fixture-kept'");
+        assertThatThrownBy(() -> execute("UPDATE auth_user SET idp_subject = 'kc-fixture' WHERE id = 'fixture-unlinked'"))
+                .isInstanceOf(SQLException.class).extracting("SQLState").isEqualTo("23505");
     }
 
     @Test
@@ -165,9 +153,9 @@ class PostgresqlSchemaLiveTest extends PostgresqlSchemaFixture {
         migrate(null);
         assertThat(migrate(null).migrationsExecuted).isZero();
         assertThat(number("SELECT count(*) FROM information_schema.columns WHERE table_schema = '" + schema + "' AND column_name = 'is_deleted' AND data_type = 'boolean'"))
-                .isEqualTo(13);
+                .isEqualTo(TABLES.size());
         assertThat(number("SELECT count(*) FROM information_schema.columns WHERE table_schema = '" + schema + "' AND column_name = 'update_time' AND data_type = 'timestamp without time zone'"))
-                .isEqualTo(13);
+                .isEqualTo(TABLES.size());
         assertThat(number("SELECT CASE WHEN 'Café' COLLATE fleet_general_ci = 'CAFE' THEN 1 ELSE 0 END")).isEqualTo(1);
         assertThat(number("SELECT CASE WHEN 'Café' COLLATE fleet_general_ci LIKE 'caf%' THEN 1 ELSE 0 END")).isEqualTo(1);
     }

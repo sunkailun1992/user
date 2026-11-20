@@ -8,3 +8,10 @@ spring:
           enabled: false
       discovery:
         enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 资源服务器签发方占位：让 utils 资源服务器自动配置在测试里同样生效（线上由 Nacos 给出 Keycloak 地址）。
+          # .invalid 是保留域名（RFC 6761），不会被解析或连接；请求层测试直接注入认证结果，不解码令牌。
+          issuer-uri: https://keycloak.invalid/realms/github-dev

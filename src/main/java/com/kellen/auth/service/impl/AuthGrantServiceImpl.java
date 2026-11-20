@@ -16,6 +16,7 @@ import com.kellen.auth.mapper.AuthResourceMapper;
 import com.kellen.auth.mapper.AuthRoleDataScopeMapper;
 import com.kellen.auth.mapper.AuthRoleResourceMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
+import com.kellen.auth.service.AuthSecurityContextInvalidator;
 import com.kellen.auth.service.AuthGrantService;
 import com.kellen.auth.service.results.AuthResourceServiceResults;
 import com.kellen.datapermission.DataPermissionContextHolder;
@@ -70,6 +71,11 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     private final AuthResourceServiceResults authResourceServiceResults;
 
     /**
+     * 业务上下文缓存失效通知。
+     */
+    private final AuthSecurityContextInvalidator securityContextInvalidator;
+
+    /**
      * 构造授权关系业务服务。
      *
      * @param authUserRoleMapper         用户角色Mapper
@@ -77,12 +83,14 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      * @param authRoleDataScopeMapper    角色自定义数据范围Mapper
      * @param authResourceMapper         资源Mapper
      * @param authResourceServiceResults 资源结果转换增强
+     * @param securityContextInvalidator 业务上下文缓存失效通知
      */
     public AuthGrantServiceImpl(AuthUserRoleMapper authUserRoleMapper,
                                 AuthRoleResourceMapper authRoleResourceMapper,
                                 AuthRoleDataScopeMapper authRoleDataScopeMapper,
                                 AuthResourceMapper authResourceMapper,
-                                AuthResourceServiceResults authResourceServiceResults) {
+                                AuthResourceServiceResults authResourceServiceResults,
+                                AuthSecurityContextInvalidator securityContextInvalidator) {
         // 保存用户角色Mapper。
         this.authUserRoleMapper = authUserRoleMapper;
         // 保存角色资源Mapper。
@@ -93,6 +101,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
         this.authResourceMapper = authResourceMapper;
         // 保存资源结果转换增强。
         this.authResourceServiceResults = authResourceServiceResults;
+        // 保存业务上下文缓存失效通知。
+        this.securityContextInvalidator = securityContextInvalidator;
     }
 
     /**
@@ -106,6 +116,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     public Boolean bindUserRole(AuthUserRoleBO bo) {
         // 调用内部绑定方法。
         bindUserRole(bo.getTenantId(), bo.getUserId(), bo.getRoleId());
+        // 用户的角色变了：该用户换版本。
+        securityContextInvalidator.user(bo.getUserId());
         // 返回成功。
         return true;
     }
@@ -158,6 +170,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
             authUserRoleMapper.deleteByUserId(bo.getTenantId(), bo.getUserId());
             // 补齐当前勾选的用户角色关系。
             roleIds.forEach(roleId -> insertUserRole(bo.getUserId(), roleId));
+            // 用户的角色变了：该用户换版本。
+            securityContextInvalidator.user(bo.getUserId());
             // 返回成功。
             return true;
         } finally {
@@ -178,6 +192,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     public Boolean bindRoleResource(AuthRoleResourceBO bo) {
         // 调用内部绑定方法。
         bindRoleResource(bo.getTenantId(), bo.getRoleId(), bo.getResourceId());
+        // 角色的权限变了：角色下的用户换版本。
+        securityContextInvalidator.roleMembers(List.of(bo.getRoleId()));
         // 返回成功。
         return true;
     }
@@ -221,6 +237,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
             authRoleResourceMapper.deleteByRoleIdAndResourceIdNotIn(bo.getTenantId(), bo.getRoleId(), resourceIds);
             // 补齐当前勾选但数据库缺失的角色资源关系。
             resourceIds.forEach(resourceId -> bindRoleResource(bo.getTenantId(), bo.getRoleId(), resourceId));
+            // 角色的权限变了：角色下的用户换版本。
+            securityContextInvalidator.roleMembers(List.of(bo.getRoleId()));
             // 返回成功。
             return true;
         } finally {
@@ -267,6 +285,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
             TenantContextHolder.setTenantId(bo.getTenantId()); // 设置目标租户上下文。
             authRoleDataScopeMapper.deleteByRoleId(bo.getTenantId(), bo.getRoleId()); // 物理删除旧关系，避免逻辑删除记录占用唯一索引。
             deptIds.forEach(deptId -> insertRoleDataScope(bo.getRoleId(), deptId)); // 补齐当前提交的部门关系。
+            securityContextInvalidator.roleMembers(List.of(bo.getRoleId())); // 角色的自定义数据范围变了：角色下的用户换版本。
             return true; // 返回同步成功。
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。

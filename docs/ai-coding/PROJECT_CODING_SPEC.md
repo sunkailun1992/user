@@ -170,7 +170,7 @@ GET    /<resources>/count        按 Query 条件统计数量；只有页面确�
 - 写入 body 不重复表达 path 已经表达的动作；body 只承接资源字段和乐观锁 `version`。
 - 当前租户优先从请求头、登录上下文或路径父资源中获取；不要在所有 body 中机械重复租户字段。
 - 授权关系按子资源表达，例如 `GET /users/{userId}/roles`、`PUT /users/{userId}/roles`、`GET /roles/{roleId}/resources`、`PUT /roles/{roleId}/resources`。
-- 无法自然映射为资源 CRUD 的业务动作，也要优先转成资源创建或子资源维护，例如登录使用 `POST /auth/sessions` 创建会话，编码生成使用 `POST /auth/manage/codes` 创建编码候选。
+- 无法自然映射为资源 CRUD 的业务动作，也要优先转成资源创建或子资源维护，例如编码生成使用 `POST /auth/manage/codes` 创建编码候选。
 - 旧接口改造为 RESTful 时，必须同步更新 Controller、Service 入参、权限资源初始化 SQL、前端调用、OpenAPI 文档、README 和测试用例。
 
 ## 表结构维护规范

@@ -10,6 +10,7 @@ import com.kellen.auth.entity.enums.AuthDataScopeEnum;
 import com.kellen.auth.entity.query.AuthRoleQuery;
 import com.kellen.auth.entity.vo.AuthRoleVO;
 import com.kellen.auth.mapper.AuthRoleMapper;
+import com.kellen.auth.service.AuthSecurityContextInvalidator;
 import com.kellen.auth.service.AuthRoleService;
 import com.kellen.auth.service.query.AuthRoleServiceQuery;
 import com.kellen.auth.service.results.AuthRoleServiceResults;
@@ -47,21 +48,30 @@ public class AuthRoleServiceImpl implements AuthRoleService {
     private final AuthRoleServiceResults authRoleServiceResults;
 
     /**
+     * 业务上下文缓存失效通知。
+     */
+    private final AuthSecurityContextInvalidator securityContextInvalidator;
+
+    /**
      * 构造角色业务服务。
      *
      * @param authRoleMapper         角色Mapper
      * @param authRoleServiceQuery   角色查询增强
      * @param authRoleServiceResults 角色结果增强
+     * @param securityContextInvalidator 业务上下文缓存失效通知
      */
     public AuthRoleServiceImpl(AuthRoleMapper authRoleMapper,
                                AuthRoleServiceQuery authRoleServiceQuery,
-                               AuthRoleServiceResults authRoleServiceResults) {
+                               AuthRoleServiceResults authRoleServiceResults,
+                               AuthSecurityContextInvalidator securityContextInvalidator) {
         // 保存角色Mapper。
         this.authRoleMapper = authRoleMapper;
         // 保存角色查询增强。
         this.authRoleServiceQuery = authRoleServiceQuery;
         // 保存角色结果增强。
         this.authRoleServiceResults = authRoleServiceResults;
+        // 保存业务上下文缓存失效通知。
+        this.securityContextInvalidator = securityContextInvalidator;
     }
 
     /**
@@ -169,7 +179,12 @@ public class AuthRoleServiceImpl implements AuthRoleService {
             // 租户条件由租户插件处理，更新实体不主动写 tenant_id。
             role.setTenantId(null);
             // 使用updateById执行乐观锁更新。
-            return authRoleMapper.updateById(role) > 0;
+            boolean updated = authRoleMapper.updateById(role) > 0;
+            if (updated) {
+                // 角色编码、状态与数据范围都进业务上下文：角色下的用户换版本。
+                securityContextInvalidator.roleMembers(List.of(bo.getId()));
+            }
+            return updated;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();
@@ -190,7 +205,12 @@ public class AuthRoleServiceImpl implements AuthRoleService {
             // 设置目标租户上下文，避免删除依赖请求头隐式租户。
             TenantContextHolder.setTenantId(tenantId);
             // 按ID逻辑删除角色。
-            return authRoleMapper.deleteById(id) > 0;
+            boolean removed = authRoleMapper.deleteById(id) > 0;
+            if (removed) {
+                // 角色删除后不再计入权限与数据范围：角色下的用户换版本。
+                securityContextInvalidator.roleMembers(List.of(id));
+            }
+            return removed;
         } finally {
             // 清理租户上下文。
             TenantContextHolder.clear();

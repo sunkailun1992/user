@@ -24,4 +24,4 @@
 - 登录用户、租户、数据源、Seata XID、请求 ID、版本号、流量泳道等横切上下文优先由 Dubbo attachment/filter 透传。
 - 确实作为业务查询条件的字段可以保留在接口参数中，例如显式查询指定租户用户。
 
-`AuthSessionRpcService` 是认证 bootstrap 特例：输入终端 access token，由 provider 验证完整生命周期及数据库授权后返回最小 userId/tenantId。token 不记录、不回传；调用方 attachment 不能代替验签。bootstrap 忽略标志只覆盖精确主键及授权关系查询，并恢复原标志。
+`SecurityContextRpcService`（契约在 utils）是认证横切的特例：各服务的资源服务器校验完 Keycloak 访问令牌后，按令牌里的 `user_id` 与请求的活动租户向 user 取业务上下文（权限码、角色、部门、数据范围、可访问租户、启停状态）。输入不含令牌，调用方 attachment 不能代替令牌校验；provider 查询时短暂忽略租户与数据权限，结束后原样恢复调用方的上下文。

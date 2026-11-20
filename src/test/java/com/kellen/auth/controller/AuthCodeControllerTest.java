@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kellen.auth.entity.query.AuthCodeGenerateQuery;
 import com.kellen.auth.service.AuthCodeGenerateService;
 import com.kellen.bean.GlobalExceptionHandler;
-import com.kellen.security.config.SecurityAuthConfig;
+import com.kellen.auth.support.ResourceServerTestConfiguration;
 import com.kellen.security.config.TenantProperties;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -19,7 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
+import static com.kellen.auth.support.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -37,9 +37,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @time 2026/05/27
  */
 @WebMvcTest(AuthCodeController.class)
-@Import({SecurityAuthConfig.class, GlobalExceptionHandler.class})
+@Import({ResourceServerTestConfiguration.class, GlobalExceptionHandler.class})
 @EnableConfigurationProperties(TenantProperties.class)
-@ContextConfiguration(classes = {AuthCodeController.class, SecurityAuthConfig.class, GlobalExceptionHandler.class, AuthCodeControllerTest.TestApplication.class})
+@ContextConfiguration(classes = {AuthCodeController.class, ResourceServerTestConfiguration.class, GlobalExceptionHandler.class, AuthCodeControllerTest.TestApplication.class})
 class AuthCodeControllerTest {
 
     /**

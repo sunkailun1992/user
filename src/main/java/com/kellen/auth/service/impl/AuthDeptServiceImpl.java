@@ -9,6 +9,7 @@ import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.query.AuthDeptQuery;
 import com.kellen.auth.entity.vo.AuthDeptVO;
 import com.kellen.auth.mapper.AuthDeptMapper;
+import com.kellen.auth.service.AuthSecurityContextInvalidator;
 import com.kellen.auth.service.AuthDeptService;
 import com.kellen.auth.service.query.AuthDeptServiceQuery;
 import com.kellen.auth.service.results.AuthDeptServiceResults;
@@ -46,16 +47,24 @@ public class AuthDeptServiceImpl implements AuthDeptService {
     private final AuthDeptServiceResults authDeptServiceResults;
 
     /**
+     * 业务上下文缓存失效通知。
+     */
+    private final AuthSecurityContextInvalidator securityContextInvalidator;
+
+    /**
      * 构造部门业务服务。
      *
      * @param authDeptMapper         部门Mapper
      * @param authDeptServiceQuery   部门查询增强
      * @param authDeptServiceResults 部门结果增强
+     * @param securityContextInvalidator 业务上下文缓存失效通知
      */
-    public AuthDeptServiceImpl(AuthDeptMapper authDeptMapper, AuthDeptServiceQuery authDeptServiceQuery, AuthDeptServiceResults authDeptServiceResults) {
+    public AuthDeptServiceImpl(AuthDeptMapper authDeptMapper, AuthDeptServiceQuery authDeptServiceQuery, AuthDeptServiceResults authDeptServiceResults,
+                               AuthSecurityContextInvalidator securityContextInvalidator) {
         this.authDeptMapper = authDeptMapper; // 保存部门Mapper。
         this.authDeptServiceQuery = authDeptServiceQuery; // 保存部门查询增强。
         this.authDeptServiceResults = authDeptServiceResults; // 保存部门结果增强。
+        this.securityContextInvalidator = securityContextInvalidator; // 保存业务上下文缓存失效通知。
     }
 
     /**
@@ -114,6 +123,7 @@ public class AuthDeptServiceImpl implements AuthDeptService {
             dept.setId(StringUtils.trimToNull(bo.getId())); // 空白ID交给 MyBatis-Plus 自动生成。
             dept.setState(bo.getState() == null ? AuthStateEnum.启用 : bo.getState()); // 设置默认启用状态。
             authDeptMapper.insert(dept); // 插入部门。
+            securityContextInvalidator.tenantMembers(bo.getTenantId()); // 部门树变了（按部门及下级的数据范围随之变化）：能使用该租户的用户换版本。
             return dept.getId(); // 返回部门ID。
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。
@@ -133,7 +143,11 @@ public class AuthDeptServiceImpl implements AuthDeptService {
             TenantContextHolder.setTenantId(bo.getTenantId()); // 设置目标租户上下文。
             AuthDept dept = GeneralConvertor.convertor(bo, AuthDept.class); // 将 BO 转换为实体。
             dept.setTenantId(null); // 租户条件由租户插件处理，避免更新 tenant_id。
-            return authDeptMapper.updateById(dept) > 0; // 使用 updateById 触发乐观锁。
+            boolean updated = authDeptMapper.updateById(dept) > 0; // 使用 updateById 触发乐观锁。
+            if (updated) {
+                securityContextInvalidator.tenantMembers(bo.getTenantId()); // 部门树变了：能使用该租户的用户换版本。
+            }
+            return updated;
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。
         }
@@ -151,7 +165,11 @@ public class AuthDeptServiceImpl implements AuthDeptService {
     public Boolean remove(String tenantId, String id) {
         try {
             TenantContextHolder.setTenantId(tenantId); // 设置目标租户上下文。
-            return authDeptMapper.deleteById(id) > 0; // 按ID逻辑删除部门。
+            boolean removed = authDeptMapper.deleteById(id) > 0; // 按ID逻辑删除部门。
+            if (removed) {
+                securityContextInvalidator.tenantMembers(tenantId); // 部门树变了：能使用该租户的用户换版本。
+            }
+            return removed;
         } finally {
             TenantContextHolder.clear(); // 清理租户上下文。
         }

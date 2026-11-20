@@ -23,6 +23,7 @@ public final class MigrationTables {
     private static final Pattern VERSION = Pattern.compile("V(\\d+)__.+\\.sql");
     private static final Pattern RENAME = Pattern.compile("ALTER TABLE (\\w+) RENAME COLUMN (\\w+) TO (\\w+);");
     private static final Pattern ADD = Pattern.compile("ALTER TABLE (\\w+) ADD COLUMN ([^;]+);");
+    private static final Pattern DROP = Pattern.compile("ALTER TABLE (\\w+) DROP COLUMN (?:IF EXISTS )?(\\w+);");
 
     private MigrationTables() {
     }
@@ -31,7 +32,7 @@ public final class MigrationTables {
      * 取一张表在 H2 上可执行的建表语句。
      *
      * @param table 表名
-     * @return 去掉 ICU 排序规则、已套用之后各版改名与新增列的建表语句
+     * @return 去掉 ICU 排序规则、已套用之后各版改名、新增与删除列的建表语句
      */
     public static String createTable(String table) {
         String baseline = read("db/migration/V1__baseline.sql");
@@ -54,6 +55,12 @@ public final class MigrationTables {
                     int end = ddl.lastIndexOf(");");
                     ddl = ddl.substring(0, end).stripTrailing() + ",\n    "
                             + add.group(2).replace(" COLLATE fleet_general_ci", "") + "\n" + ddl.substring(end);
+                }
+            }
+            Matcher drop = DROP.matcher(sql);
+            while (drop.find()) {
+                if (drop.group(1).equals(table)) {
+                    ddl = ddl.replaceAll("(?m)^\\s*" + drop.group(2) + "\\s[^\\n]*\\n", "");
                 }
             }
         }

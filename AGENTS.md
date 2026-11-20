@@ -26,7 +26,7 @@
 - 技术栈：Java 21、Spring Boot、Gradle、MyBatis-Plus、Nacos、Dubbo、`com:utils`、`com:rpc-api`
 - 项目关系：`user` 与 `message` 是同级独立业务模块，可通过 `../rpc-api` 中的 Dubbo 契约互相调用；两者底层统一依赖同级 `../utils` 公共工具项目
 - 同级协作：`../rpc-api` 提供跨服务 RPC 接口和 DTO 契约；`../utils` 提供统一响应、认证上下文、多租户、错误码和公共工具；`../message` 提供消息能力；`../gateway` 负责路由；`../admin-web` 负责后台页面
-- 核心风险：登录认证、JWT、租户隔离、角色权限、数据范围、用户状态、敏感字段、密码和 token 生命周期
+- 核心风险：Keycloak 账号同步（建改删、启停、临时口令）、访问令牌校验与业务上下文、租户隔离、角色权限、数据范围、用户状态与敏感字段
 
 ## 修改前阅读顺序
 
@@ -51,9 +51,11 @@
 
 ## 项目边界
 
-- 个人公共库固定使用 `com:utils:1.7.2` 与 `com:rpc-api:1.1.0`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
+- 个人公共库固定使用 `com:utils:2.0.0` 与 `com:rpc-api:2.0.0`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
 
-- `user` 负责认证登录、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
+- `user` 负责账号（经 Keycloak Admin REST API 同步登录账号）、业务上下文提供方（`SecurityContextRpcService`）、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
+- 登录、口令、令牌签发与注销由 Keycloak 负责（`github-dev` 域，Terraform 在 `../utils/ops/github-dev/keycloak/terraform`）；不在 user 里恢复自签 JWT、登录会话、OAuth 授权服务器或第三方签名接口。服务接入、受众、机器令牌与令牌交换按 `../utils/docs/ai-coding/AUTH_SPEC.md`。
+- 用户、授权关系、角色、权限资源、部门或租户的写操作，必须经 `AuthSecurityContextInvalidator` 让受影响用户的业务上下文换版本（事务提交后生效）。
 - 新增认证、租户、角色权限、数据范围、编码生成或跨服务 API 能力时，必须优先沿用 `docs/ai-coding/AI_DESIGN_PATTERN_GUIDE.md` 中的 Service Layer、Mapper、Strategy、State、Adapter 等项目适用模式。
 - 新增业务表必须按 `docs/ai-coding/PROJECT_CODING_SPEC.md` 补齐公共列（实体继承 `AuthEntity`，即 `TenantEntityBase` 加认证用的 `type`、`state` 枚举）；`version` 只做乐观锁，业务版本使用 `*_version` 命名。
 - 认证、租户、用户上下文必须复用 `../utils` 当前公共能力，不恢复旧 token 用户对象或旧响应结构。
@@ -65,7 +67,7 @@
 
 ## AI 工程门禁
 
-- 登录、刷新 token、退出、租户切换、用户禁用、角色权限、数据范围、密码和敏感字段相关改动默认高风险。
+- Keycloak 账号同步、资源服务器与业务上下文、租户切换、用户禁用、角色权限、数据范围、临时口令和敏感字段相关改动默认高风险。
 - 新增或修改功能前，必须按 `AI_AUTOMATION_WORKFLOW.md` 整理需求说明、验收标准和开发手册。
 - 完成后必须按 `docs/ai-coding/AI_ENGINEERING_GUARDRAILS.md` 做风险分级、Definition of Done、测试证据、安全检查、风险和回滚说明。
 - 涉及权限、租户、数据范围或认证状态时，必须补充越权、无权限、租户不匹配、目标不存在和重复提交验证。

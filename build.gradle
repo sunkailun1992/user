@@ -11,7 +11,7 @@ plugins {
  * 项目基础信息
  */
 group = 'com'
-version = '1.4.6'
+version = '1.5.0'
 description = 'user'
 
 def privateMavenUrl = providers.gradleProperty('privateMavenUrl')
@@ -38,9 +38,9 @@ ext {
     // RocketMQ 客户端版本，与 NAS 上 5.5 服务端同一版本线；Spring Cloud Alibaba BOM 管理为 5.3.1，5.3.1 不含 ACL 签名类，配了账号就启动失败。
     rocketmqClientVersion = '5.5.1'
     // 公共 utils 包版本，必须与本地或远程 Maven 制品保持一致。
-    utilsVersion = '1.7.2'
+    utilsVersion = '2.0.0'
     // 公共 RPC 契约包版本，必须与 provider/consumer 使用的契约保持一致。
-    rpcApiVersion = '1.1.0'
+    rpcApiVersion = '2.0.0'
 }
 /**
  * 编码规则
@@ -142,6 +142,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     // Spring Security Test：提供 MockMvc 安全上下文和 @WithMockUser，支持从请求层验证权限控制。
     testImplementation 'org.springframework.security:spring-security-test'
+    // MockWebServer：模拟 Keycloak 的 Admin REST API 与令牌端点，验证账号同步的请求与失败处理。
+    // 版本跟随 Spring Cloud BOM 管理的 OkHttp（4.12.0），测试与线上用同一个 OkHttp。
+    testImplementation 'com.squareup.okhttp3:mockwebserver'
     // 对齐 Gradle 测试运行器与 JUnit 6 的 Platform Launcher 版本。
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     // 仅测试：在内存 PostgreSQL 模式执行真实 Mapper/租户插件，不连接个人业务库。

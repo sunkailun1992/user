@@ -24,9 +24,6 @@ public class AuthUser extends AuthEntity {
     @Schema(description = "用户名")
     private String username;
 
-    @Schema(description = "BCrypt加密后的密码")
-    private String password;
-
     @Schema(description = "用户昵称")
     private String nickname;
 
@@ -41,4 +38,10 @@ public class AuthUser extends AuthEntity {
      */
     @Schema(description = "所属部门ID")
     private String deptId;
+
+    /**
+     * Keycloak 用户 ID（账号在 Keycloak，口令不在 user 库）。
+     */
+    @Schema(description = "Keycloak 用户 ID")
+    private String idpSubject;
 }

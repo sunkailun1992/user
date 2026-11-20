@@ -9,7 +9,7 @@ import com.kellen.auth.entity.query.AuthResourceQuery;
 import com.kellen.auth.entity.vo.AuthResourceVO;
 import com.kellen.auth.service.AuthResourceService;
 import com.kellen.bean.GlobalExceptionHandler;
-import com.kellen.security.config.SecurityAuthConfig;
+import com.kellen.auth.support.ResourceServerTestConfiguration;
 import com.kellen.security.config.TenantProperties;
 import com.kellen.utils.enumeration.ReturnCode;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static com.kellen.auth.controller.MockMvcSecurityUsers.authority;
+import static com.kellen.auth.support.MockMvcSecurityUsers.authority;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -46,9 +46,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @time 2026/05/27
  */
 @WebMvcTest(AuthResourceController.class)
-@Import({SecurityAuthConfig.class, GlobalExceptionHandler.class})
+@Import({ResourceServerTestConfiguration.class, GlobalExceptionHandler.class})
 @EnableConfigurationProperties(TenantProperties.class)
-@ContextConfiguration(classes = {AuthResourceController.class, SecurityAuthConfig.class, GlobalExceptionHandler.class, AuthResourceControllerTest.TestApplication.class})
+@ContextConfiguration(classes = {AuthResourceController.class, ResourceServerTestConfiguration.class, GlobalExceptionHandler.class, AuthResourceControllerTest.TestApplication.class})
 class AuthResourceControllerTest {
 
     /**
