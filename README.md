@@ -552,3 +552,6 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 - 依赖升到 `com:utils:2.0.1`：取 Keycloak 管理令牌（客户端凭证）访问令牌端点有连接 5 秒、读取 10 秒超时，Keycloak 卡住时账号同步按失败处理，不再无限等待。
 - 测试：`AuthRoleServiceImplReservedCodeTest`（建、改角色的保留名，先失败后通过）、`SecurityContextRpcServiceImplTest.roleCodeNamedAfterAnAdminTypeNeverGrantsThatRole`（库里已有的重名角色不给角色）。
 
+### Nacos 账号不带默认值（1.5.3）
+
+- 去掉 dev、test、prod 三套配置里 Nacos 账号与口令的默认值（原为 `nacos`，即 Nacos 管理员账号）：`custom.nacos-username`、`custom.nacos-password` 只引用 `GITHUB_NACOS_USERNAME`、`GITHUB_NACOS_PASSWORD`，缺值时启动即失败，不再静默以管理员登录（CWE-1392 默认凭据）；值由私有环境提供（IDEA 的 env 文件、Jar 的 application.properties 或容器同名环境变量）。
