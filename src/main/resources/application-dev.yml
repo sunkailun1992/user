@@ -92,7 +92,7 @@ traffic:
       rpc-sources:
         "[com.kellen.rpc.user.UserRpcService]":
           - message
-        # 各服务的资源服务器校验完 Keycloak 访问令牌后向 user 取业务上下文；本机只有灰度 user 时，未纳入的调用方会因找不到稳定提供方而 401。
+        # 各服务的资源服务器校验完 Keycloak 访问令牌后向 user 取业务上下文；本机只有灰度 user 时，未纳入的调用方会因找不到稳定提供方而 503（按 user 服务不可用处理）。
         "[com.kellen.security.oauth2.SecurityContextRpcService]":
           - ai
           - ai-agent

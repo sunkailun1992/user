@@ -142,7 +142,9 @@ class AuthRoleResourceTenantHttpIntegrationTest {
         assertThat(QUERY.get()).isNull();
     }
     @Test void unknownDisabledOrHomeTenantDisabledIdentityCannotReachResourceQuery() throws Exception {
-        assertThat(get("nobody", A, false).statusCode()).isEqualTo(401);
+        var unknown = get("nobody", A, false);
+        assertThat(unknown.statusCode()).isEqualTo(403);
+        assertThat(unknown.body()).contains("账号未开通");
         jdbc.update("UPDATE auth_user SET state=2 WHERE id='platform-admin'"); cache.bumpVersion("platform-admin");
         var disabled = get("platform-admin", A, false);
         assertThat(disabled.statusCode()).isEqualTo(403);
@@ -291,7 +293,7 @@ class AuthRoleResourceTenantHttpIntegrationTest {
         assertThat(DataPermissionContextHolder.isIgnore()).isEqualTo(ignored);
     }
     private void user(String id, String tenant, String admin) {
-        jdbc.update("INSERT INTO auth_user(id,username,tenant_id,admin_type,state) VALUES(?,?,?,?,1)", id, id, tenant, admin);
+        jdbc.update("INSERT INTO auth_user(id,username,tenant_id,admin_type,state,idp_subject) VALUES(?,?,?,?,1,?)", id, id, tenant, admin, "kc-" + id);
     }
     private void relation(String id, String tenant, String role, String resource, boolean deleted) {
         jdbc.update("INSERT INTO auth_role_resource(id,tenant_id,role_id,resource_id,is_deleted) VALUES(?,?,?,?,?)", id, tenant, role, resource, deleted);

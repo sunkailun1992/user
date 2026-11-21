@@ -44,10 +44,10 @@ class SecurityContextRpcServiceImplTest {
         AuthH2TestConfiguration.recreateTables(dataSource);
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         jdbc.update("INSERT INTO auth_tenant(id,name,tenant_id,state) VALUES ('t1','租户一','t1',1),('t2','租户二','t2',1),('t3','停用租户','t3',2)");
-        jdbc.update("INSERT INTO auth_user(id,username,nickname,admin_type,dept_id,tenant_id,state) VALUES"
-                + " ('u1','alice','Alice','TENANT_ADMIN','d1','t1',1),"
-                + " ('u-disabled','bob','Bob','TENANT_ADMIN','d1','t1',2),"
-                + " ('u-platform','root','Root','PLATFORM_SUPER_ADMIN','d1','t1',1)");
+        jdbc.update("INSERT INTO auth_user(id,username,nickname,admin_type,dept_id,tenant_id,state,idp_subject) VALUES"
+                + " ('u1','alice','Alice','TENANT_ADMIN','d1','t1',1,'kc-u1'),"
+                + " ('u-disabled','bob','Bob','TENANT_ADMIN','d1','t1',2,'kc-bob'),"
+                + " ('u-platform','root','Root','PLATFORM_SUPER_ADMIN','d1','t1',1,'kc-root')");
         jdbc.update("INSERT INTO auth_user_tenant(id,user_id,relation_tenant_id,dept_id,default_tenant,tenant_id,state) VALUES"
                 + " ('ut-1','u1','t2','d2',false,'t2',1)");
         jdbc.update("INSERT INTO auth_role(id,code,name,data_scope,tenant_id,state) VALUES"
@@ -142,6 +142,26 @@ class SecurityContextRpcServiceImplTest {
         assertThat(user.getDeptId()).isEqualTo("d2");
         assertThat(user.getAuthorities()).contains("user:auth:resources", "ROLE_viewer").doesNotContain("user:auth:manage", "ROLE_manager");
         assertThat(user.getDataScope()).isEqualTo("SELF");
+    }
+
+    /**
+     * 资源服务器拿 idpSubject 核对令牌的 sub（OIDC Core §5.7）：加载成功的结果带上 user 登记的 Keycloak 用户 ID。
+     */
+    @Test
+    void okResultCarriesTheLinkedKeycloakSubject() {
+        assertThat(provider.resolve("u1", null).getUser().getIdpSubject()).isEqualTo("kc-u1");
+        assertThat(provider.resolve("u1", "t2").getUser().getIdpSubject()).isEqualTo("kc-u1");
+    }
+
+    /**
+     * 还没关联 Keycloak 用户的账号不该有令牌（令牌只能由 Keycloak 账号取得），按账号未开通处理，不给业务上下文。
+     */
+    @Test
+    void userWithoutKeycloakAccountIsNotProvisioned() {
+        new JdbcTemplate(dataSource).update("UPDATE auth_user SET idp_subject = NULL WHERE id = 'u1'");
+        assertThat(provider.resolve("u1", null).getStatus()).isEqualTo(SecurityContextResult.Status.USER_NOT_FOUND);
+        new JdbcTemplate(dataSource).update("UPDATE auth_user SET idp_subject = '  ' WHERE id = 'u1'");
+        assertThat(provider.resolve("u1", null).getStatus()).isEqualTo(SecurityContextResult.Status.USER_NOT_FOUND);
     }
 
     @Test

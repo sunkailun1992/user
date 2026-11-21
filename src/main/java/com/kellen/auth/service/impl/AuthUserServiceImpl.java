@@ -45,7 +45,9 @@ import java.util.stream.Collectors;
  * 用户业务服务实现。
  *
  * <p>第5阶段起账号与口令在 Keycloak：建、改、停用、重置口令、删除账号时经 Admin REST API 同步（失败时本地事务回滚），
- * 并让业务上下文缓存换版本。user 库不再存口令。</p>
+ * 并让业务上下文缓存换版本。user 库不再存口令。两边写不进同一个事务，按 Saga 的做法（Garcia-Molina &amp; Salem 1987；
+ * Richardson《Microservices Patterns》第 4 章）：能撤回的 Keycloak 改动（建账号、改资料、启停）先做，本地回滚时补偿；
+ * 撤不回的排在最后——重置口令放在能撤回的改动之后，删账号放到本地提交之后（事务里先停用）。补偿失败只记日志，由维护者核对。</p>
  *
  * <p>租户边界：接口点名的租户已由控制器按活动租户校验。账号归属租户的管理员管账号本身（资料、启停、口令、删除）与本租户里的关联；
  * 不能把账号加进自己管理不了的租户，也不动它在别的租户的关联，跨租户的关联只由平台超级管理员维护
@@ -228,7 +230,7 @@ public class AuthUserServiceImpl implements AuthUserService {
             syncUserTenants(user.getId(), bo);
             // 建 Keycloak 账号（失败时整个事务回滚）；本地事务之后若回滚，补偿删除已建的账号。
             String subject = keycloakAccountClient.createAccount(user.getId(), user.getUsername(), user.getNickname(), bo.getPassword());
-            deleteAccountIfRolledBack(subject);
+            compensateOnRollback("补偿删除刚建的 Keycloak 账号", subject, () -> keycloakAccountClient.deleteAccount(subject));
             if (user.getState() == AuthStateEnum.禁用) {
                 keycloakAccountClient.setEnabled(subject, false);
             }
@@ -302,9 +304,13 @@ public class AuthUserServiceImpl implements AuthUserService {
             // 按ID逻辑删除用户。
             boolean removed = authUserMapper.deleteById(id) > 0;
             if (removed) {
-                // 删除 Keycloak 账号（失败时整个事务回滚，用户保留）。
                 if (before != null && StringUtils.isNotBlank(before.getIdpSubject())) {
-                    keycloakAccountClient.deleteAccount(before.getIdpSubject());
+                    String subject = before.getIdpSubject();
+                    boolean wasEnabled = before.getState() == AuthStateEnum.启用;
+                    // 删账号撤不回：事务里先停用（失败时整个事务回滚，用户保留），本地回滚时按原状态恢复，提交之后再删除。
+                    keycloakAccountClient.setEnabled(subject, false);
+                    compensateOnRollback("恢复 Keycloak 账号的启停状态", subject, () -> keycloakAccountClient.setEnabled(subject, wasEnabled));
+                    deleteAccountAfterCommit(subject);
                 }
                 securityContextInvalidator.user(id);
             }
@@ -342,6 +348,7 @@ public class AuthUserServiceImpl implements AuthUserService {
 
     /**
      * 按改动同步 Keycloak 账号：用户名或昵称变了改资料；给了状态就同步启停；给了口令就重置为临时口令。
+     * 改资料与启停能撤回，先做并登记回滚补偿；重置口令撤不回（不知道原口令），放在最后：前面失败时它不做，它失败时前面的改动按补偿还原。
      * 还没有 Keycloak 账号的旧数据（账号迁移前）只改本地资料；这时改口令无处可改，明确报错而不是静默跳过。
      *
      * @param before 改之前的账号
@@ -360,9 +367,13 @@ public class AuthUserServiceImpl implements AuthUserService {
         String nickname = bo.getNickname() == null ? before.getNickname() : bo.getNickname();
         if (!Objects.equals(username, before.getUsername()) || !Objects.equals(nickname, before.getNickname())) {
             keycloakAccountClient.updateProfile(subject, username, nickname);
+            compensateOnRollback("还原 Keycloak 账号资料", subject,
+                    () -> keycloakAccountClient.updateProfile(subject, before.getUsername(), before.getNickname()));
         }
         if (bo.getState() != null) {
+            boolean wasEnabled = before.getState() == AuthStateEnum.启用;
             keycloakAccountClient.setEnabled(subject, bo.getState() == AuthStateEnum.启用);
+            compensateOnRollback("恢复 Keycloak 账号的启停状态", subject, () -> keycloakAccountClient.setEnabled(subject, wasEnabled));
         }
         if (StringUtils.isNotBlank(bo.getPassword())) {
             keycloakAccountClient.resetPassword(subject, bo.getPassword());
@@ -370,11 +381,14 @@ public class AuthUserServiceImpl implements AuthUserService {
     }
 
     /**
-     * 本地事务回滚时补偿删除刚建的 Keycloak 账号；补偿失败只记录 Keycloak 用户 ID，由维护者清理。
+     * 本地事务回滚时执行补偿，撤回已写进 Keycloak 的改动；补偿失败只记录动作与 Keycloak 用户 ID（不记口令），由维护者核对。
+     * 没有事务时（不经 Spring 事务调用）不登记。
      *
-     * @param subject Keycloak 用户 ID
+     * @param action       补偿动作，写进失败日志
+     * @param subject      Keycloak 用户 ID
+     * @param compensation 补偿
      */
-    private void deleteAccountIfRolledBack(String subject) {
+    private void compensateOnRollback(String action, String subject, Runnable compensation) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
         }
@@ -385,9 +399,32 @@ public class AuthUserServiceImpl implements AuthUserService {
                     return;
                 }
                 try {
+                    compensation.run();
+                } catch (RuntimeException ex) {
+                    log.error("本地事务回滚后{}失败，请手工核对 Keycloak 账号：{}", action, subject);
+                }
+            }
+        });
+    }
+
+    /**
+     * 本地删除提交之后删 Keycloak 账号。账号此前已在事务里停用，删除失败也登录不了：只记日志由维护者清理，
+     * 不把已提交的删除报成失败（提交后回调抛出的异常会传给调用方）。没有事务时直接删除。
+     *
+     * @param subject Keycloak 用户 ID
+     */
+    private void deleteAccountAfterCommit(String subject) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            keycloakAccountClient.deleteAccount(subject);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
                     keycloakAccountClient.deleteAccount(subject);
                 } catch (RuntimeException ex) {
-                    log.error("本地建账号回滚后，补偿删除 Keycloak 账号失败，请手工删除：{}", subject);
+                    log.error("本地已删除用户、Keycloak 账号已停用，但删除 Keycloak 账号失败，请手工删除：{}", subject);
                 }
             }
         });

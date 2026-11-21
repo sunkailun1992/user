@@ -19,12 +19,17 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import javax.sql.DataSource;
 import java.util.UUID;
@@ -35,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -45,7 +51,11 @@ import static org.mockito.Mockito.when;
 /**
  * 账号交给 Keycloak：user 建、改、停用、删账号时同步 Keycloak，并让业务上下文缓存换版本；Keycloak 失败时本地事务回滚。
  * 真实 Mapper、租户插件与 Spring 事务跑在 H2（PostgreSQL 模式）上。
+ *
+ * <p>本地库与 Keycloak 两边写不进同一个事务，按 Saga 的做法（Garcia-Molina &amp; Salem 1987；Richardson《Microservices Patterns》第 4 章）：
+ * 能撤回的 Keycloak 改动先做、本地回滚时补偿；撤不回的（重置口令、删账号）排在最后或放到提交之后。</p>
  */
+@ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest(classes = AuthUserServiceImplKeycloakTest.Config.class,
         properties = {"tenant.enabled=true", "tenant.ignore-without-tenant=false"})
 class AuthUserServiceImplKeycloakTest {
@@ -62,6 +72,9 @@ class AuthUserServiceImplKeycloakTest {
     @Autowired
     private UserAccountEventProducer producer;
 
+    @MockitoSpyBean
+    private AuthSecurityContextInvalidator invalidator;
+
     @Autowired
     private DataSource dataSource;
 
@@ -73,7 +86,7 @@ class AuthUserServiceImplKeycloakTest {
         jdbc = new JdbcTemplate(dataSource);
         jdbc.update("INSERT INTO auth_user(id,username,nickname,admin_type,dept_id,tenant_id,state,idp_subject,version) VALUES"
                 + " ('u1','alice','Alice','TENANT_ADMIN','d1','t1',1,'kc-1',0)");
-        reset(keycloak, cache, producer);
+        reset(keycloak, cache, producer, invalidator);
         TenantContextHolder.clear();
         // 调用方是平台超级管理员：本类只测 Keycloak 同步，租户边界由 AuthManagementTenantBoundaryHttpIntegrationTest 覆盖。
         UserContextHolder.set(new SecurityUser("platform-admin", "platform-admin", "t1", List.of("user:auth:manage", "ROLE_PLATFORM_SUPER_ADMIN")));
@@ -203,9 +216,89 @@ class AuthUserServiceImplKeycloakTest {
 
     @Test
     void keycloakFailureKeepsUserWhenDeleting() {
-        doThrow(new UserException(ReturnCode.THIRD_PARTY_SERVICE_ERROR, "失败")).when(keycloak).deleteAccount("kc-1");
+        doThrow(new UserException(ReturnCode.THIRD_PARTY_SERVICE_ERROR, "失败")).when(keycloak).setEnabled("kc-1", false);
         assertThatThrownBy(() -> service.remove("t1", "u1")).isInstanceOf(UserException.class);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM auth_user WHERE id = 'u1' AND is_deleted = false", Integer.class)).isEqualTo(1);
+        verify(keycloak, never()).deleteAccount(anyString());
+    }
+
+    /**
+     * 删账号撤不回：事务里只停用 Keycloak 账号，本地提交之后才删除。
+     */
+    @Test
+    void deletingDisablesTheAccountInTheTransactionAndDeletesItAfterCommit() {
+        assertThat(service.remove("t1", "u1")).isTrue();
+        InOrder order = inOrder(keycloak);
+        order.verify(keycloak).setEnabled("kc-1", false);
+        order.verify(keycloak).deleteAccount("kc-1");
+    }
+
+    /**
+     * 本地删除在 Keycloak 停用之后回滚：重新启用账号，不删除，用户照常登录。
+     */
+    @Test
+    void rolledBackDeletionReEnablesTheKeycloakAccount() {
+        doThrow(new IllegalStateException("synthetic failure after keycloak")).when(invalidator).user("u1");
+        assertThatThrownBy(() -> service.remove("t1", "u1")).isInstanceOf(IllegalStateException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM auth_user WHERE id = 'u1' AND is_deleted = false", Integer.class)).isEqualTo(1);
+        InOrder order = inOrder(keycloak);
+        order.verify(keycloak).setEnabled("kc-1", false);
+        order.verify(keycloak).setEnabled("kc-1", true);
+        verify(keycloak, never()).deleteAccount(anyString());
+    }
+
+    /**
+     * 提交之后删 Keycloak 账号失败：本地删除已生效、账号已停用（登录不了），记一行日志由维护者清理，不把已提交的删除报成失败。
+     */
+    @Test
+    void failedDeletionAfterCommitIsLoggedForCleanup(CapturedOutput output) {
+        doThrow(new UserException(ReturnCode.THIRD_PARTY_SERVICE_ERROR, "失败")).when(keycloak).deleteAccount("kc-1");
+        assertThat(service.remove("t1", "u1")).isTrue();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM auth_user WHERE id = 'u1' AND is_deleted = false", Integer.class)).isZero();
+        assertThat(output.getAll()).contains("请手工删除").contains("kc-1");
+    }
+
+    /**
+     * 重置口令撤不回，排在能撤回的改动之后：改资料或启停失败时口令不动，用户不会被意外换掉口令。
+     */
+    @Test
+    void failedProfileChangeLeavesThePasswordUntouched() {
+        doThrow(new UserException(ReturnCode.THIRD_PARTY_SERVICE_ERROR, "失败")).when(keycloak).updateProfile("kc-1", "alice", "Alice Two");
+        AuthUserBO bo = existing();
+        bo.setNickname("Alice Two");
+        bo.setPassword("New-Password-" + UUID.randomUUID());
+        assertThatThrownBy(() -> service.update(bo)).isInstanceOf(UserException.class);
+        verify(keycloak, never()).resetPassword(anyString(), anyString());
+    }
+
+    /**
+     * 重置口令失败（如不满足口令策略）时本地回滚，已写进 Keycloak 的资料与启停状态改回原样。
+     */
+    @Test
+    void failedPasswordResetRestoresTheKeycloakProfileAndEnabledState() {
+        AuthUserBO bo = existing();
+        bo.setNickname("Alice Two");
+        bo.setState(AuthStateEnum.禁用);
+        bo.setPassword("New-Password-" + UUID.randomUUID());
+        doThrow(new UserException(ReturnCode.PASSWORD_VALIDATION_FAILED, "口令不符合策略")).when(keycloak).resetPassword("kc-1", bo.getPassword());
+        assertThatThrownBy(() -> service.update(bo)).isInstanceOf(UserException.class);
+        assertThat(jdbc.queryForObject("SELECT nickname FROM auth_user WHERE id = 'u1'", String.class)).isEqualTo("Alice");
+        InOrder order = inOrder(keycloak);
+        order.verify(keycloak).updateProfile("kc-1", "alice", "Alice Two");
+        order.verify(keycloak).setEnabled("kc-1", false);
+        order.verify(keycloak).resetPassword("kc-1", bo.getPassword());
+        verify(keycloak).updateProfile("kc-1", "alice", "Alice");
+        verify(keycloak).setEnabled("kc-1", true);
+    }
+
+    @Test
+    void committedUpdateIsNotCompensated() {
+        AuthUserBO bo = existing();
+        bo.setNickname("Alice Two");
+        bo.setState(AuthStateEnum.禁用);
+        assertThat(service.update(bo)).isTrue();
+        verify(keycloak, never()).updateProfile("kc-1", "alice", "Alice");
+        verify(keycloak, never()).setEnabled("kc-1", true);
     }
 
     private static AuthUserBO newUser(String username, String nickname) {

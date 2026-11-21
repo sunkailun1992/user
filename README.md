@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:2.0.7`、`com:rpc-api:2.0.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:2.0.8`、`com:rpc-api:2.0.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -46,7 +46,7 @@
 
 第5阶段起登录、口令、令牌签发、注销与机器到机器凭证都在 Keycloak（`github-dev` 域，由 `../utils/ops/github-dev/keycloak/terraform` 管理）：浏览器经网关 BFF 登录（授权码加 PKCE），服务与脚本带 Bearer 访问令牌。user 不再签发或校验自签 JWT；登录、刷新、注销会话，第三方 HMAC 会话与开放接口签名校验，`/oauth2/*` 与发现文档，OAuth 客户端管理接口都已删除，不留兼容层。
 
-user 自己是资源服务器（`com:utils:2.0.7` 自动配置）：校验访问令牌的签发方、受众 `github-api` 与有效期，按令牌里的 `user_id` 与请求头 `X-Tenant-Id` 取业务上下文（权限码、`ROLE_<角色编码>`、`ROLE_<管理员分类>`、部门、数据范围、可访问租户）。角色编码不能用管理员分类的保留名（`PLATFORM_SUPER_ADMIN`、`TENANT_ADMIN`），建、改角色时拒绝，拼权限时跳过残留的重名角色。其他服务经 Dubbo 调 user 的 `SecurityContextRpcService` 取同一份上下文；user 自己用本地实现。
+user 自己是资源服务器（`com:utils:2.0.8` 自动配置）：校验访问令牌的签发方、受众 `github-api` 与有效期，按令牌里的 `user_id` 与请求头 `X-Tenant-Id` 取业务上下文（权限码、`ROLE_<角色编码>`、`ROLE_<管理员分类>`、部门、数据范围、可访问租户）。角色编码不能用管理员分类的保留名（`PLATFORM_SUPER_ADMIN`、`TENANT_ADMIN`），建、改角色时拒绝，拼权限时跳过残留的重名角色。其他服务经 Dubbo 调 user 的 `SecurityContextRpcService` 取同一份上下文；user 自己用本地实现。
 
 当前用户接口在 `com.kellen.auth.controller.AuthController`：
 
@@ -497,7 +497,7 @@ docs/ai-coding
 
 ## 验证命令
 
-公共依赖固定为 `com:utils:2.0.7`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。业务接口只认 Keycloak 访问令牌，不使用该管理令牌。
+公共依赖固定为 `com:utils:2.0.8`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。业务接口只认 Keycloak 访问令牌，不使用该管理令牌。
 
 ```bash
 ./gradlew clean compileJava test
@@ -559,6 +559,13 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 ### utils 2.0.6（1.5.4）
 
 - 依赖从 `com:utils:2.0.1` 升到 `2.0.6`：业务上下文的 Dubbo 引用改为独立自动配置、启动时不初始化（2.0.4、2.0.5；user 本地提供实现，原先就不受影响），受保护资源元数据声明授权服务器（2.0.3），没配受众时只收 `github-api`（2.0.6）。本服务代码不变；此前 Jar 打的仍是 2.0.1，与链路验证所用的 utils 源码不一致，这次对齐。
+
+### 业务上下文带 Keycloak 用户 ID，账号同步按 Saga 补偿（1.5.6）
+
+- 业务上下文的结果带上该用户关联的 Keycloak 用户 ID（`idpSubject`），各服务的资源服务器（utils 2.0.8）核对它等于访问令牌的 `sub`，不一致回 403「登录身份与账号不一致」（OIDC Core §5.7：iss + sub 才是用户的稳定标识，防止另建 Keycloak 账号把 `user_id` 属性写成别人的）。还没关联 Keycloak 用户的账号按账号未开通返回，令牌有效时 403。上线前核对过开发库：在用的 7 个账号都已关联。
+- 改账号时，能撤回的 Keycloak 改动（资料、启停）先做并登记回滚补偿，重置口令放在最后：改资料失败时不会先把口令换掉；重置口令失败（如不满足口令策略）时本地回滚，已写进 Keycloak 的资料与启停改回原样。
+- 删账号时事务里先停用 Keycloak 账号，本地回滚就按原状态恢复；本地提交之后才删除，删除失败只记日志（账号已停用、登录不了），不把已提交的删除报成失败。原先在事务里直接删除，本地之后回滚会留下删不回来的 Keycloak 账号。
+- 依据：Saga（Garcia-Molina & Salem 1987；Richardson《Microservices Patterns》第 4 章：可补偿步骤在前，撤不回的枢轴步骤在后）。
 
 ### 停用的角色与资源不给权限，管理接口只管活动租户（1.5.5）
 

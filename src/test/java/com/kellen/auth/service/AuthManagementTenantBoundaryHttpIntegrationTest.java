@@ -105,6 +105,8 @@ class AuthManagementTenantBoundaryHttpIntegrationTest {
     private static final String A = "fixture-tenant-a", B = "fixture-tenant-b";
     /** 测试令牌前缀；令牌原文为前缀加用户编号。 */
     private static final String TOKEN_PREFIX = "synthetic-access-token-for-";
+    /** 冒用令牌前缀：带同一个 user_id，sub 却是另一个 Keycloak 账号。 */
+    private static final String FOREIGN_SUBJECT_PREFIX = "synthetic-foreign-subject-token-for-";
     /** 合成的临时口令，只给 Keycloak 替身。 */
     private static final String TEMPORARY = "Temp-Pass-2026x";
     private static final List<String> CALLERS = List.of("tenant-admin", "platform-admin");
@@ -127,7 +129,7 @@ class AuthManagementTenantBoundaryHttpIntegrationTest {
         jdbc = new JdbcTemplate(dataSource);
         jdbc.update("INSERT INTO auth_tenant(id,code,name,tenant_id,state,version) VALUES(?,?,?,?,1,1),(?,?,?,?,1,1)",
                 A, "fixture-a", "fixture-a", A, B, "fixture-b", "fixture-b", B);
-        user("tenant-admin", A, "TENANT_ADMIN", null); user("platform-admin", B, "PLATFORM_SUPER_ADMIN", null);
+        user("tenant-admin", A, "TENANT_ADMIN", "kc-tenant-admin"); user("platform-admin", B, "PLATFORM_SUPER_ADMIN", "kc-platform-admin");
         for (String tenant : List.of(A, B)) {
             String p = tenant.equals(A) ? "a" : "b";
             jdbc.update("INSERT INTO auth_role(id,name,code,data_scope,tenant_id,state,version) VALUES(?,?,?,?,?,1,1)", tenant + "-manager", "manager", "manager", "ALL", tenant);
@@ -188,6 +190,15 @@ class AuthManagementTenantBoundaryHttpIntegrationTest {
         assertThat(data(renamed).asBoolean()).isTrue();
         assertThat(jdbc.queryForObject("SELECT nickname FROM auth_user WHERE id='a-user'", String.class)).isEqualTo("renamed");
         verify(keycloak).resetPassword("kc-a-user", TEMPORARY);
+    }
+
+    /** 令牌的 sub 不是 user 给该用户登记的 Keycloak 用户（另建 Keycloak 账号冒用 user_id）：资源服务器回 403，不进管理接口、不查业务表。 */
+    @Test void tokenOfAnotherKeycloakAccountIsRejectedBeforeAnyBusinessSql() throws Exception {
+        BUSINESS_SQL.set(0);
+        var response = callAs("GET", "/auth/manage/users/options?tenantId=" + A, FOREIGN_SUBJECT_PREFIX + "tenant-admin", null);
+        assertThat(response.statusCode()).isEqualTo(403);
+        assertThat(json.readTree(response.body()).path("errorMessage").asText()).isEqualTo("登录身份与账号不一致");
+        assertThat(BUSINESS_SQL.get()).isZero();
     }
 
     @Test void crossTenantPasswordResetNeverReachesKeycloak() throws Exception {
@@ -287,8 +298,11 @@ class AuthManagementTenantBoundaryHttpIntegrationTest {
         return ids;
     }
     private HttpResponse<String> call(String method, String path, String caller, Object body) throws Exception {
+        return callAs(method, path, caller == null ? null : TOKEN_PREFIX + caller, body);
+    }
+    private HttpResponse<String> callAs(String method, String path, String token, Object body) throws Exception {
         var builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).timeout(Duration.ofSeconds(10));
-        if (caller != null) builder.header("Authorization", "Bearer " + TOKEN_PREFIX + caller);
+        if (token != null) builder.header("Authorization", "Bearer " + token);
         if (body == null) builder.method(method, HttpRequest.BodyPublishers.noBody());
         else builder.header("Content-Type", "application/json").method(method, HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
         try (HttpClient client = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).build()) {
@@ -321,6 +335,11 @@ class AuthManagementTenantBoundaryHttpIntegrationTest {
         /** 测试解码器：只认前缀加用户编号的令牌，给出带 {@code user_id} 的已校验令牌；其他令牌按无效令牌拒绝。 */
         @Bean JwtDecoder jwtDecoder() {
             return token -> {
+                if (token.startsWith(FOREIGN_SUBJECT_PREFIX)) {
+                    return Jwt.withTokenValue(token).header("alg", "RS256").subject("kc-intruder")
+                            .claim("user_id", token.substring(FOREIGN_SUBJECT_PREFIX.length())).claim("azp", "github-gateway")
+                            .issuedAt(ISSUED).expiresAt(ISSUED.plusSeconds(300)).build();
+                }
                 if (!token.startsWith(TOKEN_PREFIX)) throw new BadJwtException("Unknown test token");
                 String userId = token.substring(TOKEN_PREFIX.length());
                 return Jwt.withTokenValue(token).header("alg", "RS256").subject("kc-" + userId).claim("user_id", userId)

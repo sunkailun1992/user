@@ -27,7 +27,8 @@ import java.util.List;
  *
  * <p>活动租户：请求头指定且在用户可访问的启用租户里时用它，否则用户的归属租户；部门取该租户关系里登记的部门；
  * 权限码、角色与数据权限按该租户下的角色计算；平台超级管理员可选择任一启用租户。权限集合是后端权限码、
- * {@code ROLE_<角色编码>} 与 {@code ROLE_<管理员分类>}。</p>
+ * {@code ROLE_<角色编码>} 与 {@code ROLE_<管理员分类>}。结果带上该用户关联的 Keycloak 用户 ID（{@code idpSubject}），
+ * 资源服务器据此核对令牌的 {@code sub}（OIDC Core §5.7）；还没关联 Keycloak 用户的账号不该有令牌，按账号未开通返回。</p>
  *
  * <p>标 {@link Primary}：本服务里同时有 utils 自动生成的 Dubbo 引用（{@code @DubboService} 由 Dubbo 扫描注册，自动配置的条件看不到它），
  * 资源服务器优先用本地实现。调用方的租户与数据权限上下文原样恢复。</p>
@@ -76,6 +77,10 @@ public class SecurityContextRpcServiceImpl implements SecurityContextRpcService 
         if (user.getState() != AuthStateEnum.启用) {
             return SecurityContextResult.of(SecurityContextResult.Status.DISABLED);
         }
+        if (StringUtils.isBlank(user.getIdpSubject())) {
+            // 令牌只能由 Keycloak 账号取得；没关联 Keycloak 用户却拿着带这个 user_id 的令牌，按账号未开通处理。
+            return SecurityContextResult.of(SecurityContextResult.Status.USER_NOT_FOUND);
+        }
         List<String> tenantIds = tenantAccess.accessibleTenantIds(user);
         String tenantId = StringUtils.isBlank(requestedTenantId) ? user.getTenantId() : requestedTenantId.trim();
         if (tenantId == null || !tenantIds.contains(tenantId)) {
@@ -94,6 +99,7 @@ public class SecurityContextRpcServiceImpl implements SecurityContextRpcService 
                 .authorities(authorities)
                 .enabled(true)
                 .tenantIds(tenantIds)
+                .idpSubject(user.getIdpSubject())
                 .build());
     }
 
