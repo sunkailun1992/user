@@ -5,6 +5,7 @@ import com.kellen.auth.entity.AuthResource;
 import com.kellen.auth.entity.bo.AuthResourceBO;
 import com.kellen.auth.entity.query.AuthResourceQuery;
 import com.kellen.auth.entity.vo.AuthResourceVO;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.AuthResourceService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,13 +44,21 @@ public class AuthResourceController {
     private final AuthResourceService authResourceService;
 
     /**
+     * 管理面访问边界。
+     */
+    private final AuthTenantManagementAccess access;
+
+    /**
      * 构造权限资源维护请求层。
      *
      * @param authResourceService 权限资源业务服务
+     * @param access 管理面访问边界
      */
-    public AuthResourceController(AuthResourceService authResourceService) {
+    public AuthResourceController(AuthResourceService authResourceService, AuthTenantManagementAccess access) {
         // 注入权限资源业务服务。
         this.authResourceService = authResourceService;
+        // 注入管理面访问边界。
+        this.access = access;
     }
 
     /**
@@ -62,6 +71,8 @@ public class AuthResourceController {
     @GetMapping("/options")
     @Operation(summary = "查询权限资源选项", description = "按查询条件返回当前租户下的权限资源轻量选项列表，用于资源树和授权回显")
     public ApiResponse<List<AuthResourceVO>> list(@ParameterObject @Validated AuthResourceQuery query) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(query.getTenantId());
         // 查询指定租户的权限资源轻量选项列表。
         return ApiResponse.success(authResourceService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
@@ -76,6 +87,8 @@ public class AuthResourceController {
     @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询权限资源", description = "按查询条件分页返回当前租户下的权限资源数据")
     public ApiResponse<Page<AuthResourceVO>> page(@ParameterObject @Validated(AuthResourceQuery.Select.class) AuthResourceQuery query) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(query.getTenantId());
         // 创建MyBatis-Plus分页对象。
         Page<AuthResource> page = new Page<>(query.getCurrent(), query.getSize());
         // 查询资源分页并转换为VO。
@@ -92,6 +105,8 @@ public class AuthResourceController {
     @PostMapping
     @Operation(summary = "新增权限资源", description = "创建菜单、按钮或接口权限资源，并返回新资源ID")
     public ApiResponse<String> save(@Validated(AuthResourceBO.Save.class) @RequestBody AuthResourceBO bo) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(bo.getTenantId());
         // 新增权限资源并返回资源ID。
         return ApiResponse.success(authResourceService.save(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
@@ -106,6 +121,8 @@ public class AuthResourceController {
     @PutMapping("/{id}")
     @Operation(summary = "修改权限资源", description = "根据资源ID和version修改权限资源，并通过乐观锁防止并发覆盖")
     public ApiResponse<Boolean> update(@PathVariable String id, @Validated(AuthResourceBO.Update.class) @RequestBody AuthResourceBO bo) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(bo.getTenantId());
         // 将路径主键写入 BO，避免请求体主键和路径主键不一致。
         bo.setId(id);
         // 修改权限资源并使用version触发乐观锁。
@@ -123,6 +140,8 @@ public class AuthResourceController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除权限资源", description = "根据资源ID逻辑删除权限资源，不物理删除历史数据")
     public ApiResponse<Boolean> remove(@PathVariable String id, @RequestParam String tenantId) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(tenantId);
         // 逻辑删除权限资源。
         return ApiResponse.success(authResourceService.remove(tenantId, id)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }

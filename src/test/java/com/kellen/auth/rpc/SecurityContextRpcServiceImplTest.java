@@ -86,6 +86,44 @@ class SecurityContextRpcServiceImplTest {
     }
 
     @Test
+    void disabledRoleGivesNoRolePermissionCodeOrDataScope() {
+        // 停用的角色（state=2）不给 ROLE_、不给它的权限码，也不参与数据权限合并：它的“全部数据”不能把用户抬成全部。
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("INSERT INTO auth_role(id,code,name,data_scope,tenant_id,state) VALUES ('r-off','auditor','审计','ALL','t1',2)");
+        jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-off','u1','r-off','t1')");
+        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sorting) VALUES ('res-audit','audit:read','审计读','BACKEND','t1',1,3)");
+        jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-audit','r-off','res-audit','t1')");
+        SecurityUser user = provider.resolve("u1", null).getUser();
+        assertThat(user.getAuthorities()).contains("user:auth:manage", "ROLE_manager", "ROLE_TENANT_ADMIN")
+                .doesNotContain("ROLE_auditor", "audit:read");
+        assertThat(user.getDataScope()).isEqualTo("CUSTOM");
+        assertThat(user.getDataScopeDeptIds()).containsExactly("d1");
+    }
+
+    @Test
+    void disabledResourceGivesNoPermissionCodeEvenThroughAnEnabledRole() {
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sorting) VALUES ('res-off','user:auth:export','导出','BACKEND','t1',2,4)");
+        jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-off','r1','res-off','t1')");
+        SecurityUser user = provider.resolve("u1", null).getUser();
+        assertThat(user.getAuthorities()).contains("user:auth:manage", "ROLE_manager").doesNotContain("user:auth:export");
+    }
+
+    @Test
+    void reEnabledRoleAndResourceGrantAgain() {
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("INSERT INTO auth_role(id,code,name,data_scope,tenant_id,state) VALUES ('r-off','auditor','审计','ALL','t1',2)");
+        jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-off','u1','r-off','t1')");
+        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sorting) VALUES ('res-audit','audit:read','审计读','BACKEND','t1',2,3)");
+        jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-audit','r-off','res-audit','t1')");
+        jdbc.update("UPDATE auth_role SET state=1 WHERE id='r-off'");
+        jdbc.update("UPDATE auth_resource SET state=1 WHERE id='res-audit'");
+        SecurityUser user = provider.resolve("u1", null).getUser();
+        assertThat(user.getAuthorities()).contains("ROLE_auditor", "audit:read");
+        assertThat(user.getDataScope()).isEqualTo("ALL");
+    }
+
+    @Test
     void roleCodeNamedAfterAnAdminTypeNeverGrantsThatRole() {
         // 写入侧拒绝保留编码；库里已有（旧数据、直接写库）的冲突编码在拼权限时也跳过，租户管理员冒充不了平台管理员。
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);

@@ -22,4 +22,14 @@ public interface AuthUserTenantMapper extends BaseMapper<AuthUserTenant> {
      */
     @Delete("DELETE FROM auth_user_tenant WHERE user_id = #{userId}")
     int deleteByUserId(@Param("userId") String userId);
+
+    /**
+     * 删除用户在某个租户里的关联（物理删除，避免逻辑删除的旧行占住唯一索引）。
+     *
+     * @param userId           用户ID
+     * @param relationTenantId 关联租户ID
+     * @return 删除数量
+     */
+    @Delete("DELETE FROM auth_user_tenant WHERE user_id = #{userId} AND relation_tenant_id = #{relationTenantId}")
+    int deleteByUserIdAndRelationTenantId(@Param("userId") String userId, @Param("relationTenantId") String relationTenantId);
 }

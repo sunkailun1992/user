@@ -5,6 +5,7 @@ import com.kellen.auth.entity.AuthTenant;
 import com.kellen.auth.entity.bo.AuthTenantBO;
 import com.kellen.auth.entity.query.AuthTenantQuery;
 import com.kellen.auth.entity.vo.AuthTenantVO;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.AuthTenantService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,13 +43,21 @@ public class AuthTenantController {
     private final AuthTenantService authTenantService;
 
     /**
+     * 管理面访问边界。
+     */
+    private final AuthTenantManagementAccess access;
+
+    /**
      * 构造租户维护请求层。
      *
      * @param authTenantService 租户业务服务
+     * @param access 管理面访问边界
      */
-    public AuthTenantController(AuthTenantService authTenantService) {
+    public AuthTenantController(AuthTenantService authTenantService, AuthTenantManagementAccess access) {
         // 注入租户业务服务。
         this.authTenantService = authTenantService;
+        // 注入管理面访问边界。
+        this.access = access;
     }
 
     /**
@@ -61,6 +70,8 @@ public class AuthTenantController {
     @GetMapping("/options")
     @Operation(summary = "查询租户选项", description = "按查询条件返回租户轻量选项列表，用于登录页选择和管理端选择器展示")
     public ApiResponse<List<AuthTenantVO>> list(@ParameterObject @Validated AuthTenantQuery query) {
+        // 租户是平台级数据：平台超级管理员看全部，其余只看自己的活动租户，点名别的租户回 403。
+        access.scopeTenantQuery(query);
         // 查询全部租户轻量选项数据。
         return ApiResponse.success(authTenantService.list(query)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
@@ -75,6 +86,8 @@ public class AuthTenantController {
     @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询租户", description = "按查询条件分页返回租户主数据，用于租户管理列表")
     public ApiResponse<Page<AuthTenantVO>> page(@ParameterObject @Validated(AuthTenantQuery.Select.class) AuthTenantQuery query) {
+        // 租户是平台级数据：平台超级管理员看全部，其余只看自己的活动租户，点名别的租户回 403。
+        access.scopeTenantQuery(query);
         // 创建MyBatis-Plus分页对象。
         Page<AuthTenant> page = new Page<>(query.getCurrent(), query.getSize());
         // 查询租户分页并转换为VO。
@@ -91,6 +104,8 @@ public class AuthTenantController {
     @PostMapping
     @Operation(summary = "新增租户", description = "创建租户主数据并返回新租户ID")
     public ApiResponse<String> save(@Validated(AuthTenantBO.Save.class) @RequestBody AuthTenantBO bo) {
+        // 租户的增删改只给平台超级管理员。
+        access.requirePlatformSuperAdmin();
         // 新增租户并返回租户ID。
         return ApiResponse.success(authTenantService.save(bo)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }
@@ -105,6 +120,8 @@ public class AuthTenantController {
     @PutMapping("/{id}")
     @Operation(summary = "修改租户", description = "根据租户ID和version修改租户资料，并通过乐观锁防止并发覆盖")
     public ApiResponse<Boolean> update(@PathVariable String id, @Validated(AuthTenantBO.Update.class) @RequestBody AuthTenantBO bo) {
+        // 租户的增删改只给平台超级管理员。
+        access.requirePlatformSuperAdmin();
         // 将路径主键写入 BO，避免请求体主键和路径主键不一致。
         bo.setId(id);
         // 修改租户并使用version触发乐观锁。
@@ -121,6 +138,8 @@ public class AuthTenantController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除租户", description = "根据租户ID逻辑删除租户，不物理删除历史数据")
     public ApiResponse<Boolean> remove(@PathVariable String id) {
+        // 租户的增删改只给平台超级管理员。
+        access.requirePlatformSuperAdmin();
         // 逻辑删除租户。
         return ApiResponse.success(authTenantService.remove(id)); // 使用统一成功工厂方法组装 success、code、msg、data 和 timestamp。
     }

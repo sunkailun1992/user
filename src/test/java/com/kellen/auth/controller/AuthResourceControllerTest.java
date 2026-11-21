@@ -7,6 +7,7 @@ import com.kellen.auth.entity.bo.AuthResourceBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
 import com.kellen.auth.entity.query.AuthResourceQuery;
 import com.kellen.auth.entity.vo.AuthResourceVO;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.AuthResourceService;
 import com.kellen.bean.GlobalExceptionHandler;
 import com.kellen.auth.support.ResourceServerTestConfiguration;
@@ -67,6 +68,12 @@ class AuthResourceControllerTest {
      */
     @MockitoBean
     private AuthResourceService authResourceService;
+
+    /**
+     * 管理面访问边界 Mock；目标租户的真实判断由 AuthManagementTenantBoundaryHttpIntegrationTest 覆盖。
+     */
+    @MockitoBean
+    private AuthTenantManagementAccess access;
 
     /**
      * 请求层测试最小启动配置。

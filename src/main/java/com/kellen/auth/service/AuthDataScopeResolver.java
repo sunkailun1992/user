@@ -6,6 +6,7 @@ import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.AuthRoleDataScope;
 import com.kellen.auth.entity.AuthUserRole;
 import com.kellen.auth.entity.enums.AuthDataScopeEnum;
+import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.mapper.AuthDeptMapper;
 import com.kellen.auth.mapper.AuthRoleDataScopeMapper;
 import com.kellen.auth.mapper.AuthRoleMapper;
@@ -19,8 +20,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 按用户在活动租户下的角色合并数据权限范围：任一角色是全部数据即为全部；本部门、本部门及下级、自定义部门合并为部门集合；
- * 否则为仅本人。在指定租户下查询，调用方的上下文原样恢复。
+ * 按用户在活动租户下启用的角色合并数据权限范围：任一角色是全部数据即为全部；本部门、本部门及下级、自定义部门合并为部门集合；
+ * 否则为仅本人。停用的角色不参与。在指定租户下查询，调用方的上下文原样恢复。
  *
  * @author 孙凯伦
  */
@@ -87,7 +88,8 @@ public class AuthDataScopeResolver {
     }
 
     /**
-     * 用户在当前租户下的角色（租户插件按调用方设置的租户拼条件）。
+     * 用户在当前租户下启用的角色（租户插件按调用方设置的租户拼条件）；停用的角色不给角色、权限码与数据范围，
+     * 同芋道 {@code getEnableUserRoleListByUserIdFromCache} 与 RuoYi 系按角色状态过滤的做法。
      *
      * @param userId 用户 ID
      * @return 角色
@@ -95,7 +97,8 @@ public class AuthDataScopeResolver {
     public List<AuthRole> rolesOf(String userId) {
         Set<String> roleIds = authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, userId))
                 .stream().map(AuthUserRole::getRoleId).filter(StringUtils::isNotBlank).collect(Collectors.toCollection(LinkedHashSet::new));
-        return roleIds.isEmpty() ? List.of() : authRoleMapper.selectList(new LambdaQueryWrapper<AuthRole>().in(AuthRole::getId, roleIds));
+        return roleIds.isEmpty() ? List.of() : authRoleMapper.selectList(new LambdaQueryWrapper<AuthRole>()
+                .in(AuthRole::getId, roleIds).eq(AuthRole::getState, AuthStateEnum.启用));
     }
 
     private List<String> customDepts(String roleId) {

@@ -2,6 +2,7 @@ package com.kellen.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kellen.auth.entity.AuthResource;
+import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.AuthRoleDataScope;
 import com.kellen.auth.entity.AuthRoleResource;
 import com.kellen.auth.entity.AuthUserRole;
@@ -11,9 +12,11 @@ import com.kellen.auth.entity.bo.AuthRoleResourceSyncBO;
 import com.kellen.auth.entity.bo.AuthUserRoleBO;
 import com.kellen.auth.entity.bo.AuthUserRoleSyncBO;
 import com.kellen.auth.entity.enums.AuthResourceCategoryEnum;
+import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.entity.vo.AuthResourceVO;
 import com.kellen.auth.mapper.AuthResourceMapper;
 import com.kellen.auth.mapper.AuthRoleDataScopeMapper;
+import com.kellen.auth.mapper.AuthRoleMapper;
 import com.kellen.auth.mapper.AuthRoleResourceMapper;
 import com.kellen.auth.mapper.AuthUserRoleMapper;
 import com.kellen.auth.service.AuthSecurityContextInvalidator;
@@ -66,6 +69,11 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     private final AuthResourceMapper authResourceMapper;
 
     /**
+     * 角色Mapper（只取启用的角色）。
+     */
+    private final AuthRoleMapper authRoleMapper;
+
+    /**
      * 资源结果转换增强。
      */
     private final AuthResourceServiceResults authResourceServiceResults;
@@ -82,6 +90,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
      * @param authRoleResourceMapper     角色资源Mapper
      * @param authRoleDataScopeMapper    角色自定义数据范围Mapper
      * @param authResourceMapper         资源Mapper
+     * @param authRoleMapper             角色Mapper
      * @param authResourceServiceResults 资源结果转换增强
      * @param securityContextInvalidator 业务上下文缓存失效通知
      */
@@ -89,6 +98,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
                                 AuthRoleResourceMapper authRoleResourceMapper,
                                 AuthRoleDataScopeMapper authRoleDataScopeMapper,
                                 AuthResourceMapper authResourceMapper,
+                                AuthRoleMapper authRoleMapper,
                                 AuthResourceServiceResults authResourceServiceResults,
                                 AuthSecurityContextInvalidator securityContextInvalidator) {
         // 保存用户角色Mapper。
@@ -99,6 +109,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
         this.authRoleDataScopeMapper = authRoleDataScopeMapper;
         // 保存资源Mapper。
         this.authResourceMapper = authResourceMapper;
+        // 保存角色Mapper。
+        this.authRoleMapper = authRoleMapper;
         // 保存资源结果转换增强。
         this.authResourceServiceResults = authResourceServiceResults;
         // 保存业务上下文缓存失效通知。
@@ -293,7 +305,8 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     }
 
     /**
-     * 查询用户拥有的资源。
+     * 查询用户拥有的资源：只经启用的角色、只取启用的资源；停用的角色或资源既不给权限码，也不出现在菜单里
+     * （同 RuoYi-Vue 按角色与菜单状态过滤权限，芋道去掉停用角色并用 {@code filterDisableMenus} 去掉停用菜单）。
      *
      * @param userId 用户ID
      * @return 资源列表
@@ -306,8 +319,12 @@ public class AuthGrantServiceImpl implements AuthGrantService {
             // 查询用户角色关系。
             List<AuthUserRole> userRoles = authUserRoleMapper.selectList(new LambdaQueryWrapper<AuthUserRole>().eq(AuthUserRole::getUserId, userId));
             // 提取角色ID集合。
-            Set<String> roleIds = userRoles.stream().map(AuthUserRole::getRoleId).collect(Collectors.toSet());
-            // 无角色时返回空资源。
+            Set<String> boundRoleIds = userRoles.stream().map(AuthUserRole::getRoleId).filter(StringUtils::isNotBlank).collect(Collectors.toSet());
+            // 只保留启用的角色。
+            Set<String> roleIds = boundRoleIds.isEmpty() ? Set.of() : authRoleMapper.selectList(new LambdaQueryWrapper<AuthRole>()
+                    .in(AuthRole::getId, boundRoleIds).eq(AuthRole::getState, AuthStateEnum.启用))
+                    .stream().map(AuthRole::getId).collect(Collectors.toSet());
+            // 无启用角色时返回空资源。
             if (roleIds.isEmpty()) {
                 // 返回空列表。
                 return List.of();
@@ -321,8 +338,9 @@ public class AuthGrantServiceImpl implements AuthGrantService {
                 // 返回空列表。
                 return List.of();
             }
-            // 查询资源详情。
-            return authResourceMapper.selectList(new LambdaQueryWrapper<AuthResource>().in(AuthResource::getId, resourceIds).orderByAsc(AuthResource::getSorting));
+            // 查询启用的资源详情。
+            return authResourceMapper.selectList(new LambdaQueryWrapper<AuthResource>().in(AuthResource::getId, resourceIds)
+                    .eq(AuthResource::getState, AuthStateEnum.启用).orderByAsc(AuthResource::getSorting));
         } finally {
             // 清理数据权限忽略标记。
             DataPermissionContextHolder.clear();

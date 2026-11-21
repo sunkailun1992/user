@@ -6,6 +6,7 @@ import com.kellen.auth.entity.AuthDept;
 import com.kellen.auth.entity.bo.AuthDeptBO;
 import com.kellen.auth.entity.query.AuthDeptQuery;
 import com.kellen.auth.entity.vo.AuthDeptVO;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.AuthDeptService;
 import com.kellen.bean.GlobalExceptionHandler;
 import com.kellen.auth.support.ResourceServerTestConfiguration;
@@ -67,6 +68,12 @@ class AuthDeptControllerTest {
      */
     @MockitoBean
     private AuthDeptService authDeptService;
+
+    /**
+     * 管理面访问边界 Mock；目标租户的真实判断由 AuthManagementTenantBoundaryHttpIntegrationTest 覆盖。
+     */
+    @MockitoBean
+    private AuthTenantManagementAccess access;
 
     /**
      * 请求层测试最小启动配置。

@@ -190,9 +190,9 @@ class AuthRoleResourceTenantHttpIntegrationTest {
     }
     @Test void deniedCrossTenantCheckLeavesEveryExistingContextUntouched() {
         context(B, true);
-        assertThatThrownBy(() -> access.requireTenant(B)).isInstanceOf(AccessDeniedException.class).hasMessage("角色资源访问被拒绝");
+        assertThatThrownBy(() -> access.requireTenant(B)).isInstanceOf(AccessDeniedException.class).hasMessage("管理接口访问被拒绝");
         UserContextHolder.set(new SecurityUser("tenant-admin", "tenant-admin", A, List.of("user:auth:manage")));
-        assertThatThrownBy(() -> access.requireTenant(B)).isInstanceOf(AccessDeniedException.class).hasMessage("角色资源访问被拒绝");
+        assertThatThrownBy(() -> access.requireTenant(B)).isInstanceOf(AccessDeniedException.class).hasMessage("管理接口访问被拒绝");
         assertContext(B, true);
     }
     @Test void ordinaryMapperStillRequiresTenantAndRespectsIt() {

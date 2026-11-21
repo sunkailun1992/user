@@ -5,13 +5,17 @@ import com.kellen.auth.entity.enums.AuthStateEnum;
 import com.kellen.auth.keycloak.KeycloakAccountClient;
 import com.kellen.auth.mq.producer.UserAccountEventProducer;
 import com.kellen.auth.service.AuthSecurityContextInvalidator;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
 import com.kellen.auth.service.results.AuthUserServiceResults;
 import com.kellen.auth.support.AuthH2TestConfiguration;
+import com.kellen.security.SecurityUser;
+import com.kellen.security.UserContextHolder;
 import com.kellen.security.oauth2.SecurityUserCache;
 import com.kellen.utils.context.TenantContextHolder;
 import com.kellen.utils.enumeration.ReturnCode;
 import com.kellen.utils.exception.UserException;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,11 +75,14 @@ class AuthUserServiceImplKeycloakTest {
                 + " ('u1','alice','Alice','TENANT_ADMIN','d1','t1',1,'kc-1',0)");
         reset(keycloak, cache, producer);
         TenantContextHolder.clear();
+        // 调用方是平台超级管理员：本类只测 Keycloak 同步，租户边界由 AuthManagementTenantBoundaryHttpIntegrationTest 覆盖。
+        UserContextHolder.set(new SecurityUser("platform-admin", "platform-admin", "t1", List.of("user:auth:manage", "ROLE_PLATFORM_SUPER_ADMIN")));
     }
 
     @AfterEach
     void clear() {
         TenantContextHolder.clear();
+        UserContextHolder.clear();
     }
 
     @Test
@@ -226,7 +233,7 @@ class AuthUserServiceImplKeycloakTest {
      * 测试上下文：H2 认证表加用户服务；Keycloak、业务上下文缓存与账号事件用替身。
      */
     @Configuration(proxyBeanMethods = false)
-    @Import({AuthH2TestConfiguration.class, AuthUserServiceImpl.class, AuthSecurityContextInvalidator.class})
+    @Import({AuthH2TestConfiguration.class, AuthUserServiceImpl.class, AuthSecurityContextInvalidator.class, AuthTenantManagementAccess.class})
     static class Config {
 
         @Bean

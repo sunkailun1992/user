@@ -17,6 +17,7 @@ import com.kellen.auth.keycloak.KeycloakAccountClient;
 import com.kellen.auth.mq.producer.UserAccountEventProducer;
 import com.kellen.auth.service.AuthQueryScope;
 import com.kellen.auth.service.AuthSecurityContextInvalidator;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.AuthUserService;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
 import com.kellen.auth.service.results.AuthUserServiceResults;
@@ -27,6 +28,7 @@ import com.kellen.utils.exception.UserException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -37,12 +39,17 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 用户业务服务实现。
  *
  * <p>第5阶段起账号与口令在 Keycloak：建、改、停用、重置口令、删除账号时经 Admin REST API 同步（失败时本地事务回滚），
  * 并让业务上下文缓存换版本。user 库不再存口令。</p>
+ *
+ * <p>租户边界：接口点名的租户已由控制器按活动租户校验。账号归属租户的管理员管账号本身（资料、启停、口令、删除）与本租户里的关联；
+ * 不能把账号加进自己管理不了的租户，也不动它在别的租户的关联，跨租户的关联只由平台超级管理员维护
+ * （同 RuoYi 系在 Service 里按当前登录者做 {@code checkUserDataScope} 的写法）。</p>
  *
  * @author sunkailun
  * @className AuthUserServiceImpl
@@ -86,6 +93,11 @@ public class AuthUserServiceImpl implements AuthUserService {
     private final UserAccountEventProducer userAccountEventProducer;
 
     /**
+     * 管理面访问边界（能管理哪些租户）。
+     */
+    private final AuthTenantManagementAccess access;
+
+    /**
      * 日志对象。
      */
     private static final Logger log = LoggerFactory.getLogger(AuthUserServiceImpl.class);
@@ -100,6 +112,7 @@ public class AuthUserServiceImpl implements AuthUserService {
      * @param keycloakAccountClient      Keycloak 账号同步
      * @param securityContextInvalidator 业务上下文缓存失效通知
      * @param userAccountEventProducer  “账号已创建”事件的生产者
+     * @param access                    管理面访问边界
      */
     public AuthUserServiceImpl(AuthUserMapper authUserMapper,
                                AuthUserServiceQuery authUserServiceQuery,
@@ -107,7 +120,8 @@ public class AuthUserServiceImpl implements AuthUserService {
                                AuthUserTenantMapper authUserTenantMapper,
                                KeycloakAccountClient keycloakAccountClient,
                                AuthSecurityContextInvalidator securityContextInvalidator,
-                               UserAccountEventProducer userAccountEventProducer) {
+                               UserAccountEventProducer userAccountEventProducer,
+                               AuthTenantManagementAccess access) {
         // 保存用户Mapper。
         this.authUserMapper = authUserMapper;
         // 保存用户查询增强。
@@ -122,6 +136,8 @@ public class AuthUserServiceImpl implements AuthUserService {
         this.securityContextInvalidator = securityContextInvalidator;
         // 保存“账号已创建”事件的生产者。
         this.userAccountEventProducer = userAccountEventProducer;
+        // 保存管理面访问边界。
+        this.access = access;
     }
 
     /**
@@ -185,6 +201,8 @@ public class AuthUserServiceImpl implements AuthUserService {
     @Transactional(rollbackFor = Exception.class)
     public String save(AuthUserBO bo) {
         try {
+            // 写库之前先确认要关联的租户都管得了。
+            requireAssociableTenants(null, bo);
             // 设置目标租户上下文。
             TenantContextHolder.setTenantId(bo.getTenantId());
             // 查询同租户同用户名用户是否已存在，避免重复插入同一个用户。
@@ -237,6 +255,8 @@ public class AuthUserServiceImpl implements AuthUserService {
     @Transactional(rollbackFor = Exception.class)
     public Boolean update(AuthUserBO bo) {
         try {
+            // 写库之前先确认要关联的租户都管得了（该用户已有的别的租户关联可以原样带回）。
+            requireAssociableTenants(bo.getId(), bo);
             // 设置目标租户上下文，避免更新依赖请求头隐式租户。
             TenantContextHolder.setTenantId(bo.getTenantId());
             // 改之前的账号，用来判断 Keycloak 里要同步哪些项。
@@ -384,20 +404,20 @@ public class AuthUserServiceImpl implements AuthUserService {
             // 缺少必要参数时不处理关联。
             return;
         }
+        boolean platform = access.isPlatformSuperAdmin();
+        Set<String> existing = platform ? Set.of() : relationTenantIds(userId);
         try {
             // 用户租户关联是跨租户认证配置，写入时忽略当前租户插件条件。
             TenantContextHolder.ignore();
-            // 删除旧关联。
-            authUserTenantMapper.deleteByUserId(userId);
-            // 创建待写入租户集合。
-            Set<String> tenantIds = new LinkedHashSet<>();
-            if (bo.getTenantIds() != null) {
-                // 加入表单选择的关联租户。
-                bo.getTenantIds().stream().filter(StringUtils::isNotBlank).forEach(tenantIds::add);
-            }
-            if (StringUtils.isNotBlank(bo.getTenantId())) {
-                // 默认租户必须纳入关联范围。
-                tenantIds.add(bo.getTenantId());
+            // 待写入的租户：表单选择的关联租户加默认租户。
+            Set<String> tenantIds = requestedTenantIds(bo);
+            if (platform) {
+                // 平台超级管理员整体替换该用户的全部关联。
+                authUserTenantMapper.deleteByUserId(userId);
+            } else {
+                // 其余只替换自己管得了的租户里的关联；该用户在别的租户的关联原样保留（不能新加已由 requireAssociableTenants 挡住）。
+                tenantIds.removeIf(tenantId -> !access.canManage(tenantId));
+                existing.stream().filter(access::canManage).forEach(tenantId -> authUserTenantMapper.deleteByUserIdAndRelationTenantId(userId, tenantId));
             }
             for (String tenantId : tenantIds) {
                 // 创建用户租户关联。
@@ -417,6 +437,53 @@ public class AuthUserServiceImpl implements AuthUserService {
             // 清理租户忽略标记。
             TenantContextHolder.clearIgnore();
         }
+    }
+
+    /**
+     * 不是平台超级管理员时，要关联的租户必须是自己管得了的，或该用户已经关联着的（编辑时原样带回）；否则在写库之前拒绝。
+     *
+     * @param userId 已有用户的ID，新建时为 null
+     * @param bo     用户写入参数
+     * @throws AccessDeniedException 要把账号加进管理不了的租户时
+     */
+    private void requireAssociableTenants(String userId, AuthUserBO bo) {
+        if (bo == null || access.isPlatformSuperAdmin()) {
+            return;
+        }
+        Set<String> existing = userId == null ? Set.of() : relationTenantIds(userId);
+        for (String tenantId : requestedTenantIds(bo)) {
+            if (!access.canManage(tenantId) && !existing.contains(tenantId)) {
+                throw new AccessDeniedException("不能把账号关联到无权管理的租户");
+            }
+        }
+    }
+
+    /**
+     * 表单要关联的租户：选择的关联租户加默认租户，去掉空值、保持顺序。
+     *
+     * @param bo 用户写入参数
+     * @return 租户ID集合
+     */
+    private static Set<String> requestedTenantIds(AuthUserBO bo) {
+        Set<String> tenantIds = new LinkedHashSet<>();
+        if (bo.getTenantIds() != null) {
+            bo.getTenantIds().stream().filter(StringUtils::isNotBlank).forEach(tenantIds::add);
+        }
+        if (StringUtils.isNotBlank(bo.getTenantId())) {
+            tenantIds.add(bo.getTenantId());
+        }
+        return tenantIds;
+    }
+
+    /**
+     * 用户现有的关联租户（跨租户读取）。
+     *
+     * @param userId 用户ID
+     * @return 关联租户ID集合
+     */
+    private Set<String> relationTenantIds(String userId) {
+        return AuthQueryScope.crossTenant(() -> authUserTenantMapper.selectList(new LambdaQueryWrapper<AuthUserTenant>().eq(AuthUserTenant::getUserId, userId)))
+                .stream().map(AuthUserTenant::getRelationTenantId).filter(StringUtils::isNotBlank).collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     /**

@@ -6,6 +6,7 @@ import com.kellen.auth.entity.AuthRole;
 import com.kellen.auth.entity.bo.AuthRoleBO;
 import com.kellen.auth.entity.query.AuthRoleQuery;
 import com.kellen.auth.entity.vo.AuthRoleVO;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.AuthRoleService;
 import com.kellen.bean.GlobalExceptionHandler;
 import com.kellen.auth.support.ResourceServerTestConfiguration;
@@ -67,6 +68,12 @@ class AuthRoleControllerTest {
      */
     @MockitoBean
     private AuthRoleService authRoleService;
+
+    /**
+     * 管理面访问边界 Mock；目标租户的真实判断由 AuthManagementTenantBoundaryHttpIntegrationTest 覆盖。
+     */
+    @MockitoBean
+    private AuthTenantManagementAccess access;
 
     /**
      * 请求层测试最小启动配置。

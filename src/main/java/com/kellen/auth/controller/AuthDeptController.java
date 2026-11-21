@@ -5,6 +5,7 @@ import com.kellen.auth.entity.AuthDept;
 import com.kellen.auth.entity.bo.AuthDeptBO;
 import com.kellen.auth.entity.query.AuthDeptQuery;
 import com.kellen.auth.entity.vo.AuthDeptVO;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.AuthDeptService;
 import com.kellen.utils.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,12 +44,20 @@ public class AuthDeptController {
     private final AuthDeptService authDeptService;
 
     /**
+     * 管理面访问边界。
+     */
+    private final AuthTenantManagementAccess access;
+
+    /**
      * 构造部门维护请求层。
      *
      * @param authDeptService 部门业务服务
+     * @param access 管理面访问边界
      */
-    public AuthDeptController(AuthDeptService authDeptService) {
+    public AuthDeptController(AuthDeptService authDeptService, AuthTenantManagementAccess access) {
         this.authDeptService = authDeptService; // 注入部门业务服务。
+        // 注入管理面访问边界。
+        this.access = access;
     }
 
     /**
@@ -60,6 +69,8 @@ public class AuthDeptController {
     @GetMapping("/options")
     @Operation(summary = "查询部门选项", description = "按查询条件返回当前租户下的部门轻量选项列表，用于组织树和数据权限选择")
     public ApiResponse<List<AuthDeptVO>> list(@ParameterObject @Validated AuthDeptQuery query) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(query.getTenantId());
         return ApiResponse.success(authDeptService.list(query)); // 查询指定租户的部门轻量选项列表。
     }
 
@@ -72,6 +83,8 @@ public class AuthDeptController {
     @GetMapping(params = {"current", "size"})
     @Operation(summary = "分页查询部门", description = "按查询条件分页返回当前租户下的部门数据")
     public ApiResponse<Page<AuthDeptVO>> page(@ParameterObject @Validated(AuthDeptQuery.Select.class) AuthDeptQuery query) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(query.getTenantId());
         Page<AuthDept> page = new Page<>(query.getCurrent(), query.getSize()); // 创建 MyBatis-Plus 分页对象。
         return ApiResponse.success(authDeptService.page(page, query)); // 查询部门分页并返回统一响应。
     }
@@ -85,6 +98,8 @@ public class AuthDeptController {
     @PostMapping
     @Operation(summary = "新增部门", description = "创建组织部门并返回新部门ID")
     public ApiResponse<String> save(@Validated(AuthDeptBO.Save.class) @RequestBody AuthDeptBO bo) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(bo.getTenantId());
         return ApiResponse.success(authDeptService.save(bo)); // 新增部门并返回部门ID。
     }
 
@@ -97,6 +112,8 @@ public class AuthDeptController {
     @PutMapping("/{id}")
     @Operation(summary = "修改部门", description = "根据部门ID和version修改部门资料，并通过乐观锁防止并发覆盖")
     public ApiResponse<Boolean> update(@PathVariable String id, @Validated(AuthDeptBO.Update.class) @RequestBody AuthDeptBO bo) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(bo.getTenantId());
         bo.setId(id); // 将路径主键写入 BO，避免请求体主键和路径主键不一致。
         return ApiResponse.success(authDeptService.update(bo)); // 修改部门并使用 version 触发乐观锁。
     }
@@ -111,6 +128,8 @@ public class AuthDeptController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除部门", description = "根据部门ID逻辑删除部门，不物理删除历史数据")
     public ApiResponse<Boolean> remove(@PathVariable String id, @RequestParam String tenantId) {
+        // 请求点名的租户只能是自己的活动租户（平台超级管理员除外），越界在任何查询之前回 403。
+        access.requireTenant(tenantId);
         return ApiResponse.success(authDeptService.remove(tenantId, id)); // 逻辑删除部门。
     }
 }

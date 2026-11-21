@@ -7,6 +7,7 @@ import com.kellen.auth.mapper.AuthUserMapper;
 import com.kellen.auth.mapper.AuthUserTenantMapper;
 import com.kellen.auth.mq.producer.UserAccountEventProducer;
 import com.kellen.auth.service.AuthSecurityContextInvalidator;
+import com.kellen.auth.service.AuthTenantManagementAccess;
 import com.kellen.auth.service.query.AuthUserServiceQuery;
 import com.kellen.auth.service.results.AuthUserServiceResults;
 import com.kellen.utils.context.TenantContextHolder;
@@ -38,7 +39,16 @@ class AuthUserServiceImplEventTest {
     private final KeycloakAccountClient keycloak = mock(KeycloakAccountClient.class);
 
     private final AuthUserServiceImpl service = new AuthUserServiceImpl(authUserMapper, mock(AuthUserServiceQuery.class),
-            mock(AuthUserServiceResults.class), mock(AuthUserTenantMapper.class), keycloak, mock(AuthSecurityContextInvalidator.class), producer);
+            mock(AuthUserServiceResults.class), mock(AuthUserTenantMapper.class), keycloak, mock(AuthSecurityContextInvalidator.class), producer, platformAdmin());
+
+    /**
+     * 调用方是平台超级管理员：本类只测事件，租户边界由 AuthManagementTenantBoundaryHttpIntegrationTest 覆盖。
+     */
+    private static AuthTenantManagementAccess platformAdmin() {
+        AuthTenantManagementAccess access = mock(AuthTenantManagementAccess.class);
+        when(access.isPlatformSuperAdmin()).thenReturn(true);
+        return access;
+    }
 
     @AfterEach
     void clearContext() {

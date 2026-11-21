@@ -81,6 +81,19 @@ class AuthCurrentUserServiceImplTest {
     }
 
     @Test
+    void disabledMenusAndEverythingFromADisabledRoleStayHidden() {
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("INSERT INTO auth_role(id,name,code,data_scope,tenant_id,state) VALUES ('r-off','停用角色','archived','SELF','t1',2)");
+        jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-off','u1','r-off','t1')");
+        jdbc.update("INSERT INTO auth_resource(id,name,code,resource_category,tenant_id,state,sorting) VALUES"
+                + " ('res-off-menu','停用菜单','menu:archived','FRONTEND','t1',2,3),('res-role-menu','角色菜单','menu:role-only','FRONTEND','t1',1,4)");
+        jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-off-menu','r1','res-off-menu','t1'),('rr-role-menu','r-off','res-role-menu','t1')");
+        AuthCurrentResourceVO resources = service.currentResources();
+        assertThat(resources.getFrontendResources()).extracting(AuthResourceVO::getCode).containsExactly("menu:home");
+        assertThat(resources.getPermissions()).containsExactly("user:auth:resources");
+    }
+
+    @Test
     void currentTenantsListEveryEnabledTenantTheUserCanUse() {
         assertThat(service.currentTenants()).extracting(AuthTenantVO::getId).containsExactly("t1", "t2");
     }
