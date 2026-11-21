@@ -2,7 +2,7 @@
 
 `user` 是用户中心微服务，负责真实用户体系、认证授权、租户、角色和权限资源管理。
 
-个人公共库固定为 `com:utils:2.0.1`、`com:rpc-api:2.0.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
+个人公共库固定为 `com:utils:2.0.6`、`com:rpc-api:2.0.0`。个人与美联共用同一阿里云私有 Maven 地址：个人沿用 `com` group，公司保留 `com.kellen` group；artifact 名仍为 `utils` / `rpc-api`，Java package 不随 Maven 坐标改变。公共库须先完成 Maven Local 验证并独立发布私库，消费者再按精确坐标拉取；已有同版制品不得覆盖。
 
 ## 启动入口
 
@@ -46,7 +46,7 @@
 
 第5阶段起登录、口令、令牌签发、注销与机器到机器凭证都在 Keycloak（`github-dev` 域，由 `../utils/ops/github-dev/keycloak/terraform` 管理）：浏览器经网关 BFF 登录（授权码加 PKCE），服务与脚本带 Bearer 访问令牌。user 不再签发或校验自签 JWT；登录、刷新、注销会话，第三方 HMAC 会话与开放接口签名校验，`/oauth2/*` 与发现文档，OAuth 客户端管理接口都已删除，不留兼容层。
 
-user 自己是资源服务器（`com:utils:2.0.1` 自动配置）：校验访问令牌的签发方、受众 `github-api` 与有效期，按令牌里的 `user_id` 与请求头 `X-Tenant-Id` 取业务上下文（权限码、`ROLE_<角色编码>`、`ROLE_<管理员分类>`、部门、数据范围、可访问租户）。角色编码不能用管理员分类的保留名（`PLATFORM_SUPER_ADMIN`、`TENANT_ADMIN`），建、改角色时拒绝，拼权限时跳过残留的重名角色。其他服务经 Dubbo 调 user 的 `SecurityContextRpcService` 取同一份上下文；user 自己用本地实现。
+user 自己是资源服务器（`com:utils:2.0.6` 自动配置）：校验访问令牌的签发方、受众 `github-api` 与有效期，按令牌里的 `user_id` 与请求头 `X-Tenant-Id` 取业务上下文（权限码、`ROLE_<角色编码>`、`ROLE_<管理员分类>`、部门、数据范围、可访问租户）。角色编码不能用管理员分类的保留名（`PLATFORM_SUPER_ADMIN`、`TENANT_ADMIN`），建、改角色时拒绝，拼权限时跳过残留的重名角色。其他服务经 Dubbo 调 user 的 `SecurityContextRpcService` 取同一份上下文；user 自己用本地实现。
 
 当前用户接口在 `com.kellen.auth.controller.AuthController`：
 
@@ -497,7 +497,7 @@ docs/ai-coding
 
 ## 验证命令
 
-公共依赖固定为 `com:utils:2.0.1`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。业务接口只认 Keycloak 访问令牌，不使用该管理令牌。
+公共依赖固定为 `com:utils:2.0.6`。Actuator 管理端点使用公共包的独立令牌安全链；`security.actuator.token` 必须从个人 namespace 或环境注入，缺失时仅 health 可访问。业务接口只认 Keycloak 访问令牌，不使用该管理令牌。
 
 ```bash
 ./gradlew clean compileJava test
@@ -555,3 +555,7 @@ Admin/Zipkin 模板与三 profile 的 imports 已退役。服务 JVM 的可选 O
 ### Nacos 账号不带默认值（1.5.3）
 
 - 去掉 dev、test、prod 三套配置里 Nacos 账号与口令的默认值（原为 `nacos`，即 Nacos 管理员账号）：`custom.nacos-username`、`custom.nacos-password` 只引用 `GITHUB_NACOS_USERNAME`、`GITHUB_NACOS_PASSWORD`，缺值时启动即失败，不再静默以管理员登录（CWE-1392 默认凭据）；值由私有环境提供（IDEA 的 env 文件、Jar 的 application.properties 或容器同名环境变量）。
+
+### utils 2.0.6（1.5.4）
+
+- 依赖从 `com:utils:2.0.1` 升到 `2.0.6`：业务上下文的 Dubbo 引用改为独立自动配置、启动时不初始化（2.0.4、2.0.5；user 本地提供实现，原先就不受影响），受保护资源元数据声明授权服务器（2.0.3），没配受众时只收 `github-api`（2.0.6）。本服务代码不变；此前 Jar 打的仍是 2.0.1，与链路验证所用的 utils 源码不一致，这次对齐。

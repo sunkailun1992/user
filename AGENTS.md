@@ -51,7 +51,7 @@
 
 ## 项目边界
 
-- 个人公共库固定使用 `com:utils:2.0.1` 与 `com:rpc-api:2.0.0`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
+- 个人公共库固定使用 `com:utils:2.0.6` 与 `com:rpc-api:2.0.0`；公司库保留 `com.kellen:utils` 与 `com.kellen:rpc-api`。双方共用同一阿里云私有 Maven 地址，沿用各自 group 坐标隔离，不改 Java package，也不迁移到另一仓库或 GitHub Packages。
 
 - `user` 负责账号（经 Keycloak Admin REST API 同步登录账号）、业务上下文提供方（`SecurityContextRpcService`）、租户、用户、角色、权限资源、角色资源绑定、用户角色绑定和数据范围。
 - 登录、口令、令牌签发与注销由 Keycloak 负责（`github-dev` 域，Terraform 在 `../utils/ops/github-dev/keycloak/terraform`）；不在 user 里恢复自签 JWT、登录会话、OAuth 授权服务器或第三方签名接口。服务接入、受众、机器令牌与令牌交换按 `../utils/docs/ai-coding/AUTH_SPEC.md`。
