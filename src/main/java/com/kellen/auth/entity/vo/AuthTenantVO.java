@@ -51,7 +51,7 @@ public class AuthTenantVO implements Serializable {
      * 排序。
      */
     @Schema(description = "排序")
-    private Integer sorting;
+    private Integer sort;
 
     /**
      * 数据库版本号。

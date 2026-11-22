@@ -69,7 +69,7 @@ public class AuthResourceVO implements Serializable {
      * 排序。
      */
     @Schema(description = "排序")
-    private Integer sorting;
+    private Integer sort;
 
     /**
      * 资源状态。

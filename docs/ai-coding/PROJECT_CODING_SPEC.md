@@ -187,7 +187,7 @@ src/main/resources/db/migration/V<版本>__<说明>.sql
 - Seata AT 的 `undo_log` 在 `V1__baseline.sql` 里；数据源块固定 `spring.datasource.dynamic.seata: true`，不设总开关；建池时 Seata AT 代理就检查该表，utils 在创建任何 Bean 之前先执行 Flyway 迁移，新空库首次启动即建出该表。
 - 已有的库由 `baseline-on-migrate: true`、`baseline-version: 1` 接管：版本 1 登记为基线、不执行 `V1__baseline.sql`。
 - 基础字典、默认角色、默认权限资源等初始化数据也写进迁移；补数据用 `INSERT ... ON CONFLICT DO NOTHING` 或带租户、主键条件的确定性 `UPDATE`。
-- 不删除实体基类对应的列（`id`、`code`、`description`、审计列、`is_deleted`、`label`、`sorting`、`version`、`tenant_id`、`create_dept`），旧列只改名；删其它列或整表的迁移先在 `DO` 块里核对整列（或整表）为空，不为空就 `RAISE EXCEPTION` 让整版回滚。
+- 不删除实体基类对应的列（`id`、`code`、`description`、审计列、`is_deleted`、`label`、`sort`、`version`、`tenant_id`、`create_dept`），旧列只改名；删其它列或整表的迁移先在 `DO` 块里核对整列（或整表）为空，不为空就 `RAISE EXCEPTION` 让整版回滚。
 - 不再为基础数据新增业务初始化接口，避免启动后还需要人工调用初始化接口。
 - 表结构必须包含 `version`，乐观锁字段由 utils `EntityBase` 的 `@Version` 承接。
 - 多租户业务表必须包含 `tenant_id`，业务 SQL 不手写租户条件。
@@ -214,13 +214,13 @@ is_deleted boolean DEFAULT false, -- 删除状态
 type int DEFAULT '0', -- 类型（0：默认）
 state int DEFAULT '1', -- 状态（1：启用，2：禁用）
 label varchar(255) COLLATE fleet_general_ci DEFAULT NULL, -- 标签
-sorting int DEFAULT '0', -- 排序
+sort int DEFAULT '0', -- 排序
 version int DEFAULT '1', -- 版本号（乐观锁）
 tenant_id varchar(64) COLLATE fleet_general_ci NOT NULL, -- 租户id
 create_dept varchar(64) COLLATE fleet_general_ci DEFAULT NULL -- 创建部门ID
 ```
 
-`id`、`code`、`description`、`createTime`、`createBy`、`updateTime`、`updateBy`、`deleted`、`label`、`sorting`、`version` 由 `utils` 的 `com.kellen.entity.EntityBase` 承接（时间、创建人、修改人自动填充，创建人、修改人取当前登录用户ID，没有登录用户时不填），`tenantId` 与 `createDept`（插入时取当前登录用户的部门）由 `TenantEntityBase` 承接；本服务的 `type`、`state` 在 `AuthEntity` 声明。实体默认继承：
+`id`、`code`、`description`、`createTime`、`createBy`、`updateTime`、`updateBy`、`deleted`、`label`、`sort`、`version` 由 `utils` 的 `com.kellen.entity.EntityBase` 承接（时间、创建人、修改人自动填充，创建人、修改人取当前登录用户ID，没有登录用户时不填），`tenantId` 与 `createDept`（插入时取当前登录用户的部门）由 `TenantEntityBase` 承接；本服务的 `type`、`state` 在 `AuthEntity` 声明。实体默认继承：
 
 ```java
 public class Xxx extends AuthEntity {

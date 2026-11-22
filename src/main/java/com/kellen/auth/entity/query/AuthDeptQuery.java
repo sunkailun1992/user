@@ -92,7 +92,7 @@ public class AuthDeptQuery implements Serializable {
     /**
      * 排序字段。
      */
-    @Schema(description = "排序字段", example = "sorting")
+    @Schema(description = "排序字段", example = "sort")
     private String collationFields;
 
     /**

@@ -340,7 +340,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
             }
             // 查询启用的资源详情。
             return authResourceMapper.selectList(new LambdaQueryWrapper<AuthResource>().in(AuthResource::getId, resourceIds)
-                    .eq(AuthResource::getState, AuthStateEnum.启用).orderByAsc(AuthResource::getSorting));
+                    .eq(AuthResource::getState, AuthStateEnum.启用).orderByAsc(AuthResource::getSort));
         } finally {
             // 清理数据权限忽略标记。
             DataPermissionContextHolder.clear();
@@ -369,7 +369,7 @@ public class AuthGrantServiceImpl implements AuthGrantService {
     @Override
     public List<AuthResourceVO> toResourceViews(List<AuthResource> resources, AuthResourceCategoryEnum category) {
         // 按分类过滤并转换为资源响应对象。
-        return resources.stream().filter(resource -> category == resource.getResourceCategory()).sorted(Comparator.comparing(resource -> resource.getSorting() == null ? 0 : resource.getSorting())).map(authResourceServiceResults::toVO).toList();
+        return resources.stream().filter(resource -> category == resource.getResourceCategory()).sorted(Comparator.comparing(resource -> resource.getSort() == null ? 0 : resource.getSort())).map(authResourceServiceResults::toVO).toList();
     }
 
     /**

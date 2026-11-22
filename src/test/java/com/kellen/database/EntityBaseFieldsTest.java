@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** 13 个认证实体都继承租户基类，基类已有的公共字段（含 id、version、code、description、sorting）不在实体里重复声明。 */
+/** 13 个认证实体都继承租户基类，基类已有的公共字段（含 id、version、code、description、sort）不在实体里重复声明。 */
 class EntityBaseFieldsTest {
 
     static final List<Class<? extends TenantEntityBase>> ENTITIES = List.of(AuthDept.class, AuthResource.class,

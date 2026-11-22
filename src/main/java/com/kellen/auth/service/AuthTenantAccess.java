@@ -62,7 +62,7 @@ public class AuthTenantAccess {
         }
         return AuthQueryScope.crossTenant(() -> {
             LambdaQueryWrapper<AuthTenant> query = new LambdaQueryWrapper<AuthTenant>().eq(AuthTenant::getState, AuthStateEnum.启用)
-                    .orderByAsc(AuthTenant::getSorting).orderByAsc(AuthTenant::getId);
+                    .orderByAsc(AuthTenant::getSort).orderByAsc(AuthTenant::getId);
             if (AuthAdminTypeEnum.PLATFORM_SUPER_ADMIN == adminType(user)) {
                 return authTenantMapper.selectList(query);
             }
@@ -122,7 +122,7 @@ public class AuthTenantAccess {
         vo.setName(tenant.getName());
         vo.setState(tenant.getState());
         vo.setStateDesc(tenant.getState() == null ? null : tenant.getState().getDesc());
-        vo.setSorting(tenant.getSorting());
+        vo.setSort(tenant.getSort());
         vo.setVersion(tenant.getVersion());
         return vo;
     }

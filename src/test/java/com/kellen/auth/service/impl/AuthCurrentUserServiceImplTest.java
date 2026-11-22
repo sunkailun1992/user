@@ -48,12 +48,12 @@ class AuthCurrentUserServiceImplTest {
     void fixture() {
         AuthH2TestConfiguration.recreateTables(dataSource);
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-        jdbc.update("INSERT INTO auth_tenant(id,name,tenant_id,state,sorting) VALUES ('t1','租户一','t1',1,1),('t2','租户二','t2',1,2)");
+        jdbc.update("INSERT INTO auth_tenant(id,name,tenant_id,state,sort) VALUES ('t1','租户一','t1',1,1),('t2','租户二','t2',1,2)");
         jdbc.update("INSERT INTO auth_user(id,username,nickname,admin_type,dept_id,tenant_id,state) VALUES ('u1','alice','Alice','TENANT_ADMIN','d1','t1',1)");
         jdbc.update("INSERT INTO auth_user_tenant(id,user_id,relation_tenant_id,tenant_id) VALUES ('ut1','u1','t2','t1')");
         jdbc.update("INSERT INTO auth_role(id,name,code,data_scope,tenant_id,state) VALUES ('r1','管理员','manager','SELF','t1',1)");
         jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur1','u1','r1','t1')");
-        jdbc.update("INSERT INTO auth_resource(id,name,code,resource_category,tenant_id,state,sorting) VALUES"
+        jdbc.update("INSERT INTO auth_resource(id,name,code,resource_category,tenant_id,state,sort) VALUES"
                 + " ('res-menu','首页','menu:home','FRONTEND','t1',1,1),('res-api','当前资源','user:auth:resources','BACKEND','t1',1,2)");
         jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr1','r1','res-menu','t1'),('rr2','r1','res-api','t1')");
         TenantContextHolder.clear();
@@ -85,7 +85,7 @@ class AuthCurrentUserServiceImplTest {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         jdbc.update("INSERT INTO auth_role(id,name,code,data_scope,tenant_id,state) VALUES ('r-off','停用角色','archived','SELF','t1',2)");
         jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-off','u1','r-off','t1')");
-        jdbc.update("INSERT INTO auth_resource(id,name,code,resource_category,tenant_id,state,sorting) VALUES"
+        jdbc.update("INSERT INTO auth_resource(id,name,code,resource_category,tenant_id,state,sort) VALUES"
                 + " ('res-off-menu','停用菜单','menu:archived','FRONTEND','t1',2,3),('res-role-menu','角色菜单','menu:role-only','FRONTEND','t1',1,4)");
         jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-off-menu','r1','res-off-menu','t1'),('rr-role-menu','r-off','res-role-menu','t1')");
         AuthCurrentResourceVO resources = service.currentResources();

@@ -53,7 +53,7 @@ class SecurityContextRpcServiceImplTest {
         jdbc.update("INSERT INTO auth_role(id,code,name,data_scope,tenant_id,state) VALUES"
                 + " ('r1','manager','经理','DEPT','t1',1),('r2','viewer','查看','SELF','t2',1)");
         jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-1','u1','r1','t1'),('ur-2','u1','r2','t2')");
-        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sorting) VALUES"
+        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sort) VALUES"
                 + " ('res-1','user:auth:manage','管理','BACKEND','t1',1,1),('res-2','user:auth:resources','资源','BACKEND','t2',1,1),"
                 + " ('res-3','menu:home','首页','FRONTEND','t1',1,2)");
         jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES"
@@ -91,7 +91,7 @@ class SecurityContextRpcServiceImplTest {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         jdbc.update("INSERT INTO auth_role(id,code,name,data_scope,tenant_id,state) VALUES ('r-off','auditor','审计','ALL','t1',2)");
         jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-off','u1','r-off','t1')");
-        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sorting) VALUES ('res-audit','audit:read','审计读','BACKEND','t1',1,3)");
+        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sort) VALUES ('res-audit','audit:read','审计读','BACKEND','t1',1,3)");
         jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-audit','r-off','res-audit','t1')");
         SecurityUser user = provider.resolve("u1", null).getUser();
         assertThat(user.getAuthorities()).contains("user:auth:manage", "ROLE_manager", "ROLE_TENANT_ADMIN")
@@ -103,7 +103,7 @@ class SecurityContextRpcServiceImplTest {
     @Test
     void disabledResourceGivesNoPermissionCodeEvenThroughAnEnabledRole() {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sorting) VALUES ('res-off','user:auth:export','导出','BACKEND','t1',2,4)");
+        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sort) VALUES ('res-off','user:auth:export','导出','BACKEND','t1',2,4)");
         jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-off','r1','res-off','t1')");
         SecurityUser user = provider.resolve("u1", null).getUser();
         assertThat(user.getAuthorities()).contains("user:auth:manage", "ROLE_manager").doesNotContain("user:auth:export");
@@ -114,7 +114,7 @@ class SecurityContextRpcServiceImplTest {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         jdbc.update("INSERT INTO auth_role(id,code,name,data_scope,tenant_id,state) VALUES ('r-off','auditor','审计','ALL','t1',2)");
         jdbc.update("INSERT INTO auth_user_role(id,user_id,role_id,tenant_id) VALUES ('ur-off','u1','r-off','t1')");
-        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sorting) VALUES ('res-audit','audit:read','审计读','BACKEND','t1',2,3)");
+        jdbc.update("INSERT INTO auth_resource(id,code,name,resource_category,tenant_id,state,sort) VALUES ('res-audit','audit:read','审计读','BACKEND','t1',2,3)");
         jdbc.update("INSERT INTO auth_role_resource(id,role_id,resource_id,tenant_id) VALUES ('rr-audit','r-off','res-audit','t1')");
         jdbc.update("UPDATE auth_role SET state=1 WHERE id='r-off'");
         jdbc.update("UPDATE auth_resource SET state=1 WHERE id='res-audit'");

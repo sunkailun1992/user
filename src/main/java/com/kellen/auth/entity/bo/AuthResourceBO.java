@@ -83,7 +83,7 @@ public class AuthResourceBO implements Serializable {
      * 排序。
      */
     @Schema(description = "排序", example = "1")
-    private Integer sorting;
+    private Integer sort;
 
     /**
      * 资源状态。

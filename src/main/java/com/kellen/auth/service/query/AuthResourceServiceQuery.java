@@ -20,7 +20,7 @@ public class AuthResourceServiceQuery {
     /**
      * 默认排序字段。
      */
-    private static final String DEFAULT_SORT_FIELD = "sorting";
+    private static final String DEFAULT_SORT_FIELD = "sort";
 
     /**
      * 允许排序和查询的数据库字段白名单。
@@ -39,7 +39,7 @@ public class AuthResourceServiceQuery {
             Map.entry("type", "type"), // 允许按认证数据类型查询和排序。
             Map.entry("tenantId", "tenant_id"), // 允许按租户ID查询和排序。
             Map.entry("tenant_id", "tenant_id"), // 兼容前端传数据库列名。
-            Map.entry("sorting", "sorting"), // 允许按排序值查询和排序。
+            Map.entry("sort", "sort"), // 允许按排序值查询和排序。
             Map.entry("version", "version"), // 允许查询乐观锁版本号。
             Map.entry("createTime", "create_time"), // 允许按创建时间查询和排序。
             Map.entry("create_time", "create_time"), // 兼容前端传数据库列名。
