@@ -397,9 +397,12 @@ src/main/resources/db/migration/V3__rename_audit_columns.sql 审计列按实体�
 src/main/resources/db/migration/V4__add_create_dept.sql      租户表新增创建部门列 create_dept
 src/main/resources/db/migration/V5__rename_create_by_update_by.sql 审计列 creator/updater 改为 create_by/update_by
 src/main/resources/db/migration/V6__keycloak_accounts.sql    auth_user 加 idp_subject、删 password；删自研 OAuth 与第三方认证四张表
+src/main/resources/db/migration/V7__rename_sorting_to_sort.sql     排序列 sorting 改名 sort（9 张表）
 ```
 
 表结构只由本服务 `src/main/resources/db/migration` 的 Flyway 迁移管理；已提交的迁移文件不修改，改结构只新增 `V<下一个>__<说明>.sql`；新库保持空库，由服务首次启动时的 Flyway 建表，不手工执行任何公共脚本。已有的库由 `baseline-on-migrate` 把版本 1 登记为基线、不执行 V1，再执行 V2 起的迁移。Seata AT 的 `undo_log` 在 `V1__baseline.sql` 里；数据源块固定 `spring.datasource.dynamic.seata: true`，不设总开关；建池时 Seata AT 代理就检查该表，utils 在创建任何 Bean 之前先执行 Flyway 迁移，新空库首次启动即建出该表。
+
+排序列改名（第6阶段第三部分，1.5.7）：`V7__rename_sorting_to_sort.sql` 把 9 张表的 `sorting` 改名 `sort`，对应 utils 2.0.9 的 `EntityBase.sort`。Flyway 社区版没有撤销迁移，这次也没有改名前的备份（迁移在服务启动时先执行了），所以回退不靠还原备份，而是反向改名：停掉依赖 utils 2.0.9 的服务；确认 `undo_log` 为空（Seata AT 的回滚镜像记的是列名）；在一个事务里把这 9 张表的 `sort` 改回 `sorting`，并删掉 `flyway_schema_history` 里 V7 这一条（不删的话旧服务照样能启动，但以后重新升级时 V7 不会再跑，新代码就找不到 `sort` 列）；本服务换回 1.5.6、utils 换回 2.0.8，admin-web 同时退回 1.2.3。逐库回退脚本与手册由维护者保存在本机备份目录，不进本仓库。
 
 V1 的种子段仅用 `ON CONFLICT DO NOTHING` 补齐缺失默认租户、角色与权限，不覆盖既有权限、角色数据范围或自定义标签；SHA-256 派生资源 ID 的算法保持不变。
 
