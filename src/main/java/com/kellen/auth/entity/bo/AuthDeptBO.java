@@ -66,6 +66,12 @@ public class AuthDeptBO implements Serializable {
     private String ownerUserId;
 
     /**
+     * 排序，同级部门按它升序排；不填时新建取 0、修改不变。
+     */
+    @Schema(description = "排序，同级部门按它升序排；不填时新建取 0、修改不变", example = "1")
+    private Integer sort;
+
+    /**
      * 部门状态。
      */
     @Schema(description = "部门状态", example = "启用")

@@ -266,7 +266,7 @@ menu:rag:graph
 
 | 表 | 说明 |
 | --- | --- |
-| `auth_dept` | 租户内部门树 |
+| `auth_dept` | 租户内部门树；同级按 `sort` 升序（1.5.8 起部门的 VO、BO 带上 `sort`，新建不填取 0、修改不填不变） |
 | `auth_user.dept_id` | 用户所属部门 |
 | `auth_dept.owner_user_id` | 部门负责人用户 |
 | `auth_role.owner_user_id` | 角色负责人用户 |

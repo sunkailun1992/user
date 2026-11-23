@@ -54,6 +54,12 @@ public class AuthDeptVO implements Serializable {
     private String ownerUserId;
 
     /**
+     * 排序，同级部门按它升序排。
+     */
+    @Schema(description = "排序，同级部门按它升序排")
+    private Integer sort;
+
+    /**
      * 部门状态。
      */
     @Schema(description = "部门状态")

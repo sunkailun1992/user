@@ -94,6 +94,7 @@ class AuthDeptControllerTest {
         AuthDeptVO deptVO = new AuthDeptVO(); // 创建部门响应对象，模拟 Service 层返回。
         deptVO.setId("dept-1"); // 设置部门ID，验证响应数据会透传给前端。
         deptVO.setName("研发部"); // 设置部门名称，验证响应数据会透传给前端。
+        deptVO.setSort(3); // 设置排序值，验证部门选项带上排序值。
         when(authDeptService.list(any(AuthDeptQuery.class))).thenReturn(List.of(deptVO)); // Mock 部门选项查询结果。
 
         mockMvc.perform(get("/auth/manage/depts/options")
@@ -103,7 +104,8 @@ class AuthDeptControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].id").value("dept-1"))
-                .andExpect(jsonPath("$.data[0].name").value("研发部"));
+                .andExpect(jsonPath("$.data[0].name").value("研发部"))
+                .andExpect(jsonPath("$.data[0].sort").value(3));
 
         ArgumentCaptor<AuthDeptQuery> captor = ArgumentCaptor.forClass(AuthDeptQuery.class); // 捕获 Controller 传给 Service 的查询对象。
         verify(authDeptService).list(captor.capture()); // 验证 Controller 调用了部门选项查询服务。
@@ -154,6 +156,7 @@ class AuthDeptControllerTest {
         request.setTenantId("100"); // 设置租户ID，满足新增校验。
         request.setCode("dept_rd"); // 设置部门编码，满足新增校验。
         request.setName("研发部"); // 设置部门名称，满足新增校验。
+        request.setSort(4); // 设置排序值，验证请求体里的排序值传到业务层。
 
         mockMvc.perform(post("/auth/manage/depts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -167,6 +170,7 @@ class AuthDeptControllerTest {
         verify(authDeptService).save(captor.capture()); // 验证新增部门服务被调用。
         assertThat(captor.getValue().getCode()).isEqualTo("dept_rd"); // 验证部门编码传递正确。
         assertThat(captor.getValue().getName()).isEqualTo("研发部"); // 验证部门名称传递正确。
+        assertThat(captor.getValue().getSort()).isEqualTo(4); // 验证部门排序值传递正确。
     }
 
     /**
