@@ -9,11 +9,15 @@ import com.kellen.rpc.user.UserRpcService;
 import com.kellen.utils.context.TenantContextHolder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.apache.dubbo.config.annotation.Method;
 
 /**
  * 用户中心 Dubbo RPC 服务实现。
+ *
+ * <p>{@code getUserById} 声明为幂等（{@code idempotent}）：它只按主键读用户，不改任何状态。utils 2.1.1 起的 Dubbo 调用端
+ * 统一重试据此在请求发出后的连接类失败时重试它。</p>
  */
-@DubboService
+@DubboService(methods = @Method(name = "getUserById", parameters = {"idempotent", "true"}))
 public class UserRpcServiceImpl implements UserRpcService {
 
     /**

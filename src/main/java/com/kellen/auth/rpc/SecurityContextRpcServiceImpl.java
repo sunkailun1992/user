@@ -15,6 +15,7 @@ import com.kellen.security.oauth2.SecurityContextResult;
 import com.kellen.security.oauth2.SecurityContextRpcService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.apache.dubbo.config.annotation.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
@@ -33,10 +34,13 @@ import java.util.List;
  * <p>标 {@link Primary}：本服务里同时有 utils 自动生成的 Dubbo 引用（{@code @DubboService} 由 Dubbo 扫描注册，自动配置的条件看不到它），
  * 资源服务器优先用本地实现。调用方的租户与数据权限上下文原样恢复。</p>
  *
+ * <p>{@code resolve} 声明为幂等（{@code idempotent}）：它只读用户、租户、角色与数据范围，不改任何状态。utils 2.1.1 起的
+ * Dubbo 调用端统一重试据此在请求发出后的连接类失败时重试它。</p>
+ *
  * @author 孙凯伦
  */
 @Primary
-@DubboService
+@DubboService(methods = @Method(name = "resolve", parameters = {"idempotent", "true"}))
 public class SecurityContextRpcServiceImpl implements SecurityContextRpcService {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityContextRpcServiceImpl.class);
